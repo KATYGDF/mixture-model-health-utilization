@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentação · SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<script>
+  MathJax = { tex: { inlineMath: [['$','$']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  .step-list { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+  .step-list > li {
+    counter-increment: step;
+    position: relative;
+    padding: 2rem 0 2rem 4.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-list > li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute; left: 0; top: 2rem;
+    font-family: var(--ff-mono);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--coral);
+    line-height: 1;
+  }
+  .step-list > li:last-child { border-bottom: none; }
+  .step-title {
+    font-family: var(--ff-display);
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+    color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">SimSaúde</div>
+  <ul class="nav-links">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="metodologia.html">Metodologia</a></li>
+    <li><a href="documentacao.html" class="active">Documentação</a></li>
+    <li><a href="evolucao.html">Evolução</a></li>
+    <li><a href="codigo.html">Código</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="page-tag">Documentação técnica</div>
+    <h1>Passo a passo<br>da simulação</h1>
+    <p>Descrição detalhada de cada etapa do script R, com raciocínio por trás de cada decisão de modelagem.</p>
+  </div>
+</div>
+
+<div class="page-body">
+<div class="prose">
+
+<div class="callout callout-info">
+  Esta documentação descreve a <strong>versão 3.0</strong> do script — a versão final calibrada por indicadores ANS. Para o histórico de mudanças entre versões, veja a página <a href="evolucao.html">Evolução</a>.
+</div>
+
+<h2>Visão geral do fluxo</h2>
+
+<p>A simulação segue um fluxo sequencial em 16 etapas, organizado do mais simples ao mais complexo:</p>
+
+<ol class="step-list">
+
+<li>
+  <div class="step-title">Configuração inicial</div>
+  <p>Carregamento dos pacotes necessários (<code>dplyr</code>, <code>ggplot2</code>, <code>scales</code>) e definição da semente aleatória para reprodutibilidade:</p>
+  <pre><code>set.seed(1234)</code></pre>
+  <p>A semente garante que qualquer pessoa que execute o script obtenha exatamente os mesmos dados, essencial para um pôster científico.</p>
+</li>
+
+<li>
+  <div class="step-title">Tamanho da amostra</div>
+  <p>$n = 5.000$ beneficiários — suficiente para estabilizar as estimativas dos grupos menores (G4 = 5% → ~250 indivíduos) sem tornar o script lento.</p>
+</li>
+
+<li>
+  <div class="step-title">Atribuição de grupo latente</div>
+  <p>Cada beneficiário recebe um grupo latente $g_i \in \{1,2,3,4\}$ amostrado de uma distribuição categórica com proporções $\boldsymbol{\pi} = (0{,}50,\, 0{,}25,\, 0{,}20,\, 0{,}05)$:</p>
+  <pre><code>grupo_latente &lt;- sample(x = 1:4, size = n, replace = TRUE,
+                        prob = pi_grupos)</code></pre>
+  <p>Este é o passo fundamental — todos os demais parâmetros dependem do grupo.</p>
+</li>
+
+<li>
+  <div class="step-title">Geração vetorizada das idades</div>
+  <p>A distribuição de idades é uma mistura de três faixas. A implementação vetorizada (sem <code>sapply</code>) é ordens de magnitude mais eficiente para amostras grandes:</p>
+  <pre><code>faixa_idx &lt;- sample(1:3, size = n, replace = TRUE,
+                    prob = c(0.20, 0.55, 0.25))
+
+idade[faixa_idx == 1] &lt;- sample(0:17, sum(faixa_idx==1), replace=TRUE)
+idade[faixa_idx == 2] &lt;- sample(18:59, sum(faixa_idx==2), replace=TRUE)
+idade[faixa_idx == 3] &lt;- sample(60:85, sum(faixa_idx==3), replace=TRUE)</code></pre>
+  <p>A variável <code>idade10 = idade/10</code> é usada nos modelos para que os coeficientes reflitam o efeito por <em>década</em> de vida.</p>
+</li>
+
+<li>
+  <div class="step-title">Demais covariáveis</div>
+  <p>As covariáveis restantes são geradas independentemente do grupo latente (covariáveis <em>observadas</em> — o grupo é latente, não observável):</p>
+  <ul>
+    <li><code>sexo</code> — $\text{Bernoulli}(0{,}55)$</li>
+    <li><code>tempo_no_plano</code> — $\text{Uniforme}(1, 120)$ meses</li>
+    <li><code>copart</code> — $\text{Bernoulli}(0{,}40)$</li>
+    <li><code>regiao</code> — $\text{Categórica}(0{,}40, 0{,}35, 0{,}25)$, codificada em dummies <code>regiao2</code> e <code>regiao3</code></li>
+  </ul>
+</li>
+
+<li>
+  <div class="step-title">Interceptos por grupo (seção 4)</div>
+  <p>Os interceptos $\alpha_{gk}$ definem a <em>média-base</em> de cada desfecho para cada grupo, no log da escala. Foram calibrados iterativamente para aproximar os alvos ANS:</p>
+  <pre><code>alpha_consultas &lt;- log(c(2.5, 8.0, 4.0, 1.5)) - 0.588</code></pre>
+  <p>O ajuste aditivo (ex: <code>- 0.588</code>) é um deslocamento global aplicado após o <code>log()</code> para compensar o efeito médio das covariáveis na média populacional.</p>
+</li>
+
+<li>
+  <div class="step-title">Matrizes de coeficientes grupo-específicos (seção 5)</div>
+  <p>Cada desfecho possui uma matriz $4 \times 6$ de coeficientes, onde as linhas correspondem aos grupos e as colunas às covariáveis:</p>
+  <pre><code>betas$consultas &lt;- matrix(
+  c(# idade10  sexo   tempo  copart  regiao2  regiao3
+     0.08,    0.12,  0.03, -0.18,   0.05,    0.00,  # G1
+     0.10,    0.14,  0.04, -0.10,   0.05,    0.00,  # G2
+     0.07,    0.10,  0.02, -0.05,   0.05,    0.00,  # G3
+    -0.05,    0.08,  0.01, -0.02,   0.00,    0.05), # G4
+  nrow=4, byrow=TRUE)</code></pre>
+  <p>Decisões de modelagem embutidas:</p>
+  <ul>
+    <li><code>copart</code> tem coeficiente <em>negativo</em> em todos os grupos — coparticipação reduz utilização (efeito preço)</li>
+    <li>G4 tem coeficiente negativo para <code>idade10</code> em consultas — padrão atípico com jovens de alto uso</li>
+    <li>G3 tem maior sensibilidade de idade para internações — condizente com envelhecimento e doença crônica</li>
+  </ul>
+</li>
+
+<li>
+  <div class="step-title">Parâmetros de dispersão $\theta$</div>
+  <p>O parâmetro $\theta$ da NB₂ controla a superdispersão. Internações têm $\theta = 0{,}8$ (alta dispersão) porque eventos raros e muito concentrados em poucos indivíduos geram variância muito maior que a média.</p>
+</li>
+
+<li>
+  <div class="step-title">Probabilidades de zero estrutural $\psi_{gk}$</div>
+  <p>Para terapias e internações, definidas por grupo. O G1 (baixo uso) tem $\psi_{g=1,\,\text{internacoes}} = 0{,}97$ — 97% dos indivíduos desse grupo nunca seriam internados no período de referência, independentemente de quanto seus parâmetros NB permitiriam.</p>
+</li>
+
+<li>
+  <div class="step-title">Cálculo das médias condicionais $\mu_{igk}$</div>
+  <p>Função vetorizada que calcula $\mu_{igk} = \exp(\alpha_{gk} + \mathbf{x}_i^\top \boldsymbol{\beta}_{gk})$ para todos os $n$ indivíduos simultaneamente, usando multiplicação elemento a elemento de matrizes:</p>
+  <pre><code>calc_mu &lt;- function(alpha_vec, beta_mat, grupo, ...) {
+  X &lt;- cbind(idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+  beta_ind &lt;- beta_mat[grupo, ]          # seleciona linha do grupo de cada i
+  eta &lt;- alpha_vec[grupo] + rowSums(X * beta_ind)
+  exp(eta)
+}</code></pre>
+</li>
+
+<li>
+  <div class="step-title">Geração das contagens</div>
+  <p>Com as médias condicionais calculadas, as contagens são amostradas:</p>
+  <ul>
+    <li>Consultas, PS, Exames: <code>rnbinom(n, size=θ, mu=μ)</code></li>
+    <li>Terapias, Internações: componente de zero estrutural + NB</li>
+  </ul>
+  <pre><code>rzinb_mu &lt;- function(mu, theta, pzero) {
+  zero_flag &lt;- rbinom(length(mu), size=1, prob=pzero)
+  y_nb      &lt;- rnbinom(length(mu), size=theta, mu=mu)
+  ifelse(zero_flag == 1, 0, y_nb)
+}</code></pre>
+</li>
+
+<li>
+  <div class="step-title">Variáveis derivadas</div>
+  <p>Calculadas a partir das contagens:</p>
+  <ul>
+    <li><strong>Razões:</strong> <code>razao_exames_consultas = exames / (consultas + 1)</code></li>
+    <li><strong>Gasto:</strong> combinação linear com ruído log-normal</li>
+    <li><strong>Meses com utilização:</strong> modelo Beta-Binomial (ver seção 8 da metodologia)</li>
+    <li><strong>Prestadores distintos:</strong> Poisson com cap no percentil 99</li>
+    <li><strong>Flags:</strong> indicadores binários por percentil 95</li>
+  </ul>
+</li>
+
+<li>
+  <div class="step-title">Montagem da base final</div>
+  <p>Todas as variáveis são reunidas em um <code>data.frame</code> de $5.000 \times 21$ com tipos adequados (<code>factor</code> para categóricas, <code>integer</code> para contagens).</p>
+</li>
+
+<li>
+  <div class="step-title">Checagem vs. alvos ANS</div>
+  <p>Comparação das médias simuladas com os indicadores oficiais. As diferenças percentuais devem ser menores que 5% para validar a calibração:</p>
+  <pre><code>comparacao_ans &lt;- data.frame(
+  variavel = names(alvos_ans),
+  alvo_ans = as.numeric(alvos_ans),
+  media_observada = as.numeric(medias_obs),
+  diferenca_percentual = 100 * (medias_obs - alvos_ans) / alvos_ans
+)</code></pre>
+</li>
+
+<li>
+  <div class="step-title">Validação das médias teóricas $\mu$</div>
+  <p>Além de comparar com a ANS, o script também valida se as médias teóricas condicionais (as <em>esperanças</em> $\mu_{igk}$ antes da aleatorização) por grupo fazem sentido clínico:</p>
+  <pre><code>valid_mu &lt;- data.frame(
+  mu_consultas   = tapply(mu_consultas, dados_sim$grupo_latente, mean),
+  ...
+)</code></pre>
+</li>
+
+<li>
+  <div class="step-title">Gráficos e exportação</div>
+  <p>Sete gráficos são gerados com <code>ggplot2</code>:</p>
+  <ol>
+    <li>Histograma do total de eventos</li>
+    <li>Boxplot total de eventos por grupo</li>
+    <li>Boxplot razão exames/consultas por grupo</li>
+    <li>Dispersão gasto × eventos por grupo (escala log)</li>
+    <li>Histograma de meses com utilização</li>
+    <li>Prevalência de flags por grupo (gráfico de barras)</li>
+    <li>Boxplot razão PS/consultas por grupo</li>
+  </ol>
+  <p>A base é exportada como CSV para o caminho definido em <code>write.csv()</code>.</p>
+</li>
+
+</ol>
+
+<h2>Estrutura da base de dados gerada</h2>
+
+<table>
+  <thead>
+    <tr><th>Variável</th><th>Tipo</th><th>Descrição</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>Integer</td><td>Identificador único do beneficiário</td></tr>
+    <tr><td><code>grupo_latente</code></td><td>Factor (4 níveis)</td><td>Grupo de utilização latente</td></tr>
+    <tr><td><code>idade</code></td><td>Integer</td><td>Idade em anos</td></tr>
+    <tr><td><code>faixa_idade</code></td><td>Factor (3 níveis)</td><td>0–17 / 18–59 / 60+</td></tr>
+    <tr><td><code>sexo</code></td><td>Factor</td><td>Masculino / Feminino</td></tr>
+    <tr><td><code>tempo_no_plano</code></td><td>Integer</td><td>Tempo de permanência em meses</td></tr>
+    <tr><td><code>copart</code></td><td>Factor</td><td>Sem / Com coparticipação</td></tr>
+    <tr><td><code>regiao</code></td><td>Factor</td><td>1, 2 ou 3</td></tr>
+    <tr><td><code>consultas</code></td><td>Integer</td><td>Contagem anual de consultas eletivas</td></tr>
+    <tr><td><code>ps</code></td><td>Integer</td><td>Contagem anual de atendimentos em PS</td></tr>
+    <tr><td><code>exames</code></td><td>Integer</td><td>Contagem anual de exames diagnósticos</td></tr>
+    <tr><td><code>terapias</code></td><td>Integer</td><td>Contagem anual de sessões de terapia (ZINB)</td></tr>
+    <tr><td><code>internacoes</code></td><td>Integer</td><td>Contagem anual de internações (ZINB)</td></tr>
+    <tr><td><code>total_eventos</code></td><td>Integer</td><td>Soma de todos os desfechos</td></tr>
+    <tr><td><code>razao_exames_consultas</code></td><td>Numeric</td><td>Exames / (Consultas + 1)</td></tr>
+    <tr><td><code>razao_ps_consultas</code></td><td>Numeric</td><td>PS / (Consultas + 1)</td></tr>
+    <tr><td><code>gasto_total</code></td><td>Numeric</td><td>Gasto total estimado em R$</td></tr>
+    <tr><td><code>meses_utilizacao</code></td><td>Integer</td><td>Meses com ao menos um evento no ano</td></tr>
+    <tr><td><code>prestadores_distintos</code></td><td>Integer</td><td>Número de prestadores distintos utilizados</td></tr>
+    <tr><td><code>flag_alta_utilizacao</code></td><td>Integer (0/1)</td><td>1 se total_eventos ≥ P95</td></tr>
+    <tr><td><code>flag_baixa_coerencia</code></td><td>Integer (0/1)</td><td>1 se razão de exames ou PS ≥ P95</td></tr>
+  </tbody>
+</table>
+
+</div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolução · SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<script>
+  MathJax = { tex: { inlineMath: [['$','$']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">SimSaúde</div>
+  <ul class="nav-links">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="metodologia.html">Metodologia</a></li>
+    <li><a href="documentacao.html">Documentação</a></li>
+    <li><a href="evolucao.html" class="active">Evolução</a></li>
+    <li><a href="codigo.html">Código</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="page-tag">Histórico do projeto</div>
+    <h1>Evolução do modelo<br>de simulação</h1>
+    <p>Do protótipo inicial com limitações conhecidas até a versão calibrada por indicadores ANS.</p>
+  </div>
+</div>
+
+<div class="page-body">
+<div class="prose">
+
+<div class="timeline-full">
+
+  <!-- V1 -->
+  <div class="tl-item">
+    <div class="tl-dot tl-dot--v1"></div>
+    <div class="tl-meta">Versão 1.0 · Protótipo inicial</div>
+    <h3 class="tl-title">Estrutura base do modelo</h3>
+    <div class="tl-body">
+      <p>Primeira versão funcional do script de simulação. Estabeleceu a arquitetura fundamental: mistura de grupos latentes, log-link para a média condicional, e distribuição Binomial Negativa como distribuição de contagem.</p>
+      <p>Os dados gerados tinham estrutura estatística correta, mas os parâmetros ainda não haviam sido calibrados para refletir indicadores reais da saúde suplementar brasileira.</p>
+    </div>
+    <ul class="tl-changes">
+      <li>Estrutura de grupos latentes com proporções $\pi = (0{,}50, 0{,}25, 0{,}20, 0{,}05)$</li>
+      <li>Cinco desfechos: consultas, PS, exames, terapias, internações</li>
+      <li>NB₂ para todos os desfechos, ZINB para terapias e internações</li>
+      <li>Log-link com interceptos e covariáveis (idade, sexo, tempo, copart, região)</li>
+      <li>Gasto total com ruído log-normal ($\sigma = 0{,}25$)</li>
+      <li>Três gráficos ggplot2 iniciais</li>
+    </ul>
+
+    <div style="margin-top:1.5rem">
+      <strong style="font-family:var(--ff-mono);font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;">Limitações identificadas</strong>
+      <ul style="margin-top:0.6rem;font-size:0.9rem;color:var(--muted)">
+        <li>Geração de idades com <code>sapply</code> — lento para $n$ grande</li>
+        <li>Coeficientes $\boldsymbol{\beta}_{gk} = \boldsymbol{\beta}_k$ — idênticos para todos os grupos, sem heterogeneidade real de resposta às covariáveis</li>
+        <li><code>meses_utilizacao</code> gerado via <code>pmin(12, rpois(...))</code> — acúmulo artificial no valor máximo 12</li>
+        <li><code>prestadores_distintos</code> sem controle de outliers extremos</li>
+        <li>$\sigma_\varepsilon = 0{,}25$ no gasto total — inflação excessiva da cauda direita combinada com internações</li>
+        <li>Parâmetros sem referência a indicadores externos validados</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- V2 -->
+  <div class="tl-item">
+    <div class="tl-dot tl-dot--v2"></div>
+    <div class="tl-meta">Versão 2.0 · Revisão metodológica</div>
+    <h3 class="tl-title">Correções estruturais e modelagem mais realista</h3>
+    <div class="tl-body">
+      <p>Versão focada em corrigir os pontos fracos identificados na v1.0. As mudanças mais relevantes foram a introdução dos coeficientes grupo-específicos e o modelo Beta-Binomial para meses com utilização.</p>
+      <p>Os coeficientes grupo-específicos permitem que o mesmo efeito de coparticipação, por exemplo, atue de forma diferente em cada grupo — o G3 (agudo/hospitalar) é menos sensível ao preço do que o G1 (baixo uso), o que reflete comportamento real de pacientes em condições agudas.</p>
+    </div>
+    <ul class="tl-changes">
+      <li>Geração de idades vetorizada — substituição do <code>sapply</code> por indexação direta</li>
+      <li>Matrizes de coeficientes grupo-específicas $\boldsymbol{\beta}_{gk}$ ($4 \times 6$ por desfecho)</li>
+      <li>G4 com coeficiente negativo para <code>idade10</code> em consultas — jovens com padrão atípico</li>
+      <li><code>meses_utilizacao</code> via Beta-Binomial: $p_i \sim \text{Beta}(a_i, b_i)$, $M_i \sim \text{Binomial}(12, p_i)$</li>
+      <li><code>prestadores_distintos</code> com cap pelo percentil 99</li>
+      <li>Ruído do gasto reduzido: $\sigma_\varepsilon = 0{,}20$ (CV ≈ 20%)</li>
+      <li><code>group</code> explícito nos <code>aes()</code> dos boxplots — evita warnings no ggplot2 recente</li>
+      <li>Dois gráficos adicionais: dispersão gasto × eventos e histograma de meses</li>
+      <li>Bloco de validação: médias simuladas vs. médias-alvo por grupo</li>
+    </ul>
+  </div>
+
+  <!-- V3 -->
+  <div class="tl-item">
+    <div class="tl-dot tl-dot--v3"></div>
+    <div class="tl-meta">Versão 3.0 · Atual · Calibração ANS</div>
+    <h3 class="tl-title">Calibração por indicadores oficiais e validação expandida</h3>
+    <div class="tl-body">
+      <p>Versão definitiva para o pôster científico. Os interceptos $\alpha_{gk}$ foram recalibrados iterativamente para que as médias populacionais simuladas se aproximem dos indicadores publicados no Painel de Indicadores da ANS.</p>
+      <p>O processo de calibração envolveu comparar as médias simuladas com os alvos após cada ajuste nos interceptos, convergindo para desvios percentuais inferiores a 3% em todos os desfechos.</p>
+      <p>Foram adicionados também o bloco de comparação direta com alvos ANS e a tabela de prevalência das flags por grupo — que evidencia como o grupo atípico (G4) concentra os alertas de baixa coerência.</p>
+    </div>
+    <ul class="tl-changes">
+      <li>Interceptos recalibrados com ajustes aditivos: ex. <code>log(c(2.5, 8.0, 4.0, 1.5)) - 0.588</code></li>
+      <li>Bloco de checagem: médias simuladas vs. alvos ANS com desvio percentual</li>
+      <li>Validação das médias teóricas condicionais $\bar{\mu}_{gk}$ via <code>tapply</code></li>
+      <li>Intercepto de exames do G4 suavizado (evitava médias irrealistas)</li>
+      <li>Tabela de prevalência de flags por grupo latente</li>
+      <li>Sétimo gráfico: boxplot razão PS/consultas por grupo</li>
+      <li>Sexto gráfico: prevalência das flags (barras agrupadas)</li>
+      <li>Adição de <code>library(scales)</code> e uso de <code>percent_format()</code></li>
+      <li>Path de exportação definido para o diretório do projeto de doutorado</li>
+    </ul>
+
+    <div class="callout" style="margin-top:1.5rem">
+      <strong>Status:</strong> versão validada e pronta para uso no pôster. Nenhuma alteração de parâmetros é esperada; mudanças futuras seriam apenas para extensões do modelo (ex: modelo longitudinal, análise de clustering não supervisionado).
+    </div>
+  </div>
+
+</div>
+
+<h2>Comparativo resumido das versões</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Aspecto</th>
+      <th><span class="version-badge v1">v1.0</span></th>
+      <th><span class="version-badge v2">v2.0</span></th>
+      <th><span class="version-badge v3">v3.0</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Geração de idades</td><td><code>sapply</code></td><td>Vetorizada</td><td>Vetorizada</td></tr>
+    <tr><td>Coeficientes $\boldsymbol{\beta}$</td><td>Iguais entre grupos</td><td>Grupo-específicos</td><td>Grupo-específicos</td></tr>
+    <tr><td>Meses utilização</td><td>Poisson + <code>pmin</code></td><td>Beta-Binomial</td><td>Beta-Binomial</td></tr>
+    <tr><td>Prestadores</td><td>Sem cap</td><td>Cap P99</td><td>Cap P99</td></tr>
+    <tr><td>Ruído gasto $\sigma_\varepsilon$</td><td>0,25</td><td>0,20</td><td>0,20</td></tr>
+    <tr><td>Calibração ANS</td><td>Não</td><td>Não</td><td>Sim</td></tr>
+    <tr><td>Validação $\mu$ teórico</td><td>Não</td><td>Parcial</td><td>Completa</td></tr>
+    <tr><td>Gráficos</td><td>3</td><td>5</td><td>7</td></tr>
+    <tr><td>Flags por grupo</td><td>Não</td><td>Não</td><td>Sim</td></tr>
+  </tbody>
+</table>
+
+<h2>Próximas extensões possíveis</h2>
+
+<p>A estrutura atual pode ser naturalmente estendida para:</p>
+
+<ul>
+  <li><strong>Modelo longitudinal:</strong> gerar múltiplos períodos por beneficiário, com transições entre grupos latentes via cadeia de Markov</li>
+  <li><strong>Clustering não supervisionado:</strong> usar os dados simulados como benchmark para avaliar algoritmos de segmentação (k-means, LCA, HMM) — verificando se recuperam os grupos latentes verdadeiros</li>
+  <li><strong>Modelo de custo separado:</strong> substituir o gasto log-normal por um modelo two-part (logístico para utilização + gamma/log-normal para o valor condicional)</li>
+  <li><strong>Covariáveis correlacionadas:</strong> introduzir correlação entre <code>idade</code> e <code>tempo_no_plano</code>, e entre <code>grupo_latente</code> e características observadas (ex: idosos mais prováveis no G3)</li>
+</ul>
+
+</div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
+  </div>
+</footer>
+
+</body>
+</html>

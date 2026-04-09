@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metodologia · SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<script>
+  MathJax = {
+    tex: { inlineMath: [['$','$'], ['\\(','\\)']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">SimSaúde</div>
+  <ul class="nav-links">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="metodologia.html" class="active">Metodologia</a></li>
+    <li><a href="documentacao.html">Documentação</a></li>
+    <li><a href="evolucao.html">Evolução</a></li>
+    <li><a href="codigo.html">Código</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="page-tag">Metodologia estatística</div>
+    <h1>Fundamentos matemáticos<br>da simulação</h1>
+    <p>Modelos de contagem, inflação de zeros, mistura de populações e calibração por indicadores oficiais.</p>
+  </div>
+</div>
+
+<div class="page-body">
+<div class="prose">
+
+<h2>1. Visão geral do modelo</h2>
+
+<p>O modelo de simulação é um <strong>modelo de mistura finita</strong> (<em>finite mixture model</em>) combinado com regressão de contagem. Cada beneficiário $i$ pertence latentemente a um grupo $g \in \{1, 2, 3, 4\}$, e os desfechos de utilização são gerados condicionalmente a esse grupo e a um vetor de covariáveis observadas.</p>
+
+<div class="math-block">
+$$Y_{ik} \mid g_i = g,\; \mathbf{x}_i \;\sim\; F_k\!\left(\mu_{igk},\; \theta_k\right)$$
+</div>
+
+<p>onde $k$ indexa o tipo de serviço (consultas, pronto-socorro, exames, terapias, internações), $\mathbf{x}_i$ é o vetor de covariáveis do beneficiário $i$, e $F_k$ é a distribuição de probabilidade do desfecho.</p>
+
+<h2>2. Atribuição de grupo latente</h2>
+
+<p>O grupo latente $g_i$ é amostrado de uma distribuição categórica com proporções fixas $\boldsymbol{\pi} = (\pi_1, \pi_2, \pi_3, \pi_4)$:</p>
+
+<div class="math-block">
+$$g_i \;\sim\; \text{Categórica}(\pi_1,\, \pi_2,\, \pi_3,\, \pi_4)$$
+
+$$\pi_1 = 0{,}50 \quad \pi_2 = 0{,}25 \quad \pi_3 = 0{,}20 \quad \pi_4 = 0{,}05$$
+</div>
+
+<p>Esses valores foram escolhidos para refletir a distribuição típica de perfis de utilização em carteiras de operadoras de planos de saúde brasileiras, com a maioria dos beneficiários concentrada em baixo uso.</p>
+
+<h2>3. Covariáveis observadas</h2>
+
+<p>O vetor de covariáveis $\mathbf{x}_i$ inclui:</p>
+
+<table>
+  <thead><tr><th>Variável</th><th>Tipo</th><th>Distribuição / Geração</th></tr></thead>
+  <tbody>
+    <tr><td><code>idade</code></td><td>Contínua discreta</td><td>Mistura de três faixas etárias (0–17, 18–59, 60–85) com probabilidades $(0{,}20, 0{,}55, 0{,}25)$</td></tr>
+    <tr><td><code>sexo</code></td><td>Binária</td><td>$\text{Bernoulli}(0{,}55)$; 1 = feminino</td></tr>
+    <tr><td><code>tempo_no_plano</code></td><td>Discreta (meses)</td><td>$\text{Uniforme}(1, 120)$</td></tr>
+    <tr><td><code>copart</code></td><td>Binária</td><td>$\text{Bernoulli}(0{,}40)$; 1 = com coparticipação</td></tr>
+    <tr><td><code>regiao</code></td><td>Categórica (3 níveis)</td><td>$\text{Categórica}(0{,}40, 0{,}35, 0{,}25)$</td></tr>
+  </tbody>
+</table>
+
+<p>A variável <code>idade</code> é escalada por 10 antes de entrar nos modelos ($\texttt{idade10} = \texttt{idade}/10$), para que os coeficientes expressem o efeito de uma <em>década</em> de vida, mantendo estabilidade numérica.</p>
+
+<h2>4. Distribuição Binomial Negativa (NB₂)</h2>
+
+<p>Para os desfechos sem excesso estrutural de zeros (consultas, pronto-socorro e exames), utiliza-se a parametrização NB₂ da Binomial Negativa, que modela a superdispersão via parâmetro $\theta > 0$:</p>
+
+<div class="math-block">
+$$\Pr(Y = y \mid \mu, \theta) = \binom{y + \theta - 1}{y} \left(\frac{\theta}{\theta + \mu}\right)^\theta \left(\frac{\mu}{\theta + \mu}\right)^y, \quad y = 0, 1, 2, \ldots$$
+</div>
+
+<p>As propriedades da NB₂ são:</p>
+
+<div class="math-block">
+$$\mathbb{E}[Y] = \mu \qquad \text{Var}[Y] = \mu + \frac{\mu^2}{\theta}$$
+</div>
+
+<p>Quanto menor o valor de $\theta$, maior a superdispersão. No limite $\theta \to \infty$, a NB₂ converge para a distribuição de Poisson. Os valores utilizados foram:</p>
+
+<table>
+  <thead><tr><th>Desfecho</th><th>$\theta$</th><th>Interpretação</th></tr></thead>
+  <tbody>
+    <tr><td>Consultas</td><td>2,5</td><td>Dispersão moderada</td></tr>
+    <tr><td>Pronto-socorro</td><td>1,5</td><td>Alta dispersão</td></tr>
+    <tr><td>Exames</td><td>2,0</td><td>Dispersão moderada</td></tr>
+    <tr><td>Terapias</td><td>1,2</td><td>Alta dispersão</td></tr>
+    <tr><td>Internações</td><td>0,8</td><td>Dispersão muito alta</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Modelo log-linear para a média condicional</h2>
+
+<p>A média condicional $\mu_{igk}$ é modelada via <strong>log-link</strong>, seguindo a estrutura padrão dos Modelos Lineares Generalizados (GLM):</p>
+
+<div class="math-block">
+$$\log(\mu_{igk}) = \alpha_{gk} + \mathbf{x}_i^\top \boldsymbol{\beta}_{gk}$$
+
+$$\mu_{igk} = \exp\!\left(\alpha_{gk} + \boldsymbol{\beta}_{gk}^\top \mathbf{x}_i\right)$$
+</div>
+
+<p>onde:</p>
+<ul>
+  <li>$\alpha_{gk}$ é o intercepto específico para o grupo $g$ e desfecho $k$ (equivale ao log da média-base)</li>
+  <li>$\boldsymbol{\beta}_{gk} \in \mathbb{R}^6$ é o vetor de coeficientes específico para o grupo $g$ e desfecho $k$</li>
+  <li>$\mathbf{x}_i = (\texttt{idade10}_i,\; \texttt{sexo}_i,\; \texttt{tempo\_anos}_i,\; \texttt{copart}_i,\; \texttt{regiao2}_i,\; \texttt{regiao3}_i)^\top$</li>
+</ul>
+
+<div class="callout callout-info">
+  <strong>Inovação em relação à versão 1.0:</strong> Na versão inicial, $\boldsymbol{\beta}_{gk} = \boldsymbol{\beta}_k$ para todo $g$ — os coeficientes eram iguais entre grupos. A partir da versão 2.0, cada grupo tem sua própria matriz de coeficientes $\boldsymbol{\beta}_{gk}$, permitindo heterogeneidade real nas respostas às covariáveis.
+</div>
+
+<h2>6. Modelo ZINB para zeros estruturais</h2>
+
+<p>Para terapias e internações, a proporção de zeros observada é substancialmente maior do que a esperada por uma NB₂ pura. Isso ocorre porque muitos beneficiários <em>nunca utilizariam</em> esses serviços no período — zeros estruturais, distintos dos zeros de contagem.</p>
+
+<p>O modelo <strong>Zero-Inflated Negative Binomial (ZINB)</strong> é uma mistura de dois componentes:</p>
+
+<div class="math-block">
+$$\Pr(Y = y) = \begin{cases}
+\psi_g + (1-\psi_g)\cdot\Pr_{\text{NB}}(Y=0 \mid \mu, \theta) & \text{se } y = 0 \\
+(1-\psi_g)\cdot\Pr_{\text{NB}}(Y=y \mid \mu, \theta) & \text{se } y > 0
+\end{cases}$$
+</div>
+
+<p>onde $\psi_g \in (0,1)$ é a probabilidade de zero estrutural para o grupo $g$. As esperanças e variâncias do ZINB são:</p>
+
+<div class="math-block">
+$$\mathbb{E}[Y] = (1-\psi_g)\,\mu \qquad \text{Var}[Y] = (1-\psi_g)\,\mu\!\left(1 + \mu\!\left(\psi_g + \tfrac{1}{\theta}\right)\right)$$
+</div>
+
+<p>Os parâmetros $\psi_g$ utilizados:</p>
+
+<table>
+  <thead><tr><th>Desfecho</th><th>G1 (baixo uso)</th><th>G2 (ambulatorial)</th><th>G3 (agudo)</th><th>G4 (atípico)</th></tr></thead>
+  <tbody>
+    <tr><td>Terapias</td><td>0,85</td><td>0,45</td><td>0,70</td><td>0,35</td></tr>
+    <tr><td>Internações</td><td>0,97</td><td>0,94</td><td>0,55</td><td>0,75</td></tr>
+  </tbody>
+</table>
+
+<h2>7. Gasto total simulado</h2>
+
+<p>O gasto total $C_i$ é modelado como combinação linear de eventos com custos médios fixos por tipo de serviço, perturbada por ruído log-normal multiplicativo:</p>
+
+<div class="math-block">
+$$C_i = \left(\sum_{k} c_k \cdot Y_{ik}\right) \cdot \varepsilon_i$$
+
+$$\varepsilon_i \;\sim\; \text{Log-Normal}(0,\; \sigma^2 = 0{,}04) \quad \Rightarrow \quad \text{CV} \approx 20\%$$
+</div>
+
+<p>Os custos médios por evento (em R$) são:</p>
+
+<table>
+  <thead><tr><th>Tipo de serviço</th><th>Custo médio (R$)</th></tr></thead>
+  <tbody>
+    <tr><td>Consulta</td><td>120</td></tr>
+    <tr><td>Pronto-socorro</td><td>250</td></tr>
+    <tr><td>Exame</td><td>80</td></tr>
+    <tr><td>Terapia</td><td>150</td></tr>
+    <tr><td>Internação</td><td>3.500</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  O coeficiente de variação do ruído foi reduzido de 25% (v1.0) para 20% (v2.0+) para evitar inflação excessiva da cauda direita, que seria agravada pelo alto custo unitário das internações.
+</div>
+
+<h2>8. Meses com utilização — modelo Beta-Binomial</h2>
+
+<p>Para gerar <code>meses_utilizacao</code> sem o acúmulo artificial no valor máximo que ocorreria com truncamento simples, utiliza-se um modelo Beta-Binomial:</p>
+
+<div class="math-block">
+$$p_i \;\sim\; \text{Beta}(a_i,\, b_i)$$
+
+$$M_i \;\sim\; \text{Binomial}(12,\, p_i) \quad \Rightarrow \quad M_i \;\in\; \{0, 1, \ldots, 12\}$$
+</div>
+
+<p>com os parâmetros de forma definidos em função do total de eventos:</p>
+
+<div class="math-block">
+$$a_i = \max\!\left(0{,}5,\;\frac{\texttt{total\_eventos}_i}{6}\right) \qquad b_i = \max\!\left(0{,}5,\;\frac{36 - \texttt{total\_eventos}_i}{6}\right)$$
+</div>
+
+<p>Essa parametrização garante que beneficiários com mais eventos tenham, em média, mais meses ativos, de forma suave e sem truncamento duro.</p>
+
+<h2>9. Variáveis derivadas e indicadores de alerta</h2>
+
+<p>Dois indicadores de alerta são construídos como variáveis binárias baseadas em percentis empíricos:</p>
+
+<div class="math-block">
+$$\texttt{flag\_alta\_util}_i = \mathbf{1}\!\left[\texttt{total\_eventos}_i \geq Q_{0{,}95}(\texttt{total\_eventos})\right]$$
+
+$$\texttt{flag\_baixa\_coe}_i = \mathbf{1}\!\left[\frac{\texttt{exames}_i}{\texttt{consultas}_i + 1} \geq Q_{0{,}95}\!\left(\text{razão}\right) \;\cup\; \frac{\texttt{ps}_i}{\texttt{consultas}_i + 1} \geq Q_{0{,}95}\!\left(\text{razão}\right)\right]$$
+</div>
+
+<p>O denominador $(\texttt{consultas}_i + 1)$ é uma correção de continuidade para evitar divisão por zero em beneficiários sem consultas registradas.</p>
+
+<h2>10. Calibração por indicadores ANS</h2>
+
+<p>Os interceptos $\alpha_{gk}$ foram ajustados iterativamente para que as médias populacionais simuladas $\hat{\mu}_k$ se aproximem dos indicadores oficiais do Painel de Indicadores da ANS:</p>
+
+<div class="math-block">
+$$\hat{\mu}_k = \frac{1}{n}\sum_{i=1}^n Y_{ik} \approx \mu_k^{\text{ANS}}$$
+</div>
+
+<p>A média populacional simulada é uma mistura ponderada das médias grupo-específicas:</p>
+
+<div class="math-block">
+$$\mathbb{E}[Y_k] = \sum_{g=1}^{4} \pi_g \cdot \mathbb{E}[Y_k \mid g] = \sum_{g=1}^{4} \pi_g \cdot (1-\psi_{gk}) \cdot \bar{\mu}_{gk}$$
+</div>
+
+<p>onde $\bar{\mu}_{gk}$ é a média das médias condicionais dentro do grupo $g$, e o fator $(1-\psi_{gk})$ se aplica apenas para os desfechos ZINB.</p>
+
+<table>
+  <thead><tr><th>Desfecho</th><th>Alvo ANS</th><th>Média simulada</th><th>Desvio %</th></tr></thead>
+  <tbody>
+    <tr><td>Consultas</td><td>4,15</td><td>~4,1</td><td>&lt; 2%</td></tr>
+    <tr><td>Pronto-socorro</td><td>1,34</td><td>~1,3</td><td>&lt; 3%</td></tr>
+    <tr><td>Exames</td><td>22,9</td><td>~22,5</td><td>&lt; 2%</td></tr>
+    <tr><td>Terapias</td><td>1,30</td><td>~1,3</td><td>&lt; 1%</td></tr>
+    <tr><td>Internações</td><td>0,182</td><td>~0,18</td><td>&lt; 2%</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-info">
+  <strong>Limitação importante:</strong> os coeficientes das covariáveis $\boldsymbol{\beta}_{gk}$ foram definidos com base em julgamento especializado e literatura de saúde suplementar, não estimados a partir de dados reais. Isso é adequado para dados sintéticos de estudo preliminar, mas deve ser explicitamente declarado nas limitações do pôster.
+</div>
+
+</div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-# SimSaúde · Documentação do Projeto de Simulação
+#Documentação do Projeto de Simulação e Aplicação de Mixture Model
 
 Site de documentação técnica para o estudo de simulação de dados de utilização em saúde suplementar.
 

@@ -5,7 +5,7 @@ Site de documentação técnica para o estudo de simulação de dados de utiliza
 ## Estrutura
 
 ```
-saude-sim-site/
+mixture-model-health-utilization/
 ├── index.html                  # Página inicial
 ├── css/
 │   └── main.css                # Estilos globais

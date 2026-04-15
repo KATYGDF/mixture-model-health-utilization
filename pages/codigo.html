@@ -5,78 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Código · SimSaúde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/r.min.js"></script>
-<style>
-  .code-toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    background: #1a1612; border-radius: 4px 4px 0 0;
-    padding: 0.7rem 1.2rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .code-toolbar span {
-    font-family: var(--ff-mono); font-size: 0.72rem;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: rgba(247,243,238,0.4);
-  }
-  .copy-btn {
-    font-family: var(--ff-mono); font-size: 0.72rem;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    background: var(--coral); color: #fff;
-    border: none; border-radius: 2px;
-    padding: 0.3em 0.9em; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .copy-btn:hover { background: var(--coral-lt); }
-  .copy-btn.copied { background: var(--teal); }
-  .hljs { border-radius: 0 0 4px 4px; padding: 1.5rem 1.8rem; font-size: 0.83rem; line-height: 1.6; }
-  .section-marker {
-    background: rgba(201,79,58,0.1); border-left: 3px solid var(--coral);
-    padding: 0.6rem 1rem; border-radius: 0 4px 4px 0;
-    font-family: var(--ff-mono); font-size: 0.78rem;
-    color: var(--coral); margin: 1.5rem 0 0.5rem;
-    letter-spacing: 0.04em;
-  }
-  .code-nav {
-    position: sticky; top: 56px; z-index: 10;
-    background: var(--cream); border-bottom: 1px solid var(--border);
-    padding: 0 2.5rem; overflow-x: auto;
-    display: flex; gap: 0;
-  }
-  .code-nav a {
-    font-family: var(--ff-mono); font-size: 0.72rem;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); text-decoration: none;
-    padding: 0.8rem 1rem; white-space: nowrap;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .code-nav a:hover { color: var(--coral); border-bottom-color: var(--coral); }
-</style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-brand">SimSaúde</div>
-  <ul class="nav-links">
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="metodologia.html">Metodologia</a></li>
     <li><a href="documentacao.html">Documentação</a></li>
     <li><a href="evolucao.html">Evolução</a></li>
     <li><a href="codigo.html" class="active">Código</a></li>
   </ul>
+  <div class="sidebar-footer">Katy · 2025<br>KGF Consultoria / Sigmma Health</div>
 </nav>
 
-<div class="page-header">
-  <div class="container">
-    <div class="page-tag">Código-fonte R · v3.0</div>
-    <h1>Script de simulação</h1>
-    <p>Versão final calibrada por indicadores ANS. Requer R ≥ 4.1 e os pacotes <code>dplyr</code>, <code>ggplot2</code> e <code>scales</code>.</p>
-  </div>
-</div>
+<main class="main">
+<div class="prose">
+
+<h1>Código</h1>
+<p class="lead">Script R · v3.0</p>
 
 <nav class="code-nav">
   <a href="#sec-config">Config</a>
@@ -91,10 +45,7 @@
   <a href="#sec-export">Exportar</a>
 </nav>
 
-<div class="page-body">
-<div class="prose">
-
-<p>O script completo está disponível abaixo, dividido em seções navegáveis. Cada bloco corresponde a uma seção da <a href="documentacao.html">documentação técnica</a>.</p>
+<p>O script completo está disponível abaixo, dividido em seções navegáveis. Cada bloco corresponde a uma seção da <a href="documentacao.html">documentação técnica</a>. Requer R ≥ 4.1 e os pacotes <code>dplyr</code>, <code>ggplot2</code> e <code>scales</code>.</p>
 
 <div id="sec-config" class="section-marker">§ 1–2 · Configuração e tamanho da amostra</div>
 <div class="code-block-wrap">
@@ -404,7 +355,7 @@ flags_long &lt;- dados_sim %&gt;%
 ggplot(flags_long, aes(x = grupo_latente, y = proporcao, fill = tipo_flag)) +
   geom_col(position = "dodge") +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
-  theme_minimal() + theme(axis.text.x = element_text(angle=15, hjust=1))
+  theme_minimal() + theme(axis.text.x = element_text(angle = 15, hjust = 1))
 
 # G7: Razao PS/consultas por grupo
 ggplot(dados_sim, aes(x = grupo_latente, y = razao_ps_consultas,
@@ -424,7 +375,7 @@ cat("Arquivo salvo. Dimensoes:", nrow(dados_sim), "x", ncol(dados_sim), "\n")</c
 </div>
 
 </div>
-</div>
+</main>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());
@@ -438,12 +389,6 @@ cat("Arquivo salvo. Dimensoes:", nrow(dados_sim), "x", ncol(dados_sim), "\n")</c
     });
   }
 </script>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
-  </div>
-</footer>
 
 </body>
 </html>

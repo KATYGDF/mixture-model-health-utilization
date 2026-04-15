@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evolução · SimSaúde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
 <script>
   MathJax = { tex: { inlineMath: [['$','$']] } };
@@ -14,27 +14,26 @@
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-brand">SimSaúde</div>
-  <ul class="nav-links">
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="metodologia.html">Metodologia</a></li>
     <li><a href="documentacao.html">Documentação</a></li>
     <li><a href="evolucao.html" class="active">Evolução</a></li>
     <li><a href="codigo.html">Código</a></li>
   </ul>
+  <div class="sidebar-footer">Katy · 2025<br>KGF Consultoria / Sigmma Health</div>
 </nav>
 
-<div class="page-header">
-  <div class="container">
-    <div class="page-tag">Histórico do projeto</div>
-    <h1>Evolução do modelo<br>de simulação</h1>
-    <p>Do protótipo inicial com limitações conhecidas até a versão calibrada por indicadores ANS.</p>
-  </div>
-</div>
-
-<div class="page-body">
+<main class="main">
 <div class="prose">
+
+<h1>Evolução do modelo</h1>
+<p class="lead">Histórico do projeto</p>
+
+<p>Do protótipo inicial com limitações conhecidas até a versão calibrada por indicadores ANS.</p>
 
 <div class="timeline-full">
 
@@ -42,7 +41,7 @@
   <div class="tl-item">
     <div class="tl-dot tl-dot--v1"></div>
     <div class="tl-meta">Versão 1.0 · Protótipo inicial</div>
-    <h3 class="tl-title">Estrutura base do modelo</h3>
+    <div class="tl-title">Estrutura base do modelo</div>
     <div class="tl-body">
       <p>Primeira versão funcional do script de simulação. Estabeleceu a arquitetura fundamental: mistura de grupos latentes, log-link para a média condicional, e distribuição Binomial Negativa como distribuição de contagem.</p>
       <p>Os dados gerados tinham estrutura estatística correta, mas os parâmetros ainda não haviam sido calibrados para refletir indicadores reais da saúde suplementar brasileira.</p>
@@ -56,9 +55,9 @@
       <li>Três gráficos ggplot2 iniciais</li>
     </ul>
 
-    <div style="margin-top:1.5rem">
-      <strong style="font-family:var(--ff-mono);font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;">Limitações identificadas</strong>
-      <ul style="margin-top:0.6rem;font-size:0.9rem;color:var(--muted)">
+    <div style="margin-top:1.2rem">
+      <strong style="font-family:var(--ff-mono);font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Limitações identificadas</strong>
+      <ul style="margin-top:0.5rem;font-size:0.9rem;color:var(--muted)">
         <li>Geração de idades com <code>sapply</code> — lento para $n$ grande</li>
         <li>Coeficientes $\boldsymbol{\beta}_{gk} = \boldsymbol{\beta}_k$ — idênticos para todos os grupos, sem heterogeneidade real de resposta às covariáveis</li>
         <li><code>meses_utilizacao</code> gerado via <code>pmin(12, rpois(...))</code> — acúmulo artificial no valor máximo 12</li>
@@ -73,7 +72,7 @@
   <div class="tl-item">
     <div class="tl-dot tl-dot--v2"></div>
     <div class="tl-meta">Versão 2.0 · Revisão metodológica</div>
-    <h3 class="tl-title">Correções estruturais e modelagem mais realista</h3>
+    <div class="tl-title">Correções estruturais e modelagem mais realista</div>
     <div class="tl-body">
       <p>Versão focada em corrigir os pontos fracos identificados na v1.0. As mudanças mais relevantes foram a introdução dos coeficientes grupo-específicos e o modelo Beta-Binomial para meses com utilização.</p>
       <p>Os coeficientes grupo-específicos permitem que o mesmo efeito de coparticipação, por exemplo, atue de forma diferente em cada grupo — o G3 (agudo/hospitalar) é menos sensível ao preço do que o G1 (baixo uso), o que reflete comportamento real de pacientes em condições agudas.</p>
@@ -95,7 +94,7 @@
   <div class="tl-item">
     <div class="tl-dot tl-dot--v3"></div>
     <div class="tl-meta">Versão 3.0 · Atual · Calibração ANS</div>
-    <h3 class="tl-title">Calibração por indicadores oficiais e validação expandida</h3>
+    <div class="tl-title">Calibração por indicadores oficiais e validação expandida</div>
     <div class="tl-body">
       <p>Versão definitiva para o pôster científico. Os interceptos $\alpha_{gk}$ foram recalibrados iterativamente para que as médias populacionais simuladas se aproximem dos indicadores publicados no Painel de Indicadores da ANS.</p>
       <p>O processo de calibração envolveu comparar as médias simuladas com os alvos após cada ajuste nos interceptos, convergindo para desvios percentuais inferiores a 3% em todos os desfechos.</p>
@@ -113,7 +112,7 @@
       <li>Path de exportação definido para o diretório do projeto de doutorado</li>
     </ul>
 
-    <div class="callout" style="margin-top:1.5rem">
+    <div class="callout" style="margin-top:1.2rem">
       <strong>Status:</strong> versão validada e pronta para uso no pôster. Nenhuma alteração de parâmetros é esperada; mudanças futuras seriam apenas para extensões do modelo (ex: modelo longitudinal, análise de clustering não supervisionado).
     </div>
   </div>
@@ -156,13 +155,7 @@
 </ul>
 
 </div>
-</div>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
-  </div>
-</footer>
+</main>
 
 </body>
 </html>

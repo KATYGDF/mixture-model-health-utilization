@@ -5,61 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Documentação · SimSaúde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
 <script>
   MathJax = { tex: { inlineMath: [['$','$']] } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-<style>
-  .step-list { counter-reset: step; list-style: none; margin: 0; padding: 0; }
-  .step-list > li {
-    counter-increment: step;
-    position: relative;
-    padding: 2rem 0 2rem 4.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .step-list > li::before {
-    content: counter(step, decimal-leading-zero);
-    position: absolute; left: 0; top: 2rem;
-    font-family: var(--ff-mono);
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: var(--coral);
-    line-height: 1;
-  }
-  .step-list > li:last-child { border-bottom: none; }
-  .step-title {
-    font-family: var(--ff-display);
-    font-size: 1.2rem;
-    margin-bottom: 0.6rem;
-    color: var(--ink);
-  }
-</style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-brand">SimSaúde</div>
-  <ul class="nav-links">
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="metodologia.html">Metodologia</a></li>
     <li><a href="documentacao.html" class="active">Documentação</a></li>
     <li><a href="evolucao.html">Evolução</a></li>
     <li><a href="codigo.html">Código</a></li>
   </ul>
+  <div class="sidebar-footer">Katy · 2025<br>KGF Consultoria / Sigmma Health</div>
 </nav>
 
-<div class="page-header">
-  <div class="container">
-    <div class="page-tag">Documentação técnica</div>
-    <h1>Passo a passo<br>da simulação</h1>
-    <p>Descrição detalhada de cada etapa do script R, com raciocínio por trás de cada decisão de modelagem.</p>
-  </div>
-</div>
-
-<div class="page-body">
+<main class="main">
 <div class="prose">
+
+<h1>Documentação</h1>
+<p class="lead">Passo a passo da simulação</p>
 
 <div class="callout callout-info">
   Esta documentação descreve a <strong>versão 3.0</strong> do script — a versão final calibrada por indicadores ANS. Para o histórico de mudanças entre versões, veja a página <a href="evolucao.html">Evolução</a>.
@@ -115,14 +87,14 @@ idade[faixa_idx == 3] &lt;- sample(60:85, sum(faixa_idx==3), replace=TRUE)</code
 </li>
 
 <li>
-  <div class="step-title">Interceptos por grupo (seção 4)</div>
+  <div class="step-title">Interceptos por grupo</div>
   <p>Os interceptos $\alpha_{gk}$ definem a <em>média-base</em> de cada desfecho para cada grupo, no log da escala. Foram calibrados iterativamente para aproximar os alvos ANS:</p>
   <pre><code>alpha_consultas &lt;- log(c(2.5, 8.0, 4.0, 1.5)) - 0.588</code></pre>
   <p>O ajuste aditivo (ex: <code>- 0.588</code>) é um deslocamento global aplicado após o <code>log()</code> para compensar o efeito médio das covariáveis na média populacional.</p>
 </li>
 
 <li>
-  <div class="step-title">Matrizes de coeficientes grupo-específicos (seção 5)</div>
+  <div class="step-title">Matrizes de coeficientes grupo-específicos</div>
   <p>Cada desfecho possui uma matriz $4 \times 6$ de coeficientes, onde as linhas correspondem aos grupos e as colunas às covariáveis:</p>
   <pre><code>betas$consultas &lt;- matrix(
   c(# idade10  sexo   tempo  copart  regiao2  regiao3
@@ -260,13 +232,7 @@ idade[faixa_idx == 3] &lt;- sample(60:85, sum(faixa_idx==3), replace=TRUE)</code
 </table>
 
 </div>
-</div>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-bottom">SimSaúde · Katy · KGF Consultoria / Sigmma Health · 2025</div>
-  </div>
-</footer>
+</main>
 
 </body>
 </html>

@@ -5,217 +5,141 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SimSaúde · Simulação de Utilização em Saúde Suplementar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-brand">SimSaúde</div>
-  <ul class="nav-links">
+<nav class="sidebar">
+  <a href="index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
     <li><a href="index.html" class="active">Início</a></li>
     <li><a href="pages/metodologia.html">Metodologia</a></li>
     <li><a href="pages/documentacao.html">Documentação</a></li>
     <li><a href="pages/evolucao.html">Evolução</a></li>
     <li><a href="pages/codigo.html">Código</a></li>
   </ul>
+  <div class="sidebar-footer">Katy · 2025<br>KGF Consultoria / Sigmma Health</div>
 </nav>
 
-<header class="hero">
-  <div class="hero-tag">Estudo preliminar · Pôster científico</div>
-  <h1 class="hero-title">
-    Simulação de Dados<br>
-    <em>de Utilização em</em><br>
-    Saúde Suplementar
-  </h1>
-  <p class="hero-subtitle">
-    Geração de dados sintéticos com grupos latentes, modelos de contagem
-    inflacionados de zeros e calibração por indicadores oficiais da ANS.
-  </p>
-  <div class="hero-cta">
-    <a href="pages/metodologia.html" class="btn-primary">Ver metodologia</a>
-    <a href="pages/codigo.html" class="btn-secondary">Ver código R</a>
-  </div>
-  <div class="hero-decoration"></div>
-</header>
+<main class="main">
+<div class="prose">
 
-<section class="overview">
-  <div class="container">
-    <div class="overview-grid">
+<h1>Simulação de Dados de Utilização em Saúde Suplementar</h1>
+<p class="lead">Estudo preliminar · Pôster científico · v3.0</p>
 
-      <div class="card card--highlight">
-        <div class="card-number">5.000</div>
-        <div class="card-label">beneficiários simulados</div>
-        <div class="card-desc">Amostra com estrutura demográfica próxima à da carteira média de operadoras brasileiras</div>
-      </div>
+<p>
+Este projeto gera uma amostra sintética de beneficiários de planos de saúde usando um
+<strong>modelo de mistura finita</strong> com grupos latentes de utilização.
+Os parâmetros foram calibrados para reproduzir indicadores oficiais do
+<strong>Painel de Indicadores da ANS</strong>.
+</p>
 
-      <div class="card">
-        <div class="card-number">4</div>
-        <div class="card-label">grupos latentes</div>
-        <div class="card-desc">Baixo uso · Ambulatorial coordenado · Agudo/hospitalar · Padrão atípico</div>
-      </div>
+<p>Nenhum dado real de beneficiários foi utilizado — todos os dados são inteiramente simulados.</p>
 
-      <div class="card">
-        <div class="card-number">5</div>
-        <div class="card-label">desfechos de contagem</div>
-        <div class="card-desc">Consultas · Pronto-socorro · Exames · Terapias · Internações</div>
-      </div>
+<h2>O modelo em resumo</h2>
 
-      <div class="card">
-        <div class="card-number">ANS</div>
-        <div class="card-label">referência de calibração</div>
-        <div class="card-desc">Parâmetros ajustados para reproduzir indicadores oficiais do Painel de Indicadores da ANS</div>
-      </div>
+<table>
+  <tbody>
+    <tr>
+      <td><strong>Amostra</strong></td>
+      <td>5.000 beneficiários simulados</td>
+    </tr>
+    <tr>
+      <td><strong>Grupos latentes</strong></td>
+      <td>4 grupos com proporções fixas na população</td>
+    </tr>
+    <tr>
+      <td><strong>Desfechos de contagem</strong></td>
+      <td>Consultas · Pronto-socorro · Exames · Terapias · Internações</td>
+    </tr>
+    <tr>
+      <td><strong>Distribuições</strong></td>
+      <td>Binomial Negativa NB₂ / ZINB / Beta-Binomial</td>
+    </tr>
+    <tr>
+      <td><strong>Calibração</strong></td>
+      <td>Indicadores ANS — desvio &lt; 3% em todos os desfechos</td>
+    </tr>
+    <tr>
+      <td><strong>Implementação</strong></td>
+      <td>R · <code>dplyr</code> · <code>ggplot2</code> · <code>MASS</code></td>
+    </tr>
+  </tbody>
+</table>
 
-    </div>
-  </div>
-</section>
+<h2>Os quatro grupos latentes</h2>
 
-<section class="features">
-  <div class="container">
-    <h2 class="section-title">Destaques do modelo</h2>
-    <div class="features-grid">
+<p>
+Cada beneficiário pertence a exatamente um grupo latente $g \in \{1, 2, 3, 4\}$,
+com proporções fixas $\boldsymbol{\pi} = (0{,}50,\; 0{,}25,\; 0{,}20,\; 0{,}05)$.
+</p>
 
-      <div class="feature">
-        <div class="feature-icon">𝒩𝔹</div>
-        <h3>Binomial Negativa</h3>
-        <p>Todos os desfechos são gerados via distribuição Binomial Negativa (NB₂), adequada para dados de contagem com superdispersão, característica típica de dados de saúde.</p>
-      </div>
+<table>
+  <thead>
+    <tr>
+      <th>Grupo</th>
+      <th>Nome</th>
+      <th>Proporção</th>
+      <th>Perfil de utilização</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>G1</code></td>
+      <td>Baixo Uso</td>
+      <td>50%</td>
+      <td>~3 consultas/ano · ~2 exames · &lt;5% internação</td>
+    </tr>
+    <tr>
+      <td><code>G2</code></td>
+      <td>Ambulatorial Coordenado</td>
+      <td>25%</td>
+      <td>~8 consultas/ano · ~10 exames · alta taxa de terapias</td>
+    </tr>
+    <tr>
+      <td><code>G3</code></td>
+      <td>Agudo / Hospitalar</td>
+      <td>20%</td>
+      <td>~5 consultas/ano · ~3 PS/ano · ~80% com internação</td>
+    </tr>
+    <tr>
+      <td><code>G4</code></td>
+      <td>Padrão Atípico</td>
+      <td>5%</td>
+      <td>~4 PS/ano · ~18 exames · razão exame/consulta ↑↑</td>
+    </tr>
+  </tbody>
+</table>
 
-      <div class="feature">
-        <div class="feature-icon">𝟎⁺</div>
-        <h3>Inflação de Zeros</h3>
-        <p>Terapias e internações usam modelo ZINB — Zero-Inflated Negative Binomial — com probabilidades de zero estrutural diferentes por grupo latente.</p>
-      </div>
+<h2>Conteúdo desta documentação</h2>
 
-      <div class="feature">
-        <div class="feature-icon">β<sub>gk</sub></div>
-        <h3>Coeficientes Grupo-Específicos</h3>
-        <p>Cada grupo latente possui sua própria matriz de coeficientes de covariáveis, permitindo heterogeneidade real nos efeitos de idade, sexo, coparticipação e região.</p>
-      </div>
+<ul>
+  <li>
+    <a href="pages/metodologia.html"><strong>Metodologia</strong></a> —
+    Fundamentos matemáticos: distribuição NB₂, modelo ZINB, Beta-Binomial
+    para meses, log-link com coeficientes grupo-específicos, calibração ANS.
+  </li>
+  <li>
+    <a href="pages/documentacao.html"><strong>Documentação</strong></a> —
+    Passo a passo das 16 etapas do script R, com o raciocínio por trás
+    de cada decisão de modelagem.
+  </li>
+  <li>
+    <a href="pages/evolucao.html"><strong>Evolução</strong></a> —
+    Histórico das versões 1.0, 2.0 e 3.0: limitações identificadas e
+    correções aplicadas em cada iteração.
+  </li>
+  <li>
+    <a href="pages/codigo.html"><strong>Código</strong></a> —
+    Script R completo, anotado e pronto para executar.
+    Requer R ≥ 4.1 e os pacotes <code>dplyr</code>, <code>ggplot2</code> e <code>scales</code>.
+  </li>
+</ul>
 
-      <div class="feature">
-        <div class="feature-icon">β<sub>β</sub></div>
-        <h3>Beta-Binomial para Meses</h3>
-        <p>A variável <em>meses com utilização</em> é gerada via modelo Beta-Binomial, evitando o acúmulo artificial no valor máximo que ocorreria com simples truncamento.</p>
-      </div>
-
-      <div class="feature">
-        <div class="feature-icon">∑</div>
-        <h3>Gasto Simulado</h3>
-        <p>Gasto total como combinação linear de eventos com custos médios por tipo, multiplicada por ruído log-normal (CV ≈ 20%), gerando distribuição assimétrica realista.</p>
-      </div>
-
-      <div class="feature">
-        <div class="feature-icon">✓</div>
-        <h3>Validação vs. ANS</h3>
-        <p>Parâmetros calibrados iterativamente para que as médias populacionais simuladas se aproximem dos indicadores oficiais do Painel de Indicadores da ANS.</p>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<section class="groups-section">
-  <div class="container">
-    <h2 class="section-title">Os quatro grupos latentes</h2>
-    <p class="section-desc">A mistura de grupos é o núcleo do modelo. Cada beneficiário pertence a exatamente um grupo, com proporções fixas na população simulada.</p>
-    <div class="groups-grid">
-
-      <div class="group-card group--g1">
-        <div class="group-badge">G1 · 50%</div>
-        <h3>Baixo Uso</h3>
-        <p>Beneficiários com utilização esporádica. Predomina acesso a consultas eletivas e exames de rotina. Baixíssima frequência de internações.</p>
-        <div class="group-stats">
-          <span>~3 consultas/ano</span>
-          <span>~2 exames/ano</span>
-          <span>~5% internação</span>
-        </div>
-      </div>
-
-      <div class="group-card group--g2">
-        <div class="group-badge">G2 · 25%</div>
-        <h3>Ambulatorial Coordenado</h3>
-        <p>Usuários frequentes do sistema ambulatorial com padrão de uso coerente: alta relação exame/consulta, uso de terapias contínuas.</p>
-        <div class="group-stats">
-          <span>~8 consultas/ano</span>
-          <span>~10 exames/ano</span>
-          <span>~10% internação</span>
-        </div>
-      </div>
-
-      <div class="group-card group--g3">
-        <div class="group-badge">G3 · 20%</div>
-        <h3>Agudo / Hospitalar</h3>
-        <p>Perfil caracterizado por eventos de alta complexidade. Elevada frequência de pronto-socorro e internações, típico de condições crônicas descompensadas.</p>
-        <div class="group-stats">
-          <span>~5 consultas/ano</span>
-          <span>~3 PS/ano</span>
-          <span>~80% internação</span>
-        </div>
-      </div>
-
-      <div class="group-card group--g4">
-        <div class="group-badge">G4 · 5%</div>
-        <h3>Padrão Atípico</h3>
-        <p>Grupo com sinais de inconsistência: alto volume de exames e PS desproporcionais às consultas, sugestivo de uso fragmentado ou induzido.</p>
-        <div class="group-stats">
-          <span>~4 PS/ano</span>
-          <span>~18 exames/ano</span>
-          <span>Razão exame/consulta ↑↑</span>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<section class="timeline-preview">
-  <div class="container">
-    <h2 class="section-title">Evolução do projeto</h2>
-    <div class="timeline-mini">
-      <div class="tm-item">
-        <div class="tm-dot"></div>
-        <div class="tm-content">
-          <strong>v1.0</strong> — Versão inicial com coeficientes iguais entre grupos e <code>sapply</code> na geração de idades
-        </div>
-      </div>
-      <div class="tm-item">
-        <div class="tm-dot"></div>
-        <div class="tm-content">
-          <strong>v2.0</strong> — Geração vetorizada, coeficientes grupo-específicos, Beta-Binomial para meses, cap de percentil para prestadores
-        </div>
-      </div>
-      <div class="tm-item tm-item--active">
-        <div class="tm-dot tm-dot--active"></div>
-        <div class="tm-content">
-          <strong>v3.0 · atual</strong> — Calibração por indicadores ANS, validação de médias teóricas (μ), suavização dos interceptos, gráfico de flags
-        </div>
-      </div>
-    </div>
-    <a href="pages/evolucao.html" class="btn-secondary" style="margin-top:2rem;display:inline-block">Ver histórico completo →</a>
-  </div>
-</section>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-grid">
-      <div>
-        <strong>SimSaúde</strong>
-        <p>Estudo preliminar para pôster científico.<br>Dados inteiramente simulados — nenhum dado real de beneficiários foi utilizado.</p>
-      </div>
-      <div>
-        <strong>Referência</strong>
-        <p>Parâmetros populacionais: Painel de Indicadores da ANS<br>Metodologia: Negative Binomial / ZINB / Beta-Binomial</p>
-      </div>
-      <div>
-        <strong>Tecnologias</strong>
-        <p>R · dplyr · ggplot2 · MASS<br>HTML · CSS · MathJax</p>
-      </div>
-    </div>
-    <div class="footer-bottom">Katy · KGF Consultoria / Sigmma Health · 2025</div>
-  </div>
-</footer>
+</div>
+</main>
 
 </body>
 </html>

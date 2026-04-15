@@ -25,7 +25,7 @@ mixture-model-health-utilization/
 5. Escolha a branch `main` e pasta `/ (root)`
 6. Clique em **Save**
 
-O site ficará disponível em `https://SEU_USUARIO.github.io/simsaude-docs/`
+O site ficará disponível em `https://KATYGDF.github.io/simsaude-docs/`
 
 ## Tecnologias
 

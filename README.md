@@ -92,18 +92,16 @@ Para cada beneficiário $i$:
    - $\text{tempo}_{ni}, \text{copart}_i, \text{regiao}_i$ independentes
 
 3. **Gerar contagens de serviços** (Cap. 4 — Mixture of Generalized Linear Models for Count Data):
-   
-   **Log-link com intercepto e covariáveis grupo-específicas**:
-   $$\log(\mu_{igk}) = \alpha_{gk} + \mathbf{x}_i^\top \boldsymbol{\beta}_{gk}$$
-   
+
+   **Log-link com intercepto e covariáveis grupo-específicas**: log(μ<sub>igk</sub>) = α<sub>gk</sub> + x<sub>i</sub><sup>T</sup> β<sub>gk</sub>
+
    **Distribuições por tipo de desfecho**:
-   $$Y_{ik} \sim \begin{cases} 
-   \text{Poisson ou NB}_2(\mu_{igk}, \theta_k) & \text{consultas, PS, exames (Sec. 4.2)} \\
-   \text{ZINB}(\mu_{igk}, \theta_k, \psi_{gk}) & \text{terapias, internações (Sec. 4.4)}
-   \end{cases}$$
-   
-   - *Ref*: Cap. 4.2 — Poisson Mixture Regression Model
-   - *Ref*: Cap. 4.4 — Zero-Inflated Negative Binomial Regression Models
+   - Para consultas, PS e exames: Y<sub>igk</sub> ~ Poisson(μ<sub>igk</sub>) ou Y<sub>igk</sub> ~ NB₂(μ<sub>igk</sub>, θ<sub>k</sub>)
+   - Para terapias e internações: Y<sub>igk</sub> ~ ZINB(μ<sub>igk</sub>, θ<sub>k</sub>, ψ<sub>gk</sub>)
+
+   **Referências**:
+   - Cap. 4.2 — *Poisson Mixture Regression Model*
+   - Cap. 4.4 — *Zero-Inflated Negative Binomial Regression Models*
 
 ### Objetivos de Análise 
 

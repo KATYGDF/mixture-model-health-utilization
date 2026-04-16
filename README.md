@@ -121,7 +121,7 @@ Reponder as seguintes perguntas científicas:
 - **Estrutura**: 4 grupos com assinaturas clínicas distintas
 - **Reprodutibilidade**: Resultados idênticos com mesma semente aleatória
 
-### Fase 2 (Pôster) ⏳
+### Fase 2 
 - **FMNB**: Recuperação de $\alpha_{gk}$ e $\boldsymbol{\beta}_{gk}$ com pureza > 85%
 - **LCA**: Identificação de ~4 classes com entropia baixa (< 0.5)
 - **GMM**: Separação clara em espaço transformado, com 4 componentes selecionados via BIC

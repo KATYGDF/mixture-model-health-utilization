@@ -27,7 +27,7 @@
     <li><a href="evolucao.html">Evolução</a></li>
     <li><a href="simulacao.html">Simulação</a></li>
   </ul>
-  <div class="sidebar-footer">Katy · 2025<br>KGF Consultoria / Sigmma Health</div>
+  <div class="sidebar-footer">Katy · 2026</div>
 </nav>
 
 <main class="main">
@@ -116,7 +116,7 @@ $$\mu_{igk} = \exp\!\left(\alpha_{gk} + \boldsymbol{\beta}_{gk}^\top \mathbf{x}_
 <ul>
   <li>$\alpha_{gk}$ é o intercepto específico para o grupo $g$ e desfecho $k$ (equivale ao log da média-base)</li>
   <li>$\boldsymbol{\beta}_{gk} \in \mathbb{R}^6$ é o vetor de coeficientes específico para o grupo $g$ e desfecho $k$</li>
-  <li>$\mathbf{x}_i = (\texttt{idade10}_i,\; \texttt{sexo}_i,\; \texttt{tempo\_anos}_i,\; \texttt{copart}_i,\; \texttt{regiao2}_i,\; \texttt{regiao3}_i)^\top$</li>
+  <li>x<sub>i</sub> = (idade10<sub>i</sub>, sexo<sub>i</sub>, tempo_anos<sub>i</sub>, copart<sub>i</sub>, regiao2<sub>i</sub>, regiao3<sub>i</sub>)<sup>T</sup></li>
 </ul>
 
 <div class="callout callout-info">
@@ -192,7 +192,10 @@ $$M_i \;\sim\; \text{Binomial}(12,\, p_i) \quad \Rightarrow \quad M_i \;\in\; \{
 <p>com os parâmetros de forma definidos em função do total de eventos:</p>
 
 <div class="math-block">
-$$a_i = \max\!\left(0{,}5,\;\frac{\texttt{total\_eventos}_i}{6}\right) \qquad b_i = \max\!\left(0{,}5,\;\frac{36 - \texttt{total\_eventos}_i}{6}\right)$$
+a<sub>i</sub> = max(0.5, total_eventos<sub>i</sub> / 6)
+</div>
+<div class="math-block">
+b<sub>i</sub> = max(0.5, (36 - total_eventos<sub>i</sub>) / 6)
 </div>
 
 <p>Essa parametrização garante que beneficiários com mais eventos tenham, em média, mais meses ativos, de forma suave e sem truncamento duro.</p>
@@ -202,9 +205,11 @@ $$a_i = \max\!\left(0{,}5,\;\frac{\texttt{total\_eventos}_i}{6}\right) \qquad b_
 <p>Dois indicadores de alerta são construídos como variáveis binárias baseadas em percentis empíricos:</p>
 
 <div class="math-block">
-$$\texttt{flag\_alta\_util}_i = \mathbf{1}\!\left[\texttt{total\_eventos}_i \geq Q_{0{,}95}(\texttt{total\_eventos})\right]$$
+flag_alta_util<sub>i</sub> = 1[total_eventos<sub>i</sub> ≥ Q<sub>0.95</sub>(total_eventos)]
+</div>
 
-$$\texttt{flag\_baixa\_coe}_i = \mathbf{1}\!\left[\frac{\texttt{exames}_i}{\texttt{consultas}_i + 1} \geq Q_{0{,}95}\!\left(\text{razão}\right) \;\cup\; \frac{\texttt{ps}_i}{\texttt{consultas}_i + 1} \geq Q_{0{,}95}\!\left(\text{razão}\right)\right]$$
+<div class="math-block">
+flag_baixa_coe<sub>i</sub> = 1[ (exames<sub>i</sub> / (consultas<sub>i</sub> + 1) ≥ Q<sub>0.95</sub>(razão)) ∪ (ps<sub>i</sub> / (consultas<sub>i</sub> + 1) ≥ Q<sub>0.95</sub>(razão)) ]
 </div>
 
 <p>O denominador $(\texttt{consultas}_i + 1)$ é uma correção de continuidade para evitar divisão por zero em beneficiários sem consultas registradas.</p>

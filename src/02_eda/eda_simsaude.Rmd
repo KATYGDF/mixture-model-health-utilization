@@ -19,6 +19,8 @@ output:
     code_folding: hide
     fig_width: 10
     fig_height: 6
+    includes:
+      before_body: _sidebar.html
 ---
 
 ```{r setup, include=FALSE}

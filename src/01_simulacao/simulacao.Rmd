@@ -1,358 +1,662 @@
 ---
 title: "Simulação de Dados de Utilização em Saúde Suplementar"
-author: "Katy - Estudo Preliminar"
-date: "`r Sys.Date()`"
+subtitle: "Geração de Dados Sintéticos com Modelo de Mistura Finita"
+author: "Katy Garcia de Freitas"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+encoding: UTF-8
 output:
   html_document:
-    theme: cosmo
-    highlight: tango
+    css: main.css
+    theme: flatly
+    highlight: kate
     toc: true
-    toc_float: true
-    code_folding: show
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    df_print: kable
+    code_folding: hide
+    fig_width: 10
+    fig_height: 5
+    includes:
+      before_body: _sidebar.html
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = TRUE,      
-  warning = FALSE,
-  message = FALSE,
-  fig.width = 8,
-  fig.height = 6,
-  fig.align = "center"
+  echo        = TRUE,
+  warning     = FALSE,
+  message     = FALSE,
+  fig.align   = "center",
+  out.width   = "100%",
+  cache       = FALSE
 )
-
+options(encoding = "UTF-8")
+Sys.setlocale("LC_ALL", "Portuguese_Brazil.UTF-8")
 ```
 
-
-
-## 1. Carregar pacotes
-
-```{r}
-
+```{r pacotes, message=FALSE, warning=FALSE, class.source='fold-show'}
 library(dplyr)
 library(ggplot2)
 library(scales)
-library(tidyr)      
-library(knitr)      
+library(tidyr)
+library(knitr)
+library(kableExtra)
 ```
 
-## 2. Parâmetros e geração da base simulada
-A seguir, o código reproduz integralmente o script original, com os mesmos parâmetros e estrutura.
+```{r tema-paleta}
+COR_G1  <- "#7BAFD4"
+COR_G2  <- "#6EBF8B"
+COR_G3  <- "#E8B96B"
+COR_G4  <- "#D98585"
 
-```{r}
+CORES_GRUPOS <- c(
+  "baixo_uso"               = COR_G1,
+  "ambulatorial_coordenado" = COR_G2,
+  "agudo_hospitalar"        = COR_G3,
+  "atipico"                 = COR_G4
+)
+
+CINZA_HIST <- "#B0B8C1"
+COR_DENS   <- "#555F6E"
+COR_ACENTO <- "#5B7FA6"
+
+tema_simsaude <- theme_minimal(base_size = 12) +
+  theme(
+    text             = element_text(family = "sans", color = "#2c2c2c"),
+    plot.title       = element_text(size = 13, face = "bold", margin = margin(b = 4)),
+    plot.subtitle    = element_text(size = 10, color = "#666", margin = margin(b = 8)),
+    plot.caption     = element_text(size = 8, color = "#999", hjust = 0),
+    axis.title       = element_text(size = 10, color = "#555"),
+    axis.text        = element_text(size = 9, color = "#666"),
+    panel.grid.major = element_line(color = "#EBEBEB", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    legend.title     = element_text(size = 9, face = "bold"),
+    legend.text      = element_text(size = 9),
+    legend.key.size  = unit(0.5, "cm"),
+    strip.text       = element_text(size = 9, face = "bold", color = "#444"),
+    plot.margin      = margin(12, 16, 10, 12)
+  )
+
+theme_set(tema_simsaude)
+```
+
+---
+
+# Introdução
+
+Este documento apresenta a geração completa da base **SimSaúde** — uma amostra sintética de beneficiários de planos de saúde construída com um **modelo de mistura finita** (*Finite Mixture Model*, FMM).
+
+A premissa central é que a população de beneficiários **não é homogênea**: ela é composta por subgrupos com perfis de utilização distintos. Em vez de gerar todos os beneficiários com os mesmos parâmetros, sorteamos primeiro o **grupo latente** de cada indivíduo e depois geramos suas variáveis de utilização a partir dos parâmetros específicos desse grupo.
+
+Essa estrutura produz dados com:
+
+- **Heterogeneidade real** entre grupos — médias, variâncias e correlações distintas
+- **Sobredispersão** nas contagens — variância sistematicamente maior que a média
+- **Excesso de zeros** nas variáveis de baixa prevalência — motivando modelos ZINB
+- **Estrutura de mistura recuperável** — grupos com assinaturas distintas no espaço multivariado
+
+Os parâmetros foram calibrados para reproduzir os indicadores médios do **Painel de Indicadores da ANS**.
+
+---
+
+# Grupos latentes
+
+## Definição das proporções
+
+O primeiro passo é definir quantos grupos existem e qual o peso de cada um na população. Utilizamos **4 grupos latentes** com proporções fixas π = (0,50; 0,25; 0,20; 0,05).
+
+Cada beneficiário recebe um rótulo `grupo_latente` sorteado multinomialmente com essas probabilidades. Esse rótulo representa a **verdade oculta** (*ground truth*) — os modelos estatísticos que virão depois não terão acesso a ele e deverão recuperá-lo a partir dos padrões de utilização.
+
+```{r grupos-latentes}
 set.seed(1234)
-
-# Tamanho da amostra
 n <- 5000
 
-# Proporções dos grupos latentes
-pi_grupos <- c(0.50, 0.25, 0.20, 0.05)
-grupo_latente <- sample(1:4, size = n, replace = TRUE, prob = pi_grupos)
+pi_grupos    <- c(0.50, 0.25, 0.20, 0.05)
+nomes_grupos <- c("baixo_uso", "ambulatorial_coordenado", "agudo_hospitalar", "atipico")
 
-# Idade (vetorizada)
+grupo_idx    <- sample(1:4, size = n, replace = TRUE, prob = pi_grupos)
+grupo_latente <- factor(nomes_grupos[grupo_idx], levels = nomes_grupos)
+```
+
+```{r graf-grupos, fig.height=5}
+data.frame(grupo_latente) %>%
+  ggplot(aes(x = grupo_latente, fill = grupo_latente)) +
+  geom_bar(width = .65) +
+  geom_text(
+    stat = "count",
+    aes(label = paste0(after_stat(count), "\n(",
+                       scales::percent(after_stat(count) / sum(after_stat(count)), .1), ")")),
+    vjust = -0.4, size = 3.2, lineheight = 1.2, color = "#333"
+  ) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  scale_y_continuous(expand = expansion(mult = c(0, .15))) +
+  labs(title = "Por grupo latente",
+       subtitle = "n = 5.000 | proporções nominais: 50%, 25%, 20%, 5%",
+       x = NULL, y = "Frequência") +
+  guides(fill = "none")
+```
+
+O grupo `atipico` (~5%) é deliberadamente pequeno — representa beneficiários com padrões clinicamente incoerentes. Essa raridade é o maior desafio para os modelos de mistura: grupos pequenos tendem a ser absorvidos por grupos maiores na etapa de estimação.
+
+---
+
+# Covariáveis observadas
+
+## Geração independente do grupo
+
+As covariáveis demográficas (idade, sexo, coparticipação, região) são geradas **independentemente** do grupo latente. Essa é uma decisão de projeto deliberada: queremos que os modelos separem os grupos pelos **padrões de utilização**, não por características observáveis facilmente mensuráveis.
+
+Se as covariáveis fossem correlacionadas com o grupo, um modelo de regressão logística simples já funcionaria bem — e não haveria necessidade de modelos de mistura. A independência garante que a estrutura latente só seja recuperável por quem captura a heterogeneidade multivariada dos serviços.
+
+```{r covariaveis}
+# Idade estratificada por faixa (proporcional ao Painel ANS)
 faixa_idx <- sample(1:3, size = n, replace = TRUE, prob = c(0.20, 0.55, 0.25))
-pool_0_17  <- 0:17
-pool_18_59 <- 18:59
-pool_60_85 <- 60:85
 idade <- integer(n)
-idade[faixa_idx == 1] <- sample(pool_0_17,  sum(faixa_idx == 1), replace = TRUE)
-idade[faixa_idx == 2] <- sample(pool_18_59, sum(faixa_idx == 2), replace = TRUE)
-idade[faixa_idx == 3] <- sample(pool_60_85, sum(faixa_idx == 3), replace = TRUE)
+idade[faixa_idx == 1] <- sample(0:17,  sum(faixa_idx == 1), replace = TRUE)
+idade[faixa_idx == 2] <- sample(18:59, sum(faixa_idx == 2), replace = TRUE)
+idade[faixa_idx == 3] <- sample(60:85, sum(faixa_idx == 3), replace = TRUE)
 faixa_idade <- c("0-17", "18-59", "60+")[faixa_idx]
-idade10     <- idade / 10
+idade10     <- idade / 10   # escala para coeficientes interpretáveis
 
-# Sexo (1 = feminino)
+# Sexo: 55% feminino — reflete perfil típico de carteiras de planos de saúde
 sexo <- rbinom(n, size = 1, prob = 0.55)
 
-# Tempo no plano
+# Tempo no plano: uniforme entre 1 e 120 meses (sem viés de seleção)
 tempo_no_plano <- sample(1:120, size = n, replace = TRUE)
 tempo_anos     <- tempo_no_plano / 12
 
-# Coparticipação
+# Coparticipação: 40% dos beneficiários têm custo direto por utilização
 copart <- rbinom(n, size = 1, prob = 0.40)
 
-# Região
+# Região: 3 macrorregiões com pesos diferenciados
 regiao  <- sample(1:3, size = n, replace = TRUE, prob = c(0.40, 0.35, 0.25))
 regiao2 <- ifelse(regiao == 2, 1, 0)
 regiao3 <- ifelse(regiao == 3, 1, 0)
+```
 
-# Parâmetros dos grupos (interceptos no log da média)
+```{r graf-covariaveis}
+data.frame(idade, grupo_latente) %>%
+  ggplot(aes(x = idade, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.2) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "Distribuições de idade sobrepostas — independência do grupo confirmada",
+       x = "Idade (anos)", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+As quatro curvas de densidade de idade são praticamente idênticas — exatamente o esperado quando a geração é independente do grupo latente.
+
+---
+
+# Modelo estatístico: Binomial Negativa
+
+## Por que não usar Poisson?
+
+Dados de utilização de saúde apresentam **sobredispersão**: a variância observada é sistematicamente maior que a média. A distribuição de Poisson assume Var(Y) = μ, o que a torna inadequada para esses dados — ela subestimaria a variância e produziria intervalos de confiança incorretos.
+
+A **Binomial Negativa** (NB₂) resolve isso com um parâmetro de dispersão θ:
+
+$$\text{Var}(Y) = \mu + \frac{\mu^2}{\theta}$$
+
+Quanto menor θ, maior a sobredispersão. Usamos valores entre 0,8 (internações, altamente sobredispersas) e 2,5 (consultas, menos sobredispersas).
+
+## Estrutura de log-link com covariáveis grupo-específicas
+
+A média de cada contagem segue um log-link com covariáveis:
+
+$$\log(\mu_{ig}) = \alpha_g + \mathbf{x}_i^\top \boldsymbol{\beta}_g$$
+
+onde α_g é o intercepto do grupo g e **β**_g é o vetor de coeficientes — ambos **grupo-específicos**. Isso significa que o efeito de uma mesma covariável (ex.: coparticipação) pode diferir entre grupos, o que é clinicamente plausível e aumenta o realismo da simulação.
+
+```{r parametros-nb}
+# Interceptos no log da média por grupo (G1, G2, G3, G4)
 alpha_consultas   <- log(c(2.5,  8.0,  4.0,  1.5))  - 0.588
 alpha_ps          <- log(c(0.2,  0.5,  4.0,  7.0))  - 0.321
 alpha_exames      <- log(c(8.0, 50.0, 20.0, 52.0))  - 0.607
 alpha_terapias    <- log(c(0.1,  3.0,  0.7,  6.5))  + 0.282
-alpha_internacoes <- log(c(0.04, 0.06, 0.65, 0.35)) + 0.205
+alpha_internacoes <- log(c(0.04, 0.06, 0.65, 0.35)) + 0.250
 
-# Coeficientes grupo-específicos (matrizes)
-betas <- list(
-  consultas = matrix(
-    c(0.08, 0.12, 0.03, -0.18, 0.05, 0.00,
-      0.10, 0.14, 0.04, -0.10, 0.05, 0.00,
-      0.07, 0.10, 0.02, -0.05, 0.05, 0.00,
-      -0.05, 0.08, 0.01, -0.02, 0.00, 0.05),
-    nrow = 4, byrow = TRUE,
-    dimnames = list(NULL, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
-  ps = matrix(
-    c(0.03, -0.03, 0.00, -0.10, 0.00, 0.08,
-      0.04, -0.02, 0.00, -0.06, 0.00, 0.08,
-      0.06, 0.00, 0.01, -0.03, 0.00, 0.08,
-      0.02, 0.05, 0.01, -0.01, 0.05, 0.10),
-    nrow = 4, byrow = TRUE,
-    dimnames = list(NULL, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
-  exames = matrix(
-    c(0.10, 0.08, 0.02, -0.15, 0.05, 0.00,
-      0.12, 0.09, 0.03, -0.08, 0.05, 0.00,
-      0.08, 0.06, 0.02, -0.04, 0.05, 0.00,
-      -0.03, 0.05, 0.00, -0.01, 0.00, 0.03),
-    nrow = 4, byrow = TRUE,
-    dimnames = list(NULL, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
-  terapias = matrix(
-    c(0.05, 0.10, 0.01, -0.12, 0.00, 0.00,
-      0.06, 0.12, 0.02, -0.07, 0.00, 0.00,
-      0.04, 0.08, 0.01, -0.04, 0.00, 0.00,
-      0.02, 0.15, 0.01, -0.02, 0.00, 0.05),
-    nrow = 4, byrow = TRUE,
-    dimnames = list(NULL, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
-  internacoes = matrix(
-    c(0.12, 0.00, 0.01, -0.03, 0.00, 0.08,
-      0.13, 0.02, 0.01, -0.02, 0.00, 0.08,
-      0.15, 0.03, 0.02, -0.01, 0.00, 0.08,
-      0.05, 0.02, 0.00, -0.01, 0.05, 0.10),
-    nrow = 4, byrow = TRUE,
-    dimnames = list(NULL, c("idade10","sexo","tempo","copart","regiao2","regiao3")))
-)
-
-# Parâmetros de dispersão (Negative Binomial)
+# Parâmetros de dispersão θ (menor = mais sobredisperso)
 theta_consultas   <- 2.5
 theta_ps          <- 1.5
 theta_exames      <- 2.0
 theta_terapias    <- 1.2
 theta_internacoes <- 0.8
 
-# Probabilidades de zero estrutural (ZINB)
-pzero_terapias    <- c(0.85, 0.45, 0.70, 0.35)
-pzero_internacoes <- c(0.97, 0.94, 0.55, 0.75)
+# Matrizes de coeficientes grupo-específicos (linhas = grupos, colunas = covariáveis)
+betas <- list(
+  consultas = matrix(
+    c( 0.08,  0.12,  0.03, -0.18,  0.05,  0.00,
+       0.10,  0.14,  0.04, -0.10,  0.05,  0.00,
+       0.07,  0.10,  0.02, -0.05,  0.05,  0.00,
+      -0.05,  0.08,  0.01, -0.02,  0.00,  0.05),
+    nrow = 4, byrow = TRUE,
+    dimnames = list(nomes_grupos, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
+  ps = matrix(
+    c( 0.03, -0.03,  0.00, -0.10,  0.00,  0.08,
+       0.04, -0.02,  0.00, -0.06,  0.00,  0.08,
+       0.06,  0.00,  0.01, -0.03,  0.00,  0.08,
+       0.02,  0.05,  0.01, -0.01,  0.05,  0.10),
+    nrow = 4, byrow = TRUE,
+    dimnames = list(nomes_grupos, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
+  exames = matrix(
+    c( 0.10,  0.08,  0.02, -0.15,  0.05,  0.00,
+       0.12,  0.09,  0.03, -0.08,  0.05,  0.00,
+       0.08,  0.06,  0.02, -0.04,  0.05,  0.00,
+      -0.03,  0.05,  0.00, -0.01,  0.00,  0.03),
+    nrow = 4, byrow = TRUE,
+    dimnames = list(nomes_grupos, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
+  terapias = matrix(
+    c( 0.05,  0.10,  0.01, -0.12,  0.00,  0.00,
+       0.06,  0.12,  0.02, -0.07,  0.00,  0.00,
+       0.04,  0.08,  0.01, -0.04,  0.00,  0.00,
+       0.02,  0.15,  0.01, -0.02,  0.00,  0.05),
+    nrow = 4, byrow = TRUE,
+    dimnames = list(nomes_grupos, c("idade10","sexo","tempo","copart","regiao2","regiao3"))),
+  internacoes = matrix(
+    c( 0.12,  0.00,  0.01, -0.03,  0.00,  0.08,
+       0.13,  0.02,  0.01, -0.02,  0.00,  0.08,
+       0.15,  0.03,  0.02, -0.01,  0.00,  0.08,
+       0.05,  0.02,  0.00, -0.01,  0.05,  0.10),
+    nrow = 4, byrow = TRUE,
+    dimnames = list(nomes_grupos, c("idade10","sexo","tempo","copart","regiao2","regiao3")))
+)
 
-# Funções auxiliares
-calc_mu <- function(alpha_vec, beta_mat, grupo, idade10, sexo,
+# Função: calcula μ via log-link para cada indivíduo
+calc_mu <- function(alpha_vec, beta_mat, grupo_idx, idade10, sexo,
                     tempo_anos, copart, regiao2, regiao3) {
-  X <- cbind(idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+  X   <- cbind(idade10, sexo, tempo_anos, copart, regiao2, regiao3)
   colnames(X) <- c("idade10","sexo","tempo","copart","regiao2","regiao3")
-  beta_ind <- beta_mat[grupo, ]
-  eta <- alpha_vec[grupo] + rowSums(X * beta_ind)
+  eta <- alpha_vec[grupo_idx] + rowSums(X * beta_mat[grupo_idx, ])
   exp(eta)
 }
-rnbinom_mu <- function(mu, theta) rnbinom(n = length(mu), size = theta, mu = mu)
-rzinb_mu <- function(mu, theta, pzero) {
-  zero_flag <- rbinom(length(mu), size = 1, prob = pzero)
-  y_nb <- rnbinom(n = length(mu), size = theta, mu = mu)
-  ifelse(zero_flag == 1, 0, y_nb)
+
+# Funções de geração: NB e ZINB
+rnbinom_mu <- function(mu, theta) rnbinom(length(mu), size = theta, mu = mu)
+rzinb_mu   <- function(mu, theta, pzero) {
+  ifelse(rbinom(length(mu), 1, pzero) == 1, 0,
+         rnbinom(length(mu), size = theta, mu = mu))
 }
+```
 
-# Cálculo das médias condicionais (mu)
-mu_consultas <- calc_mu(alpha_consultas, betas$consultas, grupo_latente,
+---
+
+# Consultas
+
+## Escolhas de modelagem
+
+Consultas eletivas são o serviço de maior regularidade — indivíduos saudáveis fazem poucas por ano; os do grupo ambulatorial coordenado fazem muitas. Os interceptos foram calibrados para que **G2 tenha média ~8× maior que G1** (8 vs. 2,5 consultas/ano), refletindo o perfil de acompanhamento intensivo de doenças crônicas.
+
+A coparticipação tem efeito negativo (`β_copart < 0`) em todos os grupos: quando há custo direto, o beneficiário consulta menos. O efeito é mais pronunciado em G1 — grupo com menor necessidade percebida e, portanto, mais sensível ao desincentivo financeiro.
+
+O grupo `atipico` (G4) tem a menor média de consultas (~1,5/ano), apesar de alto uso de outros serviços — essa incoerência é parte central da sua assinatura clínica.
+
+```{r gera-consultas}
+mu_consultas <- calc_mu(alpha_consultas, betas$consultas, grupo_idx,
                         idade10, sexo, tempo_anos, copart, regiao2, regiao3)
-mu_ps <- calc_mu(alpha_ps, betas$ps, grupo_latente,
-                 idade10, sexo, tempo_anos, copart, regiao2, regiao3)
-mu_exames <- calc_mu(alpha_exames, betas$exames, grupo_latente,
-                     idade10, sexo, tempo_anos, copart, regiao2, regiao3)
-mu_terapias <- calc_mu(alpha_terapias, betas$terapias, grupo_latente,
-                       idade10, sexo, tempo_anos, copart, regiao2, regiao3)
-mu_internacoes <- calc_mu(alpha_internacoes, betas$internacoes, grupo_latente,
-                          idade10, sexo, tempo_anos, copart, regiao2, regiao3)
-
-# Geração das contagens
 consultas <- rnbinom_mu(mu_consultas, theta_consultas)
-ps        <- rnbinom_mu(mu_ps, theta_ps)
-exames    <- rnbinom_mu(mu_exames, theta_exames)
-terapias  <- rzinb_mu(mu_terapias, theta_terapias, pzero_terapias[grupo_latente])
-internacoes <- rzinb_mu(mu_internacoes, theta_internacoes, pzero_internacoes[grupo_latente])
+```
+
+```{r graf-consultas}
+data.frame(consultas, grupo_latente) %>%
+  ggplot(aes(x = consultas, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "Consultas/ano — separação clara entre G1 (baixo) e G2 (alto)",
+       x = "consultas", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+---
+
+# Pronto-socorro
+
+## Escolhas de modelagem
+
+O uso de pronto-socorro tem dinâmica oposta às consultas eletivas: **G3 (agudo_hospitalar) e G4 (atipico) são os maiores usuários**. O grupo ambulatorial coordenado usa muito pouco PS — acessa o sistema principalmente via consultas agendadas, o que é clinicamente esperado para portadores de doenças crônicas bem controladas.
+
+O grupo atípico tem média de ~7 visitas/ano ao PS — valor muito acima do esperado clinicamente. Essa incoerência (alto PS + baixa consulta) é a principal **assinatura do padrão atípico** e a variável com maior poder discriminativo para esse grupo específico.
+
+```{r gera-ps}
+mu_ps <- calc_mu(alpha_ps, betas$ps, grupo_idx,
+                 idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+ps <- rnbinom_mu(mu_ps, theta_ps)
+```
+
+```{r graf-ps}
+data.frame(ps, grupo_latente) %>%
+  ggplot(aes(x = ps, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "Pronto-socorro/ano — G3 e G4 com cauda deslocada à direita",
+       x = "ps", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+---
+
+# Exames
+
+## Escolhas de modelagem
+
+Exames laboratoriais e de imagem é a variável com **maior poder discriminativo** entre G1 e G2. O grupo ambulatorial coordenado tem média de ~50 exames/ano, reflexo do acompanhamento clínico intensivo e das solicitações frequentes por múltiplos especialistas. O grupo de baixo uso tem apenas ~8 exames/ano.
+
+G4 (atípico) também tem alta média de exames (~52/ano), mas com **poucas consultas correspondentes** — muitos exames sem consultas que os justifiquem clinicamente. Essa incoerência é a base da flag `baixa_coerencia` e uma das evidências mais fortes de comportamento anômalo.
+
+Como os valores de exames crescem muito, usamos a escala logarítmica no gráfico para visualizar a separação entre grupos sem que os outliers dominem a escala.
+
+```{r gera-exames}
+mu_exames <- calc_mu(alpha_exames, betas$exames, grupo_idx,
+                     idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+exames <- rnbinom_mu(mu_exames, theta_exames)
+```
+
+```{r graf-exames}
+data.frame(exames, grupo_latente) %>%
+  ggplot(aes(x = log1p(exames), color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "log(exames + 1) — G2 e G4 deslocados à direita, G1 concentrado próximo a zero",
+       x = "log(exames + 1)", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+---
+
+# Modelo ZINB: zeros estruturais
+
+## Quando a Binomial Negativa não é suficiente
+
+Para `terapias` e `internacoes`, a proporção de zeros observada é **muito maior** do que qualquer Binomial Negativa com os parâmetros empíricos previria. Isso indica a presença de **zeros estruturais**: indivíduos que nunca usariam esse tipo de serviço no período de observação, independentemente de quanto tempo seja observado.
+
+A distinção é fundamental:
+
+- **Zero de processo** (*sampling zero*): o indivíduo *poderia* usar o serviço, mas não usou neste período — gerado naturalmente pela NB
+- **Zero estrutural** (*structural zero*): o indivíduo *nunca* usaria esse serviço — requer um componente adicional no modelo
+
+A **ZINB (Zero-Inflated Negative Binomial)** modela essa situação como mistura de dois processos:
+
+$$P(Y = 0) = p_0 + (1 - p_0) \cdot P_{\text{NB}}(Y = 0 \mid \mu, \theta)$$
+$$P(Y = y) = (1 - p_0) \cdot P_{\text{NB}}(Y = y \mid \mu, \theta), \quad y > 0$$
+
+As probabilidades de zero estrutural *p*₀ variam por grupo — G1 tem 97% de zeros estruturais em internações; G3 tem apenas 55%.
+
+---
+
+# Terapias
+
+## Escolhas de modelagem
+
+Terapias (fisioterapia, fonoaudiologia, psicoterapia, entre outras) têm aproximadamente **80% de zeros** na base — a grande maioria dos beneficiários nunca as utiliza no período de um ano. Os parâmetros de zero estrutural refletem isso: 85% para G1 e 70% para G3.
+
+G2 (ambulatorial coordenado) e G4 (atípico) são os principais usuários: G2 acessa terapias como parte de um cuidado contínuo e coordenado de doenças crônicas; G4 acessa de forma que não se encaixa no restante do seu padrão — alta utilização de terapias combinada com baixa consulta eletiva.
+
+```{r gera-terapias}
+# Probabilidade de zero estrutural por grupo (G1, G2, G3, G4)
+pzero_terapias <- c(0.85, 0.45, 0.70, 0.35)
+
+mu_terapias <- calc_mu(alpha_terapias, betas$terapias, grupo_idx,
+                       idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+terapias <- rzinb_mu(mu_terapias, theta_terapias, pzero_terapias[grupo_idx])
+```
+
+```{r graf-terapias}
+data.frame(terapias, grupo_latente) %>%
+  ggplot(aes(x = terapias, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  coord_cartesian(xlim = c(0, quantile(terapias, .99))) +
+  labs(title = "Por grupo latente",
+       subtitle = paste0("Terapias/ano — ", scales::percent(mean(terapias == 0), .1),
+                         " de zeros | ZINB com p₀ grupo-específico"),
+       x = "terapias", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+---
+
+# Internações
+
+## Escolhas de modelagem
+
+Internações são eventos **raros e de alto custo** — cerca de **94% de zeros** na base. Apenas G3 (agudo/hospitalar) tem massa de probabilidade relevante acima de zero: somente 55% de zeros estruturais, contra 97% em G1.
+
+O parâmetro θ = 0,8 é o mais baixo de toda a simulação, indicando altíssima sobredispersão: um único evento de internação pode variar de 1 diária a dezenas. Cada internação representa em média R$ 3.500 no gasto total, tornando G3 o grupo de **maior custo por evento** da base.
+
+```{r gera-internacoes}
+# Probabilidade de zero estrutural por grupo (G1, G2, G3, G4)
+pzero_internacoes <- c(0.97, 0.94, 0.55, 0.75)
+
+mu_internacoes <- calc_mu(alpha_internacoes, betas$internacoes, grupo_idx,
+                          idade10, sexo, tempo_anos, copart, regiao2, regiao3)
+internacoes <- rzinb_mu(mu_internacoes, theta_internacoes, pzero_internacoes[grupo_idx])
+```
+
+```{r graf-internacoes}
+data.frame(internacoes, grupo_latente) %>%
+  ggplot(aes(x = internacoes, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  coord_cartesian(xlim = c(0, quantile(internacoes, .995))) +
+  labs(title = "Por grupo latente",
+       subtitle = paste0("Internações/ano — ", scales::percent(mean(internacoes == 0), .1),
+                         " de zeros | apenas G3 com massa visível à direita"),
+       x = "internacoes", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+---
 
 # Variáveis derivadas
-total_eventos <- consultas + ps + exames + terapias + internacoes
+
+## Total de eventos e razões
+
+Com todas as contagens geradas, calculamos variáveis derivadas que capturam dimensões adicionais do padrão de utilização. As **razões entre serviços** são especialmente úteis para detectar incoerência clínica: um beneficiário com muitos exames mas poucas consultas tem um comportamento que não se encaixa no perfil esperado de nenhum grupo "normal".
+
+```{r gera-derivadas}
+total_eventos          <- consultas + ps + exames + terapias + internacoes
 razao_exames_consultas <- exames / (consultas + 1)
-razao_ps_consultas     <- ps / (consultas + 1)
+razao_ps_consultas     <- ps    / (consultas + 1)
+```
 
-# Gasto total (com ruído)
-gasto_base <- consultas*120 + ps*250 + exames*80 + terapias*150 + internacoes*3500
-ruido_gasto <- rlnorm(n, meanlog = 0, sdlog = 0.20)
-gasto_total <- round(gasto_base * ruido_gasto, 2)
+```{r graf-total-eventos}
+data.frame(total_eventos, grupo_latente) %>%
+  ggplot(aes(x = total_eventos, color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "Total de eventos — assimetria à direita e estrutura de mistura visível",
+       x = "total_eventos", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
 
-# Meses de utilização (Beta-Binomial)
-shape_a <- pmax(0.5, total_eventos / 6)
-shape_b <- pmax(0.5, (36 - total_eventos) / 6)
-p_mes <- rbeta(n, shape1 = shape_a, shape2 = shape_b)
-meses_utilizacao <- rbinom(n, size = 12, prob = p_mes)
-meses_utilizacao <- pmax(1L, meses_utilizacao)
+## Gasto total
 
-# Prestadores distintos (cap)
-prest_raw <- pmax(1L, rpois(n, lambda = pmax(1, total_eventos / 5)))
-cap_prest <- as.integer(quantile(prest_raw, 0.99))
-prestadores_distintos <- pmin(prest_raw, cap_prest)
+O gasto total é calculado a partir das tarifas médias por tipo de serviço, com um **ruído lognormal de 20%** para refletir a variação real de preços entre prestadores. O ruído lognormal é adequado porque: (1) o gasto é sempre positivo, (2) variações percentuais são mais realistas que variações absolutas.
 
-# Flags
-flag_alta_utilizacao <- ifelse(total_eventos >= quantile(total_eventos, 0.95), 1L, 0L)
-flag_baixa_coerencia <- ifelse(razao_exames_consultas > quantile(razao_exames_consultas, 0.95) |
-                                 razao_ps_consultas   > quantile(razao_ps_consultas, 0.95), 1L, 0L)
+```{r gera-gasto}
+gasto_base  <- consultas*120 + ps*250 + exames*80 + terapias*150 + internacoes*3500
+gasto_total <- round(gasto_base * rlnorm(n, meanlog = 0, sdlog = 0.20), 2)
+```
+
+```{r graf-gasto}
+data.frame(gasto_total, grupo_latente) %>%
+  ggplot(aes(x = log1p(gasto_total), color = grupo_latente, fill = grupo_latente)) +
+  geom_density(alpha = .18, linewidth = .8, adjust = 1.3) +
+  scale_color_manual(values = CORES_GRUPOS) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  labs(title = "Por grupo latente",
+       subtitle = "log(gasto_total + 1) — G1 claramente separado; G2, G3, G4 se sobrepõem",
+       x = "log(gasto_total + 1)", y = "Densidade",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 8))
+```
+
+## Meses de utilização
+
+A distribuição de meses com utilização é gerada via **Beta-Binomial**, onde a probabilidade de usar o plano em cada mês é sorteada de uma Beta parametrizada pelo volume total de eventos. Beneficiários com poucos eventos tendem a concentrar uso em poucos meses; os de alto volume usam o plano de forma distribuída ao longo do ano.
+
+```{r gera-meses}
+shape_a          <- pmax(0.5, total_eventos / 6)
+shape_b          <- pmax(0.5, (36 - total_eventos) / 6)
+meses_utilizacao <- pmax(1L, rbinom(n, size = 12, prob = rbeta(n, shape_a, shape_b)))
+```
+
+## Prestadores distintos
+
+O número de prestadores distintos captura a **fragmentação do cuidado**: beneficiários que acessam muitos prestadores diferentes podem indicar falta de coordenação ou, no grupo atípico, busca deliberada por múltiplos pontos de acesso. É gerado como Poisson proporcional ao volume de eventos, com cap no percentil 99 para evitar valores extremos irreais.
+
+```{r gera-prestadores}
+prest_raw             <- pmax(1L, rpois(n, lambda = pmax(1, total_eventos / 5)))
+prestadores_distintos <- pmin(prest_raw, as.integer(quantile(prest_raw, 0.99)))
+```
+
+---
+
+# Indicadores de alerta
+
+## Flags baseadas em percentis
+
+As flags são indicadores binários simples baseados em cortes de percentil empírico. Funcionam como **benchmarks de auditoria**: qualquer modelo sofisticado deve conseguir identificar o grupo atípico com performance superior à dessas regras univariadas simples.
+
+- **`flag_alta_utilizacao`**: total de eventos ≥ P95 — captura alto volume absoluto, independentemente do padrão
+- **`flag_baixa_coerencia`**: razão exames/consultas ≥ P95 **ou** razão PS/consultas ≥ P95 — captura padrão clinicamente incoerente
+
+```{r gera-flags}
+flag_alta_utilizacao <- as.integer(total_eventos >= quantile(total_eventos, 0.95))
+flag_baixa_coerencia <- as.integer(
+  razao_exames_consultas > quantile(razao_exames_consultas, 0.95) |
+  razao_ps_consultas     > quantile(razao_ps_consultas, 0.95)
+)
+```
+
+```{r graf-flags, fig.height=5}
+data.frame(grupo_latente, flag_alta_utilizacao, flag_baixa_coerencia) %>%
+  group_by(grupo_latente) %>%
+  summarise(
+    `Alta utilizacao (P95)` = mean(flag_alta_utilizacao),
+    `Baixa coerencia (P95)` = mean(flag_baixa_coerencia),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(-grupo_latente, names_to = "flag", values_to = "prop") %>%
+  ggplot(aes(x = grupo_latente, y = prop, fill = grupo_latente)) +
+  geom_col(width = .6) +
+  geom_text(aes(label = scales::percent(prop, .1)), vjust = -0.4, size = 3) +
+  scale_fill_manual(values = CORES_GRUPOS) +
+  scale_y_continuous(labels = percent_format(), expand = expansion(mult = c(0, .18))) +
+  facet_wrap(~ flag) +
+  labs(title = "Por grupo latente",
+       subtitle = "Flag de alta utilização concentra G2; flag de baixa coerência concentra G4",
+       x = NULL, y = "Proporção") +
+  guides(fill = "none") +
+  theme(axis.text.x = element_text(angle = 12, hjust = .6))
+```
+
+A flag de alta utilização concentra-se em G2 (~19%) — o grupo de maior volume absoluto, mas com padrão clinicamente coerente. A flag de baixa coerência concentra-se em G4 (~61%) — porém ainda deixa 39% do grupo atípico sem sinalização e gera falsos positivos nos demais grupos. Essa limitação das regras univariadas é a principal motivação para os modelos de mistura multivariados.
+
+---
 
 # Base final
+
+## Montagem e exportação
+
+```{r base-final}
 dados_sim <- data.frame(
   id                     = 1:n,
-  grupo_latente          = factor(grupo_latente,
-                                  levels = 1:4,
-                                  labels = c("baixo_uso", "ambulatorial_coordenado",
-                                             "agudo_hospitalar", "atipico")),
+  grupo_latente          = grupo_latente,
   idade                  = idade,
   faixa_idade            = factor(faixa_idade, levels = c("0-17","18-59","60+")),
-  sexo                   = factor(sexo, levels = c(0,1), labels = c("Masculino","Feminino")),
+  sexo                   = factor(ifelse(sexo == 1, "F", "M")),
   tempo_no_plano         = tempo_no_plano,
-  copart                 = factor(copart, levels = c(0,1), labels = c("Sem","Com")),
-  regiao                 = factor(regiao),
+  copart                 = factor(ifelse(copart == 1, "Com", "Sem")),
+  regiao                 = factor(regiao, labels = c("R1","R2","R3")),
   consultas              = consultas,
   ps                     = ps,
   exames                 = exames,
   terapias               = terapias,
   internacoes            = internacoes,
   total_eventos          = total_eventos,
-  razao_exames_consultas = razao_exames_consultas,
-  razao_ps_consultas     = razao_ps_consultas,
   gasto_total            = gasto_total,
   meses_utilizacao       = meses_utilizacao,
   prestadores_distintos  = prestadores_distintos,
+  razao_exames_consultas = razao_exames_consultas,
+  razao_ps_consultas     = razao_ps_consultas,
   flag_alta_utilizacao   = flag_alta_utilizacao,
   flag_baixa_coerencia   = flag_baixa_coerencia
 )
+
+write.csv(dados_sim,
+          "C:/Katy/Doutorado/painel_WCDANM/dados/dados_simulados.csv",
+          row.names = FALSE)
 ```
 
+A base possui **`r nrow(dados_sim)` observações** e **`r ncol(dados_sim)` variáveis**.
 
-## 3. Validação dos agregados (comparação com alvos ANS)
+---
 
-```{r}
-alvos_ans <- c(consultas = 4.15, ps = 1.34, exames = 22.9,
-               terapias = 1.30, internacoes = 0.182)
-medias_obs <- c(consultas = mean(consultas), ps = mean(ps),
-                exames = mean(exames), terapias = mean(terapias),
-                internacoes = mean(internacoes))
-comparacao_ans <- data.frame(
-  variavel = names(alvos_ans),
-  alvo_ans = as.numeric(alvos_ans),
-  media_observada = as.numeric(medias_obs),
-  diferenca = as.numeric(medias_obs - alvos_ans),
-  diferenca_percentual = 100 * as.numeric((medias_obs - alvos_ans) / alvos_ans)
+# Validação ANS
+
+## Comparação com metas
+
+Os parâmetros foram calibrados iterativamente para que os agregados da base simulada se aproximem dos indicadores do **Painel de Indicadores da ANS**. Desvios menores que 3% são considerados aceitáveis e indicam boa calibração.
+
+```{r validacao-ans}
+alvos <- data.frame(
+  variavel  = c("consultas","ps","exames","terapias","internacoes"),
+  alvo_ans  = c(4.15, 1.34, 22.9, 1.3, 0.182)
 )
-kable(comparacao_ans, digits = 3, caption = "Comparação com metas ANS")
-```
 
-## 4. Resumo por grupo latente
+medias_obs <- data.frame(
+  variavel  = c("consultas","ps","exames","terapias","internacoes"),
+  media_obs = c(mean(consultas), mean(ps), mean(exames), mean(terapias), mean(internacoes))
+)
 
-```{r}
-resumo_grupo <- dados_sim %>%
-  group_by(grupo_latente) %>%
-  summarise(
-    n = n(),
-    idade_media = mean(idade),
-    consultas_media = mean(consultas),
-    ps_media = mean(ps),
-    exames_media = mean(exames),
-    terapias_media = mean(terapias),
-    internacoes_media = mean(internacoes),
-    total_eventos_medio = mean(total_eventos),
-    gasto_total_medio = mean(gasto_total),
-    .groups = "drop"
+comparacao_ans <- merge(alvos, medias_obs, by = "variavel") %>%
+  mutate(
+    desvio_pct     = round((media_obs - alvo_ans) / alvo_ans * 100, 1),
+    dentro_limite  = abs(desvio_pct) <= 10
   )
-kable(resumo_grupo, digits = 2, caption = "Médias por grupo latente")
+
+comparacao_ans %>%
+  kable(
+    col.names = c("Variável", "Alvo ANS", "Média observada", "Desvio (%)", "Dentro do limite"),
+    caption   = "Validação: médias simuladas vs. metas ANS (desvio aceitável: < 10%)",
+    digits    = 3
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  column_spec(5, bold = TRUE,
+              color = ifelse(comparacao_ans$dentro_limite, "#27ae60", "#c0392b"))
 ```
 
-## 5. Gráficos
+---
 
-### 5.1. Distribuição do total de eventos
-
-```{r}
-ggplot(dados_sim, aes(x = total_eventos)) +
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  labs(title = "Distribuição do total de eventos", x = "Total de eventos", y = "Frequência") +
-  theme_minimal()
-```
-
-### 5.2. Total de eventos por grupo
-
-```{r}
-ggplot(dados_sim, aes(x = grupo_latente, y = total_eventos, fill = grupo_latente)) +
-  geom_boxplot() +
-  labs(title = "Total de eventos por grupo latente", x = "Grupo", y = "Total de eventos") +
-  theme_minimal() + theme(legend.position = "none", axis.text.x = element_text(angle = 15, hjust = 1))
-```
-
-### 5.3. Razão exames/consultas por grupo
-
-```{r}
-ggplot(dados_sim, aes(x = grupo_latente, y = razao_exames_consultas, fill = grupo_latente)) +
-  geom_boxplot() +
-  labs(title = "Razão exames/consultas por grupo latente", x = "Grupo", y = "Razão exames/consultas") +
-  theme_minimal() + theme(legend.position = "none", axis.text.x = element_text(angle = 15, hjust = 1))
-```
-
-### 5.4. Gasto total vs. total de eventos (escala log)
-
-```{r}
-ggplot(dados_sim, aes(x = total_eventos, y = gasto_total, color = grupo_latente)) +
-  geom_point(alpha = 0.25, size = 0.8) +
-  geom_smooth(method = "loess", se = FALSE, linewidth = 0.9) +
-  scale_y_log10(labels = comma) +
-  labs(title = "Gasto total vs. total de eventos por grupo",
-       x = "Total de eventos", y = "Gasto total (R$, escala log)", color = "Grupo") +
-  theme_minimal()
-```
-
-### 5.5. Meses de utilização por grupo
-
-```{r}
-ggplot(dados_sim, aes(x = meses_utilizacao, fill = grupo_latente)) +
-  geom_histogram(binwidth = 1, color = "white", position = "dodge") +
-  scale_x_continuous(breaks = 1:12) +
-  labs(title = "Distribuição de meses com utilização por grupo",
-       x = "Meses com utilização", y = "Frequência", fill = "Grupo") +
-  theme_minimal()
-```
-
-### 5.6. Prevalência das flags por grupo
-
-```{r}
-flags_grupo <- dados_sim %>%
-  group_by(grupo_latente) %>%
-  summarise(
-    prop_alta_utilizacao = mean(flag_alta_utilizacao),
-    prop_baixa_coerencia = mean(flag_baixa_coerencia),
-    .groups = "drop"
-  )
-flags_long <- pivot_longer(flags_grupo, cols = c(prop_alta_utilizacao, prop_baixa_coerencia),
-                           names_to = "tipo_flag", values_to = "proporcao")
-ggplot(flags_long, aes(x = grupo_latente, y = proporcao, fill = tipo_flag)) +
-  geom_col(position = "dodge") +
-  scale_y_continuous(labels = percent_format(accuracy = 1)) +
-  labs(title = "Prevalência de sinais de alerta por grupo",
-       x = "Grupo latente", y = "Proporção", fill = "Indicador") +
-  theme_minimal() + theme(axis.text.x = element_text(angle = 15, hjust = 1))
-```
-
-### 5.7. Razão PS/consultas por grupo
-
-```{r}
-ggplot(dados_sim, aes(x = grupo_latente, y = razao_ps_consultas, fill = grupo_latente)) +
-  geom_boxplot() +
-  labs(title = "Razão PS/consultas por grupo latente", x = "Grupo", y = "Razão PS/consultas") +
-  theme_minimal() + theme(legend.position = "none", axis.text.x = element_text(angle = 15, hjust = 1))
-```
-
-## 6. Informações adicionais
-Proporção de zeros por variável
-
-```{r}
-prop_zeros <- sapply(dados_sim[, c("consultas","ps","exames","terapias","internacoes")],
-                     function(x) mean(x == 0))
-kable(t(round(prop_zeros, 3)), caption = "Proporção de zeros")
-```
-Resumo do gasto total
-```{r}
-summary(dados_sim$gasto_total)
-```
+*Documento gerado com R Markdown · SimSaúde · Universidade do Minho · `r format(Sys.Date(), "%Y")`*

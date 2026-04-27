@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Como a Simulação Funciona · SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+<script>
+  MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+/* ============================================================
+   SimSaúde · inline CSS — espelha main.css
+   ============================================================ */
+
+:root {
+  --ink:      #2c2c2c;
+  --text:     #3a3a3a;
+  --muted:    #666;
+  --accent:   #2a6b6e;
+  --bg:       #ffffff;
+  --sidebar:  #f7f7f7;
+  --border:   #e4e4e4;
+  --code-bg:  #f4f4f4;
+
+  --ff-body:  'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --ff-mono:  'IBM Plex Mono', 'Courier New', monospace;
+
+  --sidebar-w: 250px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 1rem;
+  line-height: 1.8;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow-y: auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sidebar-brand {
+  font-family: var(--ff-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  display: block;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+
+.sidebar-subtitle {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 2rem;
+}
+
+.sidebar-nav { list-style: none; }
+
+.sidebar-nav a {
+  display: block;
+  padding: 0.38rem 0.65rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  border-radius: 3px;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.4;
+}
+
+.sidebar-nav a:hover {
+  color: var(--ink);
+  background: var(--border);
+}
+
+.sidebar-nav a.active {
+  color: var(--accent);
+  background: rgba(42, 107, 110, 0.09);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 2rem;
+  font-size: 0.73rem;
+  color: #b0b0b0;
+  line-height: 1.6;
+}
+
+/* ---- MAIN ---- */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-width: 0;
+  padding: 3.5rem 5rem 6rem 4.5rem;
+  max-width: calc(var(--sidebar-w) + 760px);
+}
+
+/* ---- PROSE ---- */
+.prose h1 {
+  font-size: 1.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
+}
+
+.prose .lead {
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.8rem;
+}
+
+.prose h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2.8rem 0 0.8rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2rem 0 0.5rem;
+}
+
+.prose p {
+  margin-bottom: 1.1rem;
+  line-height: 1.8;
+}
+
+.prose ul, .prose ol {
+  margin: 0.4rem 0 1.1rem 1.4rem;
+}
+
+.prose li {
+  margin-bottom: 0.35rem;
+  line-height: 1.75;
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover { color: #1a4345; }
+.prose strong { font-weight: 600; color: var(--ink); }
+.prose em     { font-style: italic; }
+
+/* ---- CODE ---- */
+code {
+  font-family: var(--ff-mono);
+  font-size: 0.84em;
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 2px;
+  color: #555;
+}
+
+pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1.2rem 1.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 1.2rem 0;
+  font-family: var(--ff-mono);
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---- MATH BLOCK ---- */
+.math-block,
+.formula-box {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 3px;
+  padding: 1rem 1.5rem;
+  margin: 1.3rem 0;
+  overflow-x: auto;
+  font-size: 0.98rem;
+  text-align: center;
+}
+
+/* ---- TABLE ---- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0;
+  font-size: 0.9rem;
+}
+
+thead th {
+  background: var(--code-bg);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--ff-mono);
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+
+tbody td {
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafafa; }
+
+/* ---- CALLOUTS ---- */
+.callout {
+  background: rgba(42, 107, 110, 0.06);
+  border-left: 3px solid var(--accent);
+  padding: 0.8rem 1.2rem;
+  border-radius: 0 3px 3px 0;
+  margin: 1.3rem 0;
+  font-size: 0.93rem;
+}
+
+.callout-info  { background: rgba(42, 107, 110, 0.06); border-left-color: var(--accent); }
+.callout-tip   { background: rgba(42, 107, 110, 0.06); border-left-color: var(--accent); }
+.callout-warn  { background: rgba(200, 151, 58, 0.08); border-left-color: #c8973a; }
+
+.callout-label {
+  font-family: var(--ff-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+/* ---- STEP LIST ---- */
+.step-list {
+  counter-reset: step;
+  list-style: none;
+  margin: 0; padding: 0;
+}
+
+.step-list > li {
+  counter-increment: step;
+  position: relative;
+  padding: 1.5rem 0 1.5rem 3.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-list > li:last-child { border-bottom: none; }
+
+.step-list > li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: 1.5rem;
+  font-family: var(--ff-mono);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+
+/* ---- FLOW DIAGRAM ---- */
+.flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.flow-box {
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  padding: 0.45rem 0.9rem;
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
+  color: var(--ink);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.flow-box.highlight {
+  background: rgba(42, 107, 110, 0.09);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.flow-arrow {
+  font-size: 1rem;
+  color: var(--border);
+}
+
+/* ---- SECTION RULE ---- */
+hr.section-rule {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 3rem 0;
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+  .main    { margin-left: 0; padding: 2rem 1.5rem 4rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="metodologia.html">Metodologia</a></li>
+    <li><a href="documentacao.html" class="active">Documentação</a></li>
+    <li><a href="evolucao.html">Evolução</a></li>
+    <li><a href="simulacao_codigo.html">Simulação - Código</a></li>
+    <li><a href="simulacao_fundamentos.html">Simulação - Fundamentos</a></li>
+  </ul>
+  <div class="sidebar-footer">Katy · 2026</div>
+</nav>
+
+<main class="main">
+<div class="prose">
+
+<h1>Como a Simulação Funciona</h1>
+<p class="lead">Uma explicação narrativa das escolhas estatísticas e dos mecanismos geradores de dados</p>
+
+<div class="callout">
+  <div class="callout-label">Para que serve esta página</div>
+  Esta página não descreve o código linha a linha — isso está na <a href="pages/simulacao_codigo.html">Simulação - Código</a>.
+  Aqui o objetivo é diferente: explicar <em>por que</em> cada decisão foi tomada, qual fenômeno do mundo
+  real ela representa, e o que tornaria a simulação inválida se a decisão fosse diferente.
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<h2>A ideia central: populações heterogêneas</h2>
+
+<p>
+  Beneficiários de planos de saúde não são uma população homogênea. Um jovem saudável, um diabético
+  em acompanhamento contínuo, um paciente com doença aguda e um beneficiário com padrão de uso irregular
+  têm comportamentos de utilização radicalmente diferentes — e qualquer modelo que os trate como iguais
+  vai produzir estimativas ruins para todos.
+</p>
+
+<p>
+  A abordagem de <strong>modelos de mistura</strong> parte exatamente dessa constatação: a população é
+  uma mistura de subpopulações latentes, cada uma com seu próprio perfil de utilização. O problema
+  estatístico central é: dado que não observamos a qual subpopulação cada indivíduo pertence, conseguimos
+  <em>recuperar</em> essa estrutura a partir dos dados observados?
+</p>
+
+<p>
+  Para responder a essa pergunta com rigor, precisamos de um conjunto de dados em que a verdade seja
+  conhecida — onde o rótulo de grupo <em>existe</em> mas fica escondido do modelo. Isso é o que a
+  simulação produz.
+</p>
+
+<div class="callout callout-tip">
+  <div class="callout-label">Princípio de avaliação</div>
+  Um modelo de mistura ajustado a esses dados — sem ver a coluna <code>grupo_latente</code> —
+  deve ser capaz de recuperar os 4 grupos com alta concordância ao rótulo verdadeiro.
+  A qualidade da recuperação, medida por ARI e tabelas de confusão, é a evidência de eficácia
+  que o pôster irá apresentar.
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>Por que Binomial Negativa e não Poisson?</h2>
+
+<p>
+  A distribuição de Poisson é o modelo padrão para dados de contagem. Ela tem uma propriedade elegante —
+  a variância é igual à média — mas essa propriedade raramente se sustenta em dados de saúde.
+</p>
+
+<p>
+  Na prática, contagens de utilização são <strong>superdispersas</strong>: a variância observada é
+  muito maior que a média. O motivo é intuitivo — há fatores não observados que fazem alguns indivíduos
+  acumular muitos eventos enquanto a maioria fica com poucos. Um paciente oncológico, por exemplo,
+  tem dezenas de exames num ano enquanto um jovem saudável tem um ou nenhum.
+</p>
+
+<p>
+  A Binomial Negativa (NB₂) resolve isso com um parâmetro adicional de dispersão $\theta$:
+</p>
+
+<div class="formula-box">
+  $$Y_{ik} \mid g_i = g \;\sim\; \text{NB}\!\left(\mu_{igk},\; \theta_k\right)$$
+  $$\text{Var}(Y_{ik}) = \mu_{igk} + \frac{\mu_{igk}^2}{\theta_k}$$
+</div>
+
+<p>
+  Quando $\theta \to \infty$, a NB converge para Poisson. Quanto menor o $\theta$, maior a
+  superdispersão. Internações, por serem eventos raros e concentrados, recebem o menor $\theta$ da
+  simulação — refletindo que a variabilidade real nesses dados é muito alta.
+</p>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>Por que ZINB para terapias e internações?</h2>
+
+<p>
+  Mesmo com superdispersão, a Binomial Negativa pode não ser suficiente quando há um excesso de zeros
+  muito além do que a distribuição prevê. Isso acontece porque os zeros têm origens diferentes:
+</p>
+
+<ul>
+  <li>Um zero de <strong>processo</strong> — o indivíduo poderia ter usado o serviço, mas por acaso
+  não usou no período de observação.</li>
+  <li>Um zero <strong>estrutural</strong> — o indivíduo <em>nunca</em> usaria esse serviço no período,
+  independentemente de qualquer circunstância. Um beneficiário sem nenhuma condição clínica crônica
+  não vai fazer sessões de terapia; um jovem saudável muito provavelmente não será internado.</li>
+</ul>
+
+<p>
+  O modelo ZINB (Zero-Inflated NB) mistura explicitamente esses dois processos. Para cada indivíduo,
+  primeiro se decide — com probabilidade $\psi_g$ — se ele pertence ao componente de zero estrutural.
+  Se não, seu desfecho é amostrado da NB:
+</p>
+
+<div class="formula-box">
+  $$P(Y_{ik} = 0) = \psi_{gk} + (1 - \psi_{gk})\, P_{\text{NB}}(0 \mid \mu_{igk}, \theta_k)$$
+  $$P(Y_{ik} = y) = (1 - \psi_{gk})\, P_{\text{NB}}(y \mid \mu_{igk}, \theta_k) \quad \text{para } y > 0$$
+</div>
+
+<p>
+  Na simulação, as probabilidades de zero estrutural variam por grupo — o grupo de baixo uso tem
+  valores altos, enquanto o grupo agudo/hospitalar tem valores menores para internações, refletindo
+  que esses indivíduos têm probabilidade real de internação no período.
+</p>
+
+<div class="callout callout-warn">
+  <div class="callout-label">Por que não ZINB em tudo?</div>
+  Consultas e exames têm proporção de zeros pequena e compatível com o que uma NB com os parâmetros
+  observados já preveria. Aplicar ZINB onde não há excesso real de zeros seria modelagem desnecessária —
+  aumentaria a complexidade sem ganho preditivo, e poderia prejudicar a identificabilidade do modelo
+  quando aplicado em fase de estimação.
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>A estrutura de regressão: log-link com coeficientes por grupo</h2>
+
+<p>
+  A média de cada contagem não é constante dentro do grupo — ela depende das covariáveis observadas
+  do indivíduo. Essa dependência é modelada por um preditor linear no log da escala (log-link):
+</p>
+
+<div class="formula-box">
+  $$\log(\mu_{igk}) = \alpha_{gk} + \mathbf{x}_i^\top \boldsymbol{\beta}_{gk}$$
+</div>
+
+<p>
+  onde $\alpha_{gk}$ é o intercepto do grupo $g$ para o desfecho $k$, e $\boldsymbol{\beta}_{gk}$
+  é o vetor de coeficientes — específico ao grupo. Isso significa que o efeito de cada covariável
+  pode ser diferente em cada grupo.
+</p>
+
+<h3>Por que coeficientes grupo-específicos?</h3>
+
+<p>
+  A escolha de $\boldsymbol{\beta}_{gk}$ distintos por grupo reflete o que se observa na prática:
+  o efeito da idade no número de consultas de um paciente crônico é diferente do efeito da idade
+  em um paciente de padrão atípico. Um modelo com coeficientes globais compartilhados seria
+  mais simples, mas sacrificaria essa heterogeneidade estruturalmente importante.
+</p>
+
+<p>
+  Algumas decisões específicas refletem conhecimento de domínio:
+</p>
+
+<ul>
+  <li>
+    <strong>Coparticipação com coeficiente negativo em todos os grupos.</strong>
+    A coparticipação financeira funciona como barreira de acesso — reduz a demanda induzida.
+    É um efeito amplamente documentado na literatura de economia da saúde (moral hazard reduzido).
+  </li>
+  <li>
+    <strong>Grupo atípico com coeficiente de idade negativo em consultas.</strong>
+    O padrão atípico (possível fraude ou uso irregular) tende a ser mais frequente em adultos mais
+    jovens e não segue a lógica de que consultas aumentam com a idade — ao contrário dos demais grupos.
+  </li>
+  <li>
+    <strong>Grupo agudo/hospitalar com maior sensibilidade de idade para internações.</strong>
+    O efeito do envelhecimento sobre o risco de internação é mais pronunciado em populações com
+    doenças crônicas descompensadas — exatamente o perfil desse grupo.
+  </li>
+</ul>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>O papel dos interceptos e a calibração</h2>
+
+<p>
+  Os interceptos $\alpha_{gk}$ definem a utilização esperada de um indivíduo "médio" de cada grupo —
+  antes de qualquer ajuste pelas covariáveis. Eles são o parâmetro que diferencia mais visivelmente
+  os grupos na simulação.
+</p>
+
+<p>
+  A calibração é o processo pelo qual esses interceptos são ajustados para que as médias marginais
+  da população inteira — ponderadas pelas proporções $\pi_g$ de cada grupo — se aproximem dos
+  indicadores publicados pela ANS para operadoras médico-hospitalares. Isso garante que os dados
+  simulados sejam <em>plausíveis</em> no contexto do setor, e não apenas matematicamente convenientes.
+</p>
+
+<div class="callout">
+  <div class="callout-label">Como a calibração é feita</div>
+  <p>
+    O processo é iterativo: parte-se de valores iniciais baseados nos perfis clínicos esperados de
+    cada grupo, gera-se a simulação, compara-se a média marginal observada com o alvo ANS, e
+    ajusta-se o intercepto na direção da diferença. O ajuste aditivo no log da escala —
+    por exemplo, <code>log(c(2.5, 8.0, 4.0, 1.5)) - 0.588</code> — representa um deslocamento
+    global que compensa o efeito médio das covariáveis sobre a média populacional.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>Covariáveis: observadas e independentes do grupo latente</h2>
+
+<p>
+  Uma decisão importante da simulação é que as covariáveis — idade, sexo, tempo no plano,
+  coparticipação, região — são geradas <em>independentemente</em> do grupo latente. Isso reflete
+  a suposição de que pertencer a um grupo de utilização não é determinado por essas variáveis
+  observáveis, mas por fatores não observados (condição de saúde subjacente, comportamento, etc.).
+</p>
+
+<p>
+  Se as covariáveis fossem correlacionadas com o grupo (por exemplo, se o grupo atípico fosse
+  forçosamente mais jovem), os modelos teriam uma "muleta" para recuperar os grupos — o que
+  inflaria artificialmente as métricas de desempenho. Ao manter a independência, a recuperação
+  dos grupos tem que se basear genuinamente nos padrões de contagem, não nas covariáveis.
+</p>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>Variáveis derivadas: além das contagens primárias</h2>
+
+<p>
+  As cinco contagens primárias (consultas, PS, exames, terapias, internações) são o coração da
+  simulação. As demais variáveis são derivadas delas, adicionando camadas de realismo e criando
+  indicadores que correspondem ao que sistemas reais de monitoramento de operadoras produzem.
+</p>
+
+<ol class="step-list">
+
+  <li>
+    <div class="step-title">Gasto total com ruído log-normal</div>
+    <p>
+      O gasto é calculado como combinação linear das contagens — cada tipo de evento tem um custo
+      médio — multiplicada por um fator de ruído log-normal. O ruído representa a variabilidade
+      real de preços entre prestadores, negociações de tabela e mix de procedimentos dentro de
+      cada categoria. O log-normal é a distribuição canônica para preços em saúde porque garante
+      que o gasto seja sempre positivo e produz a assimetria à direita observada em dados reais.
+    </p>
+  </li>
+
+  <li>
+    <div class="step-title">Meses de utilização via Beta-Binomial</div>
+    <p>
+      Beneficiários com mais eventos tendem a estar distribuídos em mais meses do ano — não é
+      possível ter 50 exames concentrados em um único mês sem ao menos aparecer em vários.
+      O modelo Beta-Binomial captura essa dependência: os parâmetros de forma da distribuição Beta
+      são derivados do total de eventos, de modo que quem usa mais tem probabilidade de utilização
+      mensal mais alta. O resultado é amostrado como contagem de meses em 12 tentativas.
+    </p>
+  </li>
+
+  <li>
+    <div class="step-title">Prestadores distintos com cap no P99</div>
+    <p>
+      O número de prestadores diferentes acionados por beneficiário segue uma Poisson cujo parâmetro
+      cresce com o total de eventos — mais eventos, mais prestadores. O cap no percentil 99 evita
+      valores implausíveis que poderiam surgir de realizações extremas da Poisson, sem comprometer
+      a distribuição para a grande maioria dos indivíduos.
+    </p>
+  </li>
+
+  <li>
+    <div class="step-title">Razões de coerência clínica</div>
+    <p>
+      As razões exames/consultas e PS/consultas são indicadores clássicos de auditoria. A lógica
+      subjacente é que exames e PS são serviços secundários — em um sistema bem coordenado, eles
+      deveriam ser precedidos ou acompanhados por consultas médicas. O <code>+1</code> no denominador
+      evita divisão por zero e serve como regularização: representa uma consulta implícita de
+      referência para o médico de atenção primária.
+    </p>
+    <p>
+      Valores muito altos dessas razões — exames em excesso sem consultas correspondentes, ou
+      pronto-socorro acionado como porta de entrada habitual — são os sinais que sistemas de
+      monitoramento de operadoras buscam detectar.
+    </p>
+  </li>
+
+  <li>
+    <div class="step-title">Flags binárias de alerta</div>
+    <p>
+      As duas flags transformam métricas contínuas em indicadores binários usando os percentis 95
+      como limiar. Esse é o mecanismo mais simples de detecção baseada em regras — e serve na
+      simulação como <em>benchmark</em>: qualquer modelo sofisticado deve superar a capacidade das
+      flags de identificar o grupo atípico.
+    </p>
+  </li>
+
+</ol>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>O fluxo completo em resumo</h2>
+
+<p>A geração de cada beneficiário segue uma cadeia causal bem definida:</p>
+
+<div class="flow">
+  <div class="flow-box highlight">$\pi_g$ — proporções</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box highlight">$g_i$ — grupo latente</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">$\alpha_{gk}$, $\boldsymbol{\beta}_{gk}$</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">$\mu_{igk} = \exp(\alpha + \mathbf{x}^\top\boldsymbol{\beta})$</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">NB ou ZINB</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box highlight">contagens observadas</div>
+</div>
+
+<p>
+  As covariáveis $\mathbf{x}_i$ entram na cadeia após o grupo ser definido, mas são geradas
+  independentemente. O grupo latente é o fator que modula como as covariáveis se traduzem em
+  utilização — e é justamente essa modulação que os modelos de mistura precisam recuperar.
+</p>
+
+<!-- ════════════════════════════════════════ -->
+<hr class="section-rule">
+<h2>O que torna esses dados adequados para validar modelos de mistura?</h2>
+
+<p>
+  Três propriedades combinadas fazem desta simulação um banco de testes válido:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Propriedade</th><th>Como está presente</th><th>Por que importa</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Verdade conhecida</strong></td>
+      <td>Coluna <code>grupo_latente</code> disponível para avaliação</td>
+      <td>Permite calcular ARI, tabelas de confusão e outras métricas de recuperação</td>
+    </tr>
+    <tr>
+      <td><strong>Heterogeneidade genuína</strong></td>
+      <td>Interceptos e coeficientes distintos por grupo</td>
+      <td>Os grupos diferem nos perfis de utilização, não apenas nas proporções</td>
+    </tr>
+    <tr>
+      <td><strong>Realismo estatístico</strong></td>
+      <td>Superdispersão (NB), zeros estruturais (ZINB), calibração ANS</td>
+      <td>O modelo gerador é compatível com os dados que seriam observados no setor</td>
+    </tr>
+    <tr>
+      <td><strong>Dificuldade controlada</strong></td>
+      <td>G4 com apenas 5% da população e sinal parcialmente sobrepostos</td>
+      <td>Testa a capacidade do modelo de identificar grupos raros — o caso de interesse prático</td>
+    </tr>
+    <tr>
+      <td><strong>Reprodutibilidade</strong></td>
+      <td><code>set.seed(1234)</code></td>
+      <td>Garante que qualquer replicação do experimento parte exatamente dos mesmos dados</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout callout-tip">
+  <div class="callout-label">Limitação esperada</div>
+  Por construção, o modelo que melhor recupera os grupos é aquele que mais se assemelha ao modelo
+  gerador — FMNB neste caso. Isso não é um problema; é esperado e é o ponto de partida.
+  A contribuição científica está em demonstrar a extensão dessa recuperação, quantificar a
+  degradação com modelos menos adequados (LCA sobre contagens, GMM) e discutir o que acontece
+  quando o número de componentes K é desconhecido.
+</div>
+
+</div><!-- /prose -->
+</main>
+
+</body>
+</html>

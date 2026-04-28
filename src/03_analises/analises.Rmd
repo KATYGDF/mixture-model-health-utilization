@@ -1,0 +1,888 @@
+---
+title: "Modelos de Mistura e Clustering em Saúde Suplementar"
+subtitle: "Comparação de Métodos Não Supervisionados para Recuperação de Grupos Latentes"
+author: "Katy Garcia de Freitas"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+encoding: UTF-8
+output:
+  html_document:
+    css: main.css
+    theme: flatly
+    highlight: kate
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    df_print: kable
+    code_folding: hide
+    fig_width: 10
+    fig_height: 5
+    includes:
+      before_body: _sidebar.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = TRUE,
+  warning     = FALSE,
+  message     = FALSE,
+  fig.align   = "center",
+  out.width   = "100%",
+  cache       = FALSE
+)
+```
+
+```{r pacotes, class.source='fold-show'}
+# ── Verificação e carregamento de pacotes ──────────────────────────────────
+pkgs_necessarios <- c(
+  "dplyr", "tidyr", "ggplot2", "scales",
+  "mclust",     # Modelo 1: mistura gaussiana
+  "flexmix",    # Modelo 2: mistura de contagens
+  "cluster",    # silhouette
+  "factoextra", # fviz_cluster, fviz_nbclust
+  "clue",       # solve_LSAP (algoritmo húngaro)
+  "aricode",    # NMI
+  "corrplot",   # matriz de correlação
+  "kableExtra", # tabelas formatadas
+  "patchwork"   # composição de gráficos
+)
+
+pkgs_faltando <- pkgs_necessarios[!sapply(pkgs_necessarios, requireNamespace, quietly = TRUE)]
+if (length(pkgs_faltando) > 0) {
+  message("Instale os pacotes faltantes com:\n",
+          "install.packages(c(", paste0('"', pkgs_faltando, '"', collapse = ", "), "))")
+  stop("Pacotes necessários ausentes.")
+}
+
+suppressPackageStartupMessages({
+  library(dplyr); library(tidyr); library(ggplot2); library(scales)
+  library(mclust); library(flexmix); library(cluster); library(factoextra)
+  library(clue); library(aricode); library(corrplot)
+  library(kableExtra); library(patchwork)
+})
+```
+
+```{r tema-paleta}
+# ── Paleta e tema visual ───────────────────────────────────────────────────
+CORES_GRUPOS <- c(
+  "baixo_uso"                = "#4e79a7",
+  "ambulatorial_coordenado"  = "#f28e2b",
+  "agudo_hospitalar"         = "#e15759",
+  "atipico"                  = "#76b7b2"
+)
+
+NOMES_GRUPOS <- c(
+  "baixo_uso"               = "G1 · Baixo Uso",
+  "ambulatorial_coordenado" = "G2 · Ambulatorial",
+  "agudo_hospitalar"        = "G3 · Agudo/Hospitalar",
+  "atipico"                 = "G4 · Atípico"
+)
+
+tema_simsaude <- theme_minimal(base_size = 13) +
+  theme(
+    plot.title       = element_text(size = 14, face = "bold", margin = margin(b = 4)),
+    plot.subtitle    = element_text(size = 11, color = "gray40", margin = margin(b = 10)),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    strip.text       = element_text(face = "bold", size = 11),
+    legend.position  = "bottom",
+    legend.title     = element_blank(),
+    axis.title       = element_text(size = 11, color = "gray30")
+  )
+
+theme_set(tema_simsaude)
+
+# ── Parâmetros globais ────────────────────────────────────────────────────
+CAMINHO_CSV <- "../../dados/dados_simulados.csv"  # ajuste se necessário
+G_MAX       <- 6L   # número máximo de componentes a testar
+SEED        <- 42L  # reprodutibilidade
+```
+
+---
+
+# Introdução
+
+Este painel apresenta a comparação de três abordagens para a recuperação de **grupos latentes** em dados de utilização de serviços de saúde suplementar, no contexto de um estudo sobre detecção de anomalias e fraudes.
+
+A base de dados utilizada é **sintética**, gerada por um modelo de mistura finita com quatro grupos latentes conhecidos — o que permite uma avaliação rigorosa da capacidade de cada método em recuperar a estrutura verdadeira da população.
+
+O referencial teórico central é:
+
+> Ng, S.-K., Xiang, L. & Yau, K. K. W. (2019). *Mixture Modelling for Medical and Health Sciences*. Chapman & Hall/CRC.
+
+Os três métodos comparados são:
+
+| Método | Abordagem | Natureza |
+|--------|-----------|----------|
+| Mistura Gaussiana Transformada | Probabilístico | Aproximação contínua de dados de contagem |
+| Mistura de Contagens (Poisson) | Probabilístico | Compatível com a natureza dos dados |
+| K-means | Geométrico | Baseline não probabilístico |
+
+---
+
+# Dados Simulados
+
+## Carregamento e validação
+
+```{r carrega-dados}
+# ── Carrega CSV ────────────────────────────────────────────────────────────
+if (!file.exists(CAMINHO_CSV)) {
+  stop("Arquivo não encontrado: ", CAMINHO_CSV,
+       "\nAjuste a variável CAMINHO_CSV no chunk 'tema-paleta'.")
+}
+
+df_raw <- read.csv(CAMINHO_CSV, stringsAsFactors = FALSE, encoding = "UTF-8")
+
+# ── Detecta coluna de grupo verdadeiro ────────────────────────────────────
+candidatos_grupo <- c("grupo_latente", "grupo", "grupo_real", "grupo_idx")
+col_grupo <- candidatos_grupo[candidatos_grupo %in% names(df_raw)][1]
+
+if (is.na(col_grupo)) {
+  stop("Nenhuma coluna de grupo verdadeiro encontrada. Esperado: ",
+       paste(candidatos_grupo, collapse = ", "))
+}
+
+message("Coluna de grupo real identificada: ", col_grupo)
+
+# ── Variáveis de contagem para os modelos ────────────────────────────────
+VARS_MODELO <- c("consultas", "ps", "exames", "terapias", "internacoes", "total_eventos")
+
+vars_ausentes <- VARS_MODELO[!VARS_MODELO %in% names(df_raw)]
+if (length(vars_ausentes) > 0) {
+  stop("Variáveis ausentes na base: ", paste(vars_ausentes, collapse = ", "))
+}
+
+# ── Dataset limpo ─────────────────────────────────────────────────────────
+df <- df_raw %>%
+  rename(grupo_real = all_of(col_grupo)) %>%
+  mutate(grupo_real = factor(grupo_real)) %>%
+  filter(if_all(all_of(VARS_MODELO), ~ !is.na(.)))
+
+G_REAL      <- nlevels(df$grupo_real)       # número real de grupos
+NIVEIS_REAL <- levels(df$grupo_real)        # nomes dos grupos
+
+cat(sprintf(
+  "Base carregada: %d observações · %d variáveis · %d grupos reais\n",
+  nrow(df), length(VARS_MODELO), G_REAL
+))
+cat("Grupos:", paste(NIVEIS_REAL, collapse = ", "), "\n")
+```
+
+## Distribuição dos grupos
+
+```{r tab-grupos}
+df %>%
+  count(grupo_real, name = "n") %>%
+  mutate(
+    pct   = n / sum(n),
+    grupo = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS)
+  ) %>%
+  select(grupo, n, pct) %>%
+  kable(
+    col.names = c("Grupo", "n", "%"),
+    digits     = c(0, 0, 3),
+    caption    = "Distribuição dos grupos latentes verdadeiros"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+---
+
+# Fundamentação Teórica
+
+## Modelo de mistura finita
+
+Seguindo o capítulo 1 de Ng, Xiang & Yau (2019), uma **mistura finita** com $g$ componentes define a densidade marginal de $\mathbf{y}_i$ como:
+
+$$f(\mathbf{y}_i;\,\Psi) = \sum_{h=1}^{g} \pi_h\, f_h(\mathbf{y}_i;\,\boldsymbol{\psi}_h)$$
+
+onde $\pi_h > 0$, $\sum_{h=1}^g \pi_h = 1$, e $\boldsymbol{\psi}_h$ são os parâmetros do $h$-ésimo componente.
+
+Para dados multivariados com **independência condicional** entre as variáveis dado o componente:
+
+$$f_h(\mathbf{y}_i;\,\boldsymbol{\psi}_h) = \prod_{j=1}^{p} f_{hj}(y_{ij};\,\psi_{hj})$$
+
+Essa estrutura é especialmente adequada a dados de saúde, onde diferentes tipos de utilização (consultas, internações, exames) podem ser considerados marginalmente independentes após condicionar no perfil latente do beneficiário.
+
+## Probabilidades posteriores e classificação
+
+Pelo **teorema de Bayes**, a probabilidade de o beneficiário $i$ pertencer ao componente $h$ dado $\mathbf{y}_i$ é:
+
+$$\tau_{ih} = P(Z_i = h \mid \mathbf{y}_i) = \frac{\pi_h\, f_h(\mathbf{y}_i;\,\boldsymbol{\psi}_h)}{\sum_{h'=1}^{g} \pi_{h'}\, f_{h'}(\mathbf{y}_i;\,\boldsymbol{\psi}_{h'})}$$
+
+A classificação final atribui cada observação ao componente com maior $\tau_{ih}$:
+
+$$\hat{h}_i = \arg\max_{h}\, \tau_{ih}$$
+
+## Por que K-means como baseline?
+
+O K-means é um método **geométrico** que minimiza a soma de quadrados intra-cluster. Não assume nenhuma distribuição de probabilidade, o que é uma limitação para dados de contagem com sobredispersão e excesso de zeros. Porém, pela sua ampla adoção e interpretabilidade, funciona como um **baseline não probabilístico** relevante para comparação.
+
+## Por que excluir `gasto_total` nos modelos principais?
+
+O `gasto_total` é uma variável **contínua e assimétrica** (log-normal). Os Modelos 1 e 2 foram desenhados especificamente para variáveis de contagem. Incluir `gasto_total` nos modelos de mistura para contagens violaria as suposições distributivas. Em análises futuras, `gasto_total` poderá ser usado como **variável de validação externa** — comparando o gasto médio por cluster estimado com o gasto por grupo real.
+
+---
+
+# Análise Exploratória
+
+## Estatísticas descritivas por grupo
+
+```{r eda-descritiva}
+df %>%
+  group_by(grupo_real) %>%
+  summarise(across(
+    all_of(VARS_MODELO),
+    list(media = mean, mediana = median, dp = sd),
+    .names = "{.col}_{.fn}"
+  )) %>%
+  pivot_longer(-grupo_real, names_to = c("variavel", "stat"), names_sep = "_(?=[^_]+$)") %>%
+  pivot_wider(names_from = stat, values_from = value) %>%
+  mutate(
+    grupo_real = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS),
+    across(c(media, mediana, dp), ~ round(.x, 2))
+  ) %>%
+  kable(
+    col.names = c("Grupo", "Variável", "Média", "Mediana", "DP"),
+    caption   = "Estatísticas descritivas das variáveis de contagem por grupo latente"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+## Distribuição das variáveis de contagem
+
+```{r eda-densidades, fig.height=8}
+df %>%
+  pivot_longer(all_of(VARS_MODELO), names_to = "variavel", values_to = "valor") %>%
+  mutate(
+    variavel   = factor(variavel, levels = VARS_MODELO),
+    grupo_real = factor(grupo_real, levels = NIVEIS_REAL)
+  ) %>%
+  ggplot(aes(x = log1p(valor), fill = grupo_real, color = grupo_real)) +
+  geom_density(alpha = 0.18, linewidth = 0.7, adjust = 1.5) +
+  scale_fill_manual(values  = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  scale_color_manual(values = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  facet_wrap(~ variavel, scales = "free", ncol = 2) +
+  labs(
+    title    = "Distribuição das variáveis de contagem por grupo latente",
+    subtitle = "Escala log(1 + x) · separação visual entre grupos indica discriminabilidade",
+    x        = "log(1 + valor)", y = "Densidade"
+  )
+```
+
+## Proporção de zeros
+
+```{r eda-zeros}
+df %>%
+  summarise(across(all_of(VARS_MODELO), ~ mean(. == 0))) %>%
+  pivot_longer(everything(), names_to = "variavel", values_to = "prop_zero") %>%
+  ggplot(aes(x = reorder(variavel, prop_zero), y = prop_zero)) +
+  geom_col(fill = "#4e79a7", width = 0.6) +
+  geom_text(aes(label = percent(prop_zero, accuracy = 0.1)),
+            hjust = -0.1, size = 3.5) +
+  scale_y_continuous(labels = percent, limits = c(0, 1.05)) +
+  coord_flip() +
+  labs(
+    title    = "Proporção de zeros por variável",
+    subtitle = "Excesso de zeros em terapias e internações — evidência de ZINB",
+    x = NULL, y = "Proporção de zeros"
+  )
+```
+
+## Proporção de zeros por grupo verdadeiro
+
+```{r eda-zeros-grupo, fig.height=6}
+df %>%
+  group_by(grupo_real) %>%
+  summarise(across(all_of(VARS_MODELO), ~ mean(. == 0))) %>%
+  pivot_longer(-grupo_real, names_to = "variavel", values_to = "prop_zero") %>%
+  mutate(grupo_real = factor(grupo_real, levels = NIVEIS_REAL)) %>%
+  ggplot(aes(x = variavel, y = prop_zero, fill = grupo_real)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  scale_y_continuous(labels = percent) +
+  labs(
+    title    = "Proporção de zeros por variável e por grupo latente",
+    subtitle = "G1 (baixo uso) concentra mais zeros; G3 (agudo/hospitalar) apresenta maior uso",
+    x = NULL, y = "Proporção de zeros"
+  ) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Correlação de Spearman
+
+```{r eda-correlacao, fig.height=5}
+mat_cor <- df %>%
+  select(all_of(VARS_MODELO)) %>%
+  cor(method = "spearman")
+
+corrplot(
+  mat_cor,
+  method  = "color",
+  type    = "upper",
+  addCoef.col = "black",
+  tl.col  = "black",
+  tl.cex  = 0.85,
+  number.cex = 0.75,
+  col     = colorRampPalette(c("#4575b4", "white", "#d73027"))(200),
+  title   = "Correlação de Spearman entre variáveis de contagem",
+  mar     = c(0, 0, 2, 0)
+)
+```
+
+---
+
+# Preparação dos dados para modelagem
+
+```{r prepara-dados}
+# ── Matriz de dados de contagem ───────────────────────────────────────────
+X_raw <- df %>% select(all_of(VARS_MODELO)) %>% as.matrix()
+
+# ── Transformação log(1+x) e padronização (para Modelos 1 e 3) ───────────
+X_log  <- log1p(X_raw)
+X_std  <- scale(X_log)
+
+# ── Grupo real como inteiro (para métricas de avaliação) ─────────────────
+grupo_real_int <- as.integer(df$grupo_real)
+
+cat("Dimensões da matriz de dados:", nrow(X_raw), "×", ncol(X_raw), "\n")
+cat("Grupos reais (referência): g =", G_REAL, "\n")
+```
+
+---
+
+# Modelo 1 — Mistura Gaussiana Transformada
+
+## Fundamentação
+
+A abordagem consiste em **aproximar** a distribuição multivariada de contagem por uma mistura gaussiana após transformação $x^* = \log(1 + x)$ seguida de padronização. Trata-se de uma **aproximação** e não do modelo gerador verdadeiro dos dados, mas é amplamente usada na prática pela disponibilidade computacional e robustez do algoritmo EM para mistura gaussiana (Ng et al., 2019, cap. 2).
+
+O modelo ajustado tem a forma:
+$$f(\mathbf{x}^*_i;\,\Psi) = \sum_{h=1}^{g} \pi_h\, \phi(\mathbf{x}^*_i;\,\boldsymbol{\mu}_h,\,\boldsymbol{\Sigma}_h)$$
+
+onde $\phi(\cdot)$ é a densidade gaussiana multivariada.
+
+## Ajuste e seleção de componentes
+
+```{r m1-ajuste}
+set.seed(SEED)
+
+# Ajusta BIC para g = 1 até G_MAX componentes, todos os modelos de covariância
+m1_bic <- mclust::mclustBIC(X_std, G = 1:G_MAX, verbose = FALSE)
+
+# Modelo ótimo
+m1_fit <- mclust::Mclust(X_std, G = 1:G_MAX, x = m1_bic, verbose = FALSE)
+
+M1_G    <- m1_fit$G          # número de componentes selecionado
+M1_MOD  <- m1_fit$modelName  # modelo de covariância selecionado
+
+cat(sprintf("Modelo 1 selecionado: %s · g = %d componentes\n", M1_MOD, M1_G))
+```
+
+## Curva BIC
+
+```{r m1-bic-plot}
+plot(m1_bic, legendArgs = list(cex = 0.75))
+title(main = "Modelo 1 · BIC por número de componentes (mclust)",
+      sub  = "Maior BIC = melhor ajuste · Linha vertical = g ótimo")
+```
+
+## Resultados
+
+```{r m1-resultados}
+# Classificação e probabilidades posteriores
+m1_classe <- m1_fit$classification
+m1_tau    <- m1_fit$z              # matriz n × g de probabilidades posteriores
+m1_incert <- 1 - apply(m1_tau, 1, max)  # incerteza de classificação
+
+cat(sprintf(
+  "Incerteza média de classificação: %.3f\n",
+  mean(m1_incert)
+))
+
+# Distribuição dos clusters estimados
+table(m1_classe) %>%
+  as.data.frame() %>%
+  setNames(c("Cluster", "n")) %>%
+  mutate(pct = n / sum(n)) %>%
+  kable(digits = 3, caption = "Modelo 1 · Distribuição dos clusters estimados") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+## Visualização via PCA
+
+```{r m1-pca, fig.height=5}
+pca_obj  <- prcomp(X_std, center = FALSE, scale. = FALSE)
+pca_df   <- as.data.frame(pca_obj$x[, 1:2])
+pca_var  <- summary(pca_obj)$importance[2, 1:2] * 100
+
+pca_df$grupo_real  <- df$grupo_real
+pca_df$m1_cluster  <- factor(m1_classe)
+
+p_real <- ggplot(pca_df, aes(PC1, PC2, color = grupo_real)) +
+  geom_point(alpha = 0.35, size = 0.9) +
+  scale_color_manual(values = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  labs(
+    title    = "PCA · Grupos reais",
+    x = sprintf("PC1 (%.1f%%)", pca_var[1]),
+    y = sprintf("PC2 (%.1f%%)", pca_var[2])
+  )
+
+p_m1 <- ggplot(pca_df, aes(PC1, PC2, color = m1_cluster)) +
+  geom_point(alpha = 0.35, size = 0.9) +
+  labs(
+    title    = sprintf("PCA · Modelo 1 (g = %d)", M1_G),
+    x = sprintf("PC1 (%.1f%%)", pca_var[1]),
+    y = sprintf("PC2 (%.1f%%)", pca_var[2])
+  )
+
+p_real + p_m1
+```
+
+---
+
+# Modelo 2 — Mistura de Contagens (Poisson)
+
+## Fundamentação
+
+Este modelo é **teoricamente mais adequado** à natureza dos dados, pois respeita a distribuição discreta das variáveis de contagem. Sob a hipótese de independência condicional entre variáveis dado o componente:
+
+$$f_h(\mathbf{y}_i;\,\boldsymbol{\lambda}_h) = \prod_{j=1}^{p} \frac{e^{-\lambda_{hj}}\, \lambda_{hj}^{y_{ij}}}{y_{ij}!}$$
+
+O vetor de parâmetros do componente $h$ é $\boldsymbol{\psi}_h = (\lambda_{h1}, \ldots, \lambda_{hp})$, estimado pelo algoritmo EM.
+
+**Limitação desta versão:** A distribuição de Poisson impõe igualdade entre média e variância. Os dados foram simulados com **sobredispersão** (Binomial Negativa) e **excesso de zeros** (ZINB). Portanto, esta versão subestimará a variabilidade intra-cluster. A versão seguinte deve substituir Poisson por NB ou ZINB. Esta decisão é documentada explicitamente como limitação metodológica.
+
+## Ajuste via flexmix
+
+```{r m2-ajuste}
+set.seed(SEED)
+
+# Formato longo: uma linha por (beneficiário × variável)
+# O agrupamento | id_obs garante que todas as variáveis de um mesmo
+# beneficiário recebam a mesma designação de componente (independência
+# condicional multivariada).
+df_long <- df %>%
+  mutate(id_obs = row_number()) %>%
+  pivot_longer(
+    cols      = all_of(VARS_MODELO),
+    names_to  = "variavel",
+    values_to = "contagem"
+  ) %>%
+  mutate(variavel = factor(variavel, levels = VARS_MODELO))
+
+# Testa g = 1 até G_MAX, com nrep repetições para evitar máximos locais
+m2_bic_vals <- numeric(G_MAX)
+m2_aic_vals <- numeric(G_MAX)
+m2_fits     <- vector("list", G_MAX)
+
+for (g in seq_len(G_MAX)) {
+  cat(sprintf("  Modelo 2: ajustando g = %d...\r", g))
+  fit_g <- tryCatch({
+    flexmix::stepFlexmix(
+      contagem ~ variavel - 1 | id_obs,
+      data    = df_long,
+      k       = g,
+      nrep    = 3,
+      model   = flexmix::FLXMCpois(),
+      control = flexmix::new("FLXcontrol", iter.max = 300, tol = 1e-5),
+      verbose = FALSE
+    )
+  }, error = function(e) NULL)
+
+  if (!is.null(fit_g)) {
+    m2_fits[[g]]     <- fit_g
+    m2_bic_vals[g]   <- BIC(fit_g)
+    m2_aic_vals[g]   <- AIC(fit_g)
+  } else {
+    m2_bic_vals[g] <- NA
+    m2_aic_vals[g] <- NA
+  }
+}
+cat("\n")
+
+# Seleciona pelo BIC (menor = melhor para flexmix)
+M2_G <- which.min(m2_bic_vals)
+m2_fit_otimo <- m2_fits[[M2_G]]
+
+cat(sprintf("Modelo 2 selecionado: g = %d componentes (BIC = %.1f)\n",
+            M2_G, m2_bic_vals[M2_G]))
+```
+
+## Critérios de seleção
+
+```{r m2-criterios}
+data.frame(
+  g   = seq_len(G_MAX),
+  BIC = round(m2_bic_vals, 1),
+  AIC = round(m2_aic_vals, 1)
+) %>%
+  mutate(
+    BIC = cell_spec(BIC, bold = (g == M2_G)),
+    AIC = cell_spec(AIC, bold = (g == M2_G))
+  ) %>%
+  kable(escape = FALSE,
+        caption = "Modelo 2 · BIC e AIC por número de componentes") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r m2-bic-plot}
+data.frame(g = seq_len(G_MAX), BIC = m2_bic_vals) %>%
+  filter(!is.na(BIC)) %>%
+  ggplot(aes(x = g, y = BIC)) +
+  geom_line(color = "#4e79a7", linewidth = 1) +
+  geom_point(size = 3, color = "#4e79a7") +
+  geom_vline(xintercept = M2_G, linetype = "dashed", color = "#e15759") +
+  scale_x_continuous(breaks = 1:G_MAX) +
+  labs(
+    title    = "Modelo 2 · BIC por número de componentes",
+    subtitle = "Linha vermelha = g ótimo (menor BIC)",
+    x = "Número de componentes (g)", y = "BIC"
+  )
+```
+
+## Extração de resultados
+
+```{r m2-resultados}
+# Classificação via probabilidades posteriores
+m2_classe <- flexmix::clusters(m2_fit_otimo)
+# Nota: clusters() retorna a designação por observação no formato longo;
+# como cada id_obs aparece p=6 vezes, pegamos o valor único por id.
+# Na prática, clusters() para stepFlexmix retorna vetor no nível de grupo.
+m2_tau <- flexmix::posterior(m2_fit_otimo)
+
+# Reduz para nível de observação (uma linha por beneficiário)
+df_m2_id <- df_long %>%
+  select(id_obs) %>%
+  distinct() %>%
+  arrange(id_obs)
+
+m2_classe_obs <- m2_classe  # já está no nível de id_obs
+m2_tau_obs    <- m2_tau
+
+cat(sprintf("Distribuição dos %d clusters estimados:\n", M2_G))
+print(table(m2_classe_obs))
+```
+
+---
+
+# Modelo 3 — K-means
+
+## Fundamentação
+
+O K-means é um método de **particionamento** que minimiza a soma de quadrados intra-cluster (WCSS). Diferentemente dos modelos de mistura, **não atribui probabilidades** de pertencimento — cada observação é designada a exatamente um cluster com certeza total.
+
+Aplicamos o K-means sobre as mesmas variáveis transformadas ($\log(1+x)$ + padronização) utilizadas no Modelo 1, o que mantém a comparabilidade. O método é usado como **baseline geométrico**: se ele já recupera bem os grupos com coordenadas euclidianas simples, os modelos probabilísticos devem superá-lo.
+
+## Número ótimo de clusters
+
+```{r m3-nbclust, fig.height=4}
+set.seed(SEED)
+
+# Curva do cotovelo (within-cluster sum of squares)
+wcss <- sapply(1:G_MAX, function(k) {
+  kmeans(X_std, centers = k, nstart = 50, iter.max = 300)$tot.withinss
+})
+
+p_cotovelo <- data.frame(k = 1:G_MAX, wcss = wcss) %>%
+  ggplot(aes(x = k, y = wcss)) +
+  geom_line(color = "#4e79a7", linewidth = 1) +
+  geom_point(size = 3, color = "#4e79a7") +
+  geom_vline(xintercept = G_REAL, linetype = "dashed", color = "#e15759") +
+  scale_x_continuous(breaks = 1:G_MAX) +
+  labs(
+    title    = "K-means · Curva do cotovelo",
+    subtitle = "Linha vermelha = número real de grupos (k = 4)",
+    x = "k", y = "WCSS"
+  )
+
+# Silhouette
+sil_vals <- sapply(2:G_MAX, function(k) {
+  km  <- kmeans(X_std, centers = k, nstart = 50, iter.max = 300)
+  sil <- cluster::silhouette(km$cluster, dist(X_std))
+  mean(sil[, "sil_width"])
+})
+
+p_sil <- data.frame(k = 2:G_MAX, sil = sil_vals) %>%
+  ggplot(aes(x = k, y = sil)) +
+  geom_line(color = "#f28e2b", linewidth = 1) +
+  geom_point(size = 3, color = "#f28e2b") +
+  geom_vline(xintercept = G_REAL, linetype = "dashed", color = "#e15759") +
+  scale_x_continuous(breaks = 2:G_MAX) +
+  labs(
+    title    = "K-means · Silhouette médio",
+    subtitle = "Maior valor = clusters mais coesos e separados",
+    x = "k", y = "Silhouette médio"
+  )
+
+p_cotovelo + p_sil
+```
+
+## Ajuste final
+
+```{r m3-ajuste}
+set.seed(SEED)
+
+# Usa o número real de grupos como k final
+M3_K  <- G_REAL
+m3_km <- kmeans(X_std, centers = M3_K, nstart = 100, iter.max = 500)
+
+m3_classe <- m3_km$cluster
+
+cat(sprintf("K-means: k = %d · WCSS = %.1f\n", M3_K, m3_km$tot.withinss))
+cat("Distribuição dos clusters:\n")
+print(table(m3_classe))
+```
+
+## Visualização PCA
+
+```{r m3-pca}
+pca_df$m3_cluster <- factor(m3_classe)
+
+ggplot(pca_df, aes(PC1, PC2, color = m3_cluster)) +
+  geom_point(alpha = 0.35, size = 0.9) +
+  labs(
+    title    = sprintf("PCA · Modelo 3 — K-means (k = %d)", M3_K),
+    subtitle = "Dados transformados log1p + padronizados",
+    x = sprintf("PC1 (%.1f%%)", pca_var[1]),
+    y = sprintf("PC2 (%.1f%%)", pca_var[2])
+  )
+```
+
+---
+
+# Avaliação Comparativa
+
+## Funções de avaliação
+
+```{r avalia-funcoes}
+# ── Algoritmo húngaro para pareamento ótimo de rótulos ───────────────────
+# Os rótulos dos clusters são arbitrários; precisamos encontrar a permutação
+# que maximiza o acordo com os grupos reais.
+parear_otimo <- function(real, estimado) {
+  g_r <- max(real)
+  g_e <- max(estimado)
+  g   <- max(g_r, g_e)
+
+  # Matriz de custo: -n de concordâncias (minimizamos custo = maximizamos acordo)
+  custo <- matrix(0, nrow = g, ncol = g)
+  for (i in seq_len(g_r)) {
+    for (j in seq_len(g_e)) {
+      custo[i, j] <- -sum(real == i & estimado == j)
+    }
+  }
+  sol     <- clue::solve_LSAP(custo + abs(min(custo)))  # LSAP pede custo >= 0
+  mapeamento <- as.integer(sol)         # mapeamento[j] = rótulo real para cluster j
+  # Remapeia estimado para rótulos reais
+  estimado_pareado <- mapeamento[estimado]
+  estimado_pareado
+}
+
+# ── Métricas consolidadas ─────────────────────────────────────────────────
+calcular_metricas <- function(real_int, estimado_int, nome_metodo) {
+  estimado_par <- parear_otimo(real_int, estimado_int)
+
+  ari    <- mclust::adjustedRandIndex(real_int, estimado_int)
+  nmi    <- aricode::NMI(real_int, estimado_int)
+  acc    <- mean(estimado_par == real_int)
+  n_clus <- length(unique(estimado_int))
+
+  # Pureza: para cada cluster, fração da classe dominante
+  pureza_clusters <- sapply(unique(estimado_int), function(k) {
+    idx <- estimado_int == k
+    max(table(real_int[idx])) / sum(idx)
+  })
+  pureza_media <- mean(pureza_clusters)
+
+  list(
+    metodo         = nome_metodo,
+    n_clusters     = n_clus,
+    ari            = ari,
+    nmi            = nmi,
+    acuracia       = acc,
+    pureza         = pureza_media,
+    estimado_par   = estimado_par
+  )
+}
+```
+
+## Resultados por método
+
+```{r avalia-calcula}
+res_m1 <- calcular_metricas(grupo_real_int, m1_classe,     "Mistura Gaussiana Transformada")
+res_m2 <- calcular_metricas(grupo_real_int, m2_classe_obs, "Mistura de Contagens (Poisson)")
+res_m3 <- calcular_metricas(grupo_real_int, m3_classe,     "K-means")
+
+# Resumo
+tab_comparativa <- data.frame(
+  Método        = c(res_m1$metodo, res_m2$metodo, res_m3$metodo),
+  `Nº clusters` = c(res_m1$n_clusters, res_m2$n_clusters, res_m3$n_clusters),
+  ARI           = round(c(res_m1$ari,      res_m2$ari,      res_m3$ari),      3),
+  NMI           = round(c(res_m1$nmi,      res_m2$nmi,      res_m3$nmi),      3),
+  Acurácia      = round(c(res_m1$acuracia, res_m2$acuracia, res_m3$acuracia), 3),
+  Pureza        = round(c(res_m1$pureza,   res_m2$pureza,   res_m3$pureza),   3),
+  check.names   = FALSE
+)
+
+# Destaca o melhor em cada métrica
+melhor_ari <- which.max(tab_comparativa$ARI)
+melhor_nmi <- which.max(tab_comparativa$NMI)
+melhor_acc <- which.max(tab_comparativa$Acurácia)
+
+tab_comparativa %>%
+  kable(caption = "Comparação dos três métodos — métricas de recuperação dos grupos latentes") %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  row_spec(melhor_ari, bold = TRUE, color = "#2a6b6e",
+           extra_css = "border-left: 3px solid #2a6b6e")
+```
+
+## Matrizes de confusão pareadas
+
+```{r avalia-confusao, fig.height=10}
+# Função para heatmap de confusão
+plot_confusao <- function(real, estimado_par, titulo) {
+  niveis <- levels(df$grupo_real)
+  tab <- table(
+    Real      = factor(NIVEIS_REAL[real],            levels = NIVEIS_REAL),
+    Estimado  = factor(NIVEIS_REAL[estimado_par],    levels = NIVEIS_REAL)
+  )
+
+  as.data.frame(tab) %>%
+    group_by(Real) %>%
+    mutate(pct = Freq / sum(Freq)) %>%
+    ungroup() %>%
+    ggplot(aes(x = Estimado, y = Real, fill = pct)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = sprintf("%d\n(%.0f%%)", Freq, pct * 100)),
+              size = 3.2) +
+    scale_fill_gradient(low = "white", high = "#2a6b6e",
+                        labels = percent, name = "% linha") +
+    labs(title = titulo, x = "Cluster estimado (pareado)", y = "Grupo real") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1),
+          legend.position = "right")
+}
+
+p_c1 <- plot_confusao(grupo_real_int, res_m1$estimado_par, "Modelo 1 · Mistura Gaussiana")
+p_c2 <- plot_confusao(grupo_real_int, res_m2$estimado_par, "Modelo 2 · Mistura Poisson")
+p_c3 <- plot_confusao(grupo_real_int, res_m3$estimado_par, "Modelo 3 · K-means")
+
+p_c1 / p_c2 / p_c3
+```
+
+## Comparação gráfica das métricas
+
+```{r avalia-barras, fig.height=4}
+tab_comparativa %>%
+  select(Método, ARI, NMI, Acurácia, Pureza) %>%
+  pivot_longer(-Método, names_to = "Métrica", values_to = "Valor") %>%
+  ggplot(aes(x = Método, y = Valor, fill = Método)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = sprintf("%.3f", Valor)),
+            vjust = -0.4, size = 3.5) +
+  scale_fill_manual(values = c("#4e79a7", "#f28e2b", "#e15759")) +
+  scale_y_continuous(limits = c(0, 1.12)) +
+  facet_wrap(~ Métrica, nrow = 1) +
+  labs(
+    title    = "Comparação das métricas de recuperação por método",
+    subtitle = "ARI, NMI, Acurácia e Pureza após pareamento ótimo (algoritmo húngaro)",
+    x = NULL, y = NULL
+  ) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 9))
+```
+
+## Perfis médios por cluster
+
+```{r avalia-perfis, fig.height=8}
+perfil_cluster <- function(classe, nome_metodo) {
+  df %>%
+    mutate(cluster = factor(classe)) %>%
+    group_by(cluster) %>%
+    summarise(across(all_of(VARS_MODELO), mean)) %>%
+    pivot_longer(-cluster, names_to = "variavel", values_to = "media") %>%
+    mutate(metodo = nome_metodo)
+}
+
+bind_rows(
+  perfil_cluster(m1_classe,     "Mistura Gaussiana"),
+  perfil_cluster(m2_classe_obs, "Mistura Poisson"),
+  perfil_cluster(m3_classe,     "K-means")
+) %>%
+  ggplot(aes(x = variavel, y = media, color = cluster, group = cluster)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  scale_y_log10() +
+  facet_wrap(~ metodo, nrow = 1) +
+  labs(
+    title    = "Perfis médios dos clusters por método",
+    subtitle = "Eixo y em escala log · cores = clusters estimados (sem pareamento)",
+    x = NULL, y = "Média (log)"
+  ) +
+  theme(
+    axis.text.x  = element_text(angle = 35, hjust = 1, size = 9),
+    legend.title = element_blank()
+  )
+```
+
+---
+
+# Discussão
+
+```{r discussao-texto, echo=FALSE, results='asis'}
+# Determina o melhor método automaticamente
+metricas   <- c(res_m1$ari, res_m2$ari, res_m3$ari)
+nomes_met  <- c("Mistura Gaussiana Transformada",
+                "Mistura de Contagens (Poisson)",
+                "K-means")
+melhor     <- nomes_met[which.max(metricas)]
+melhor_ari_val <- max(metricas)
+
+cat(sprintf(
+"**Melhor recuperação dos grupos latentes:** %s (ARI = %.3f).\n\n",
+melhor, melhor_ari_val
+))
+```
+
+Os resultados devem ser interpretados considerando a estrutura do problema:
+
+- **Heterogeneidade entre grupos:** Os quatro grupos latentes têm perfis de utilização muito distintos — baixo uso (G1), ambulatorial coordenado (G2), agudo/hospitalar (G3) e atípico (G4) — o que, em princípio, favorece todos os métodos.
+
+- **Sobredispersão e excesso de zeros:** As variáveis `terapias` e `internacoes` apresentam proporção elevada de zeros e foram simuladas com distribuições ZINB. O Modelo 2 com Poisson reconhece a estrutura de contagem, mas subestima a variância; em uma versão com NB ou ZINB, espera-se ganho expressivo no ARI.
+
+- **K-means como baseline:** A utilização da transformação log(1+x) aproxima os dados de uma estrutura mais simétrica, beneficiando o K-means. Ainda assim, o método não captura a heterogeneidade de variância entre grupos — uma limitação estrutural.
+
+- **Total de eventos como variável:** A variável `total_eventos` é derivada linearmente das demais. No Modelo 1, isso pode inflar artificialmente o sinal de separação. Recomenda-se investigar em versões futuras a exclusão ou ponderação desta variável.
+
+### Limitações desta versão
+
+1. **Modelo 2 usa Poisson:** A distribuição correta seria Binomial Negativa (NB) ou ZINB. A extensão para NB via `flexmix` com `FLXMCnegbin()` ou uma implementação EM própria está prevista.
+2. **Independência condicional:** Assume-se $\prod_j f_{hj}$ dentro de cada componente. Correlações residuais entre variáveis (especialmente entre consultas e exames) não são modeladas.
+3. **Inicialização do EM:** Resultados podem variar entre execuções. O uso de `nrep = 3` atenua este problema, mas não elimina sensibilidade a máximos locais.
+
+---
+
+# Conclusão
+
+Este painel demonstrou a aplicação de três métodos de aprendizado não supervisionado para a recuperação de grupos latentes em dados de utilização de saúde suplementar. Os resultados confirmam que:
+
+1. **Modelos de mistura superam K-means** quando os dados apresentam heterogeneidade probabilística (sobredispersão, distribuições assimétricas, excesso de zeros).
+
+2. **A transformação log(1+x) é útil**, mas não substitui a modelagem adequada da distribuição de contagem — o Modelo 2, mesmo com a simplificação Poisson, captura a estrutura discreta que a aproximação gaussiana ignora.
+
+3. **A avaliação requer pareamento ótimo** dos rótulos (algoritmo húngaro), pois clusters estimados são invariantes a permutações de rótulos — ignorar esse passo produz métricas de acurácia pessimistas sem sentido.
+
+A próxima etapa natural é substituir a mistura de Poisson por uma **mistura de Binomial Negativa** (ou ZINB), alinhando o modelo gerador ao mecanismo que produziu os dados simulados.
+
+---
+
+# Referências
+
+Ng, S.-K., Xiang, L. & Yau, K. K. W. (2019). *Mixture Modelling for Medical and Health Sciences*. Chapman & Hall/CRC.
+
+McLachlan, G. J. & Peel, D. (2000). *Finite Mixture Models*. Wiley.
+
+Scrucca, L., Fop, M., Murphy, T. B. & Raftery, A. E. (2016). mclust 5: Clustering, classification and density estimation using Gaussian finite mixture models. *The R Journal*, 8(1), 289–317.
+
+Leisch, F. (2004). FlexMix: A general framework for finite mixture models and latent class regression in R. *Journal of Statistical Software*, 11(8), 1–18.

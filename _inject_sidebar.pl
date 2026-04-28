@@ -27,6 +27,7 @@ sub nav_html {
         [ "evolucao.html",    "Evolu\x{E7}\x{E3}o" ],
         [ "simulacao.html",   "Simula\x{E7}\x{E3}o" ],
         [ "eda_simsaude.html","EDA"                ],
+        [ "analises.html",   "An\x{E1}lises"      ],
     );
     my $items = "";
     for my $l (@links) {

@@ -35,13 +35,13 @@ knitr::opts_chunk$set(
 ```
 
 ```{r pacotes, class.source='fold-show'}
-# ── Verificação e carregamento de pacotes ──────────────────────────────────
+# ── Instalação automática de pacotes ausentes ─────────────────────────────
 pkgs_necessarios <- c(
   "dplyr", "tidyr", "ggplot2", "scales",
   "mclust",     # Modelo 1: mistura gaussiana
   "flexmix",    # Modelo 2: mistura de contagens
   "cluster",    # silhouette
-  "factoextra", # fviz_cluster, fviz_nbclust
+  "factoextra", # visualização de clusters
   "clue",       # solve_LSAP (algoritmo húngaro)
   "aricode",    # NMI
   "corrplot",   # matriz de correlação
@@ -49,11 +49,15 @@ pkgs_necessarios <- c(
   "patchwork"   # composição de gráficos
 )
 
-pkgs_faltando <- pkgs_necessarios[!sapply(pkgs_necessarios, requireNamespace, quietly = TRUE)]
+pkgs_faltando <- pkgs_necessarios[
+  !sapply(pkgs_necessarios, requireNamespace, quietly = TRUE)
+]
+
 if (length(pkgs_faltando) > 0) {
-  message("Instale os pacotes faltantes com:\n",
-          "install.packages(c(", paste0('"', pkgs_faltando, '"', collapse = ", "), "))")
-  stop("Pacotes necessários ausentes.")
+  message("Instalando pacotes ausentes: ",
+          paste(pkgs_faltando, collapse = ", "))
+  install.packages(pkgs_faltando, repos = "https://cloud.r-project.org",
+                   quiet = TRUE)
 }
 
 suppressPackageStartupMessages({

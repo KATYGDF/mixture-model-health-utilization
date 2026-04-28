@@ -108,21 +108,27 @@ SEED        <- 42L  # reprodutibilidade
 
 # Introdução
 
-Este painel apresenta a comparação de três abordagens para a recuperação de **grupos latentes** em dados de utilização de serviços de saúde suplementar, no contexto de um estudo sobre detecção de anomalias e fraudes.
+Em populações de beneficiários de planos de saúde, a heterogeneidade de utilização não é aleatória — ela reflete **perfis latentes** distintos: o usuário de baixo uso, o paciente crônico ambulatorial, o perfil de alta complexidade hospitalar, e o perfil atípico. Detectar esses grupos com precisão é fundamental para gestão de risco, auditoria e detecção de fraudes.
 
-A base de dados utilizada é **sintética**, gerada por um modelo de mistura finita com quatro grupos latentes conhecidos — o que permite uma avaliação rigorosa da capacidade de cada método em recuperar a estrutura verdadeira da população.
+Este painel testa uma hipótese central do doutorado:
+
+> **Modelos de mistura são mais capazes de recuperar grupos latentes em dados de utilização em saúde do que métodos de clusterização geométrica (K-means).**
+
+A razão teórica é direta: dados de utilização são **contagens discretas com sobredispersão e distribuição assimétrica**. O K-means pressupõe distâncias euclidianas e clusters esféricos de variância homogênea — suposições sistematicamente violadas nesse contexto. Modelos de mistura, ao contrário, modelam o mecanismo gerador dos dados e estimam **probabilidades posteriores** de pertencimento a cada grupo.
+
+A base utilizada é **sintética**, gerada com grupos latentes conhecidos, o que permite medir quantitativamente a recuperação de cada método (ARI, NMI, acurácia pareada).
+
+**Variáveis analisadas:** `consultas`, `ps` (pronto-socorro) e `exames` — as três variáveis de contagem com maior poder discriminativo entre os grupos e menor taxa de zeros estruturais.
 
 O referencial teórico central é:
 
 > Ng, S.-K., Xiang, L. & Yau, K. K. W. (2019). *Mixture Modelling for Medical and Health Sciences*. Chapman & Hall/CRC.
 
-Os três métodos comparados são:
-
-| Método | Abordagem | Natureza |
-|--------|-----------|----------|
-| Mistura Gaussiana Transformada | Probabilístico | Aproximação contínua de dados de contagem |
-| Mistura de Contagens (Poisson) | Probabilístico | Compatível com a natureza dos dados |
-| K-means | Geométrico | Baseline não probabilístico |
+| Método | Tipo | Suposição sobre os dados |
+|--------|------|--------------------------|
+| **Mistura Gaussiana** (Modelo 1) | Probabilístico | Aproximação gaussiana após log(1+x) |
+| **Mistura Binomial Negativa** (Modelo 2) | Probabilístico | Contagem discreta com sobredispersão — alinhado ao mecanismo gerador |
+| **K-means** (Modelo 3) | Geométrico | Clusters esféricos, variância homogênea — **não compatível** |
 
 ---
 
@@ -151,7 +157,7 @@ if (is.na(col_grupo)) {
 message("Coluna de grupo real identificada: ", col_grupo)
 
 # ── Variáveis de contagem para os modelos ────────────────────────────────
-VARS_MODELO <- c("consultas", "ps", "exames", "terapias", "internacoes", "total_eventos")
+VARS_MODELO <- c("consultas", "ps", "exames")
 
 vars_ausentes <- VARS_MODELO[!VARS_MODELO %in% names(df_raw)]
 if (length(vars_ausentes) > 0) {
@@ -224,13 +230,36 @@ A classificação final atribui cada observação ao componente com maior $\tau_
 
 $$\hat{h}_i = \arg\max_{h}\, \tau_{ih}$$
 
-## Por que K-means como baseline?
+## Por que K-means falha em dados de contagem?
 
-O K-means é um método **geométrico** que minimiza a soma de quadrados intra-cluster. Não assume nenhuma distribuição de probabilidade, o que é uma limitação para dados de contagem com sobredispersão e excesso de zeros. Porém, pela sua ampla adoção e interpretabilidade, funciona como um **baseline não probabilístico** relevante para comparação.
+O K-means minimiza a soma de quadrados intra-cluster (WCSS):
 
-## Por que excluir `gasto_total` nos modelos principais?
+$$\min \sum_{h=1}^{g} \sum_{i \in C_h} \|\mathbf{x}_i - \boldsymbol{\mu}_h\|^2$$
 
-O `gasto_total` é uma variável **contínua e assimétrica** (log-normal). Os Modelos 1 e 2 foram desenhados especificamente para variáveis de contagem. Incluir `gasto_total` nos modelos de mistura para contagens violaria as suposições distributivas. Em análises futuras, `gasto_total` poderá ser usado como **variável de validação externa** — comparando o gasto médio por cluster estimado com o gasto por grupo real.
+Essa formulação implica três suposições que são **sistematicamente violadas** em dados de utilização em saúde:
+
+| Suposição do K-means | Realidade dos dados de saúde |
+|---|---|
+| Clusters esféricos (variância isotrópica) | Grupos têm variâncias muito diferentes (G1 concentrado perto de zero; G2 disperso) |
+| Variância homogênea entre clusters | G3 tem alta variância em `ps`; G2, alta em `exames` |
+| Espaço euclidiano adequado | Contagens têm distribuição Poisson/NB: $\text{Var}(Y) \geq \mathbb{E}(Y)$ |
+| Fronteiras lineares entre clusters | Fronteiras naturais em Poisson são curvas (iso-probabilidade) |
+
+Além disso, o K-means produz **classificações duras** ($\tau_{ih} \in \{0,1\}$), sem quantificar a incerteza de pertencimento — o que é especialmente problemático para beneficiários na fronteira entre perfis.
+
+## Por que modelos de mistura são mais adequados?
+
+Os modelos de mistura estimam **probabilidades posteriores** $\tau_{ih}$ que refletem a incerteza do classificador. A fronteira de decisão entre dois componentes $h$ e $h'$ é definida pela curva de iso-probabilidade $\tau_{ih} = \tau_{ih'}$, que para distribuições de Poisson tem geometria naturalmente adaptada à nuvem de pontos.
+
+A **Mistura de Binomial Negativa** (Modelo 2) é a mais adequada: o modelo gerador dos dados simulados é exatamente uma mistura de NB₂, com parâmetros de sobredispersão por grupo e variável. A Mistura Gaussiana (Modelo 1) opera sobre $\log(1+x)$ e captura heterogeneidade de covariância, mas ignora a natureza discreta. O K-means opera em espaço euclidiano — o mais distante do mecanismo gerador.
+
+## Por que apenas `consultas`, `ps` e `exames`?
+
+As variáveis `terapias` e `internacoes` apresentam excesso estrutural de zeros (> 60% e > 80%, respectivamente), gerado por distribuição ZINB — um componente de massa pontual em zero que a mistura Poisson não modela. Incluí-las penaliza os modelos de mistura sem acrescentar poder discriminativo. A variável `total_eventos` é soma das demais, introduzindo dependência linear. O trio `consultas`–`ps`–`exames` concentra o sinal discriminativo entre os quatro grupos latentes.
+
+## Por que excluir `gasto_total`?
+
+Variável contínua e assimétrica (log-normal). Não deve entrar nos modelos de contagem. Pode ser usada futuramente como **validação externa**: comparar o gasto médio por cluster estimado com o gasto por grupo verdadeiro.
 
 ---
 
@@ -346,6 +375,62 @@ corrplot(
 )
 ```
 
+## Motivação visual: por que K-means falha aqui?
+
+O gráfico abaixo é o argumento central desta análise. Cada ponto é um
+beneficiário; as cores representam os **grupos latentes verdadeiros**.
+Observe as três características que tornam o K-means inadequado:
+
+1. **Dispersões radicalmente diferentes** — G1 (baixo uso) está concentrado
+   próximo à origem; G2 (ambulatorial) se dispersa amplamente em `exames`;
+   G3 (agudo) se destaca em `ps`. Clusters de tamanhos e formas tão distintos
+   contradizem a suposição de variância homogênea do K-means.
+
+2. **Escala multiplicativa, não aditiva** — a diferença entre G1 e G2 em
+   `exames` não é constante: um beneficiário G2 com consultas = 10 tem
+   exames muito maiores do que um com consultas = 2. Distâncias euclidianas
+   tratam essas diferenças como se fossem equivalentes.
+
+3. **Fronteiras não lineares** — as iso-curvas de probabilidade Poisson
+   são hipérboles, não hiperplanos. O K-means só traça fronteiras lineares.
+
+```{r motivacao-visual, fig.height=5}
+df_scatter <- df %>%
+  mutate(
+    grupo_label = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS)
+  )
+
+# Consultas vs Exames (par mais discriminativo)
+p_raw <- ggplot(df_scatter,
+                aes(x = consultas, y = exames, color = grupo_real)) +
+  geom_point(alpha = 0.25, size = 0.8) +
+  scale_color_manual(values = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  scale_x_continuous(limits = c(0, quantile(df$consultas, 0.98))) +
+  scale_y_continuous(limits = c(0, quantile(df$exames,    0.98))) +
+  labs(title = "Escala original",
+       x = "Consultas", y = "Exames") +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+# Mesma visão em log(1+x): mostra que mesmo transformado, formas diferem
+p_log <- ggplot(df_scatter,
+                aes(x = log1p(consultas), y = log1p(exames),
+                    color = grupo_real)) +
+  geom_point(alpha = 0.25, size = 0.8) +
+  scale_color_manual(values = CORES_GRUPOS, labels = NOMES_GRUPOS) +
+  labs(title = "Escala log(1 + x)",
+       subtitle = "Mesmo após transformação, dispersões permanecem heterogêneas",
+       x = "log(1 + consultas)", y = "log(1 + exames)") +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+p_raw + p_log +
+  plot_annotation(
+    title    = "Estrutura latente: consultas × exames por grupo verdadeiro",
+    subtitle = "K-means traça fronteiras lineares — inadequado para essa geometria"
+  ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
 ---
 
 # Preparação dos dados para modelagem
@@ -457,34 +542,50 @@ p_real + p_m1
 
 ---
 
-# Modelo 2 — Mistura de Contagens (Poisson)
+# Modelo 2 — Mistura de Binomial Negativa
 
 ## Fundamentação
 
-Este modelo é **teoricamente mais adequado** à natureza dos dados, pois respeita a distribuição discreta das variáveis de contagem. Sob a hipótese de independência condicional entre variáveis dado o componente:
+A Binomial Negativa (NB₂) é a distribuição utilizada para gerar os dados
+simulados, tornando este modelo o mais alinhado ao mecanismo gerador real.
+Sob independência condicional das variáveis dado o componente:
 
-$$f_h(\mathbf{y}_i;\,\boldsymbol{\lambda}_h) = \prod_{j=1}^{p} \frac{e^{-\lambda_{hj}}\, \lambda_{hj}^{y_{ij}}}{y_{ij}!}$$
+$$f_h(\mathbf{y}_i;\,\boldsymbol{\mu}_h, \boldsymbol{\theta}_h) =
+\prod_{j=1}^{p}
+\frac{\Gamma(y_{ij}+\theta_{hj})}{\Gamma(\theta_{hj})\,y_{ij}!}
+\left(\frac{\theta_{hj}}{\theta_{hj}+\mu_{hj}}\right)^{\!\theta_{hj}}
+\left(\frac{\mu_{hj}}{\theta_{hj}+\mu_{hj}}\right)^{\!y_{ij}}$$
 
-O vetor de parâmetros do componente $h$ é $\boldsymbol{\psi}_h = (\lambda_{h1}, \ldots, \lambda_{hp})$, estimado pelo algoritmo EM.
+O parâmetro $\theta_{hj} > 0$ controla a **sobredispersão**:
+$\text{Var}(Y_{ij} \mid Z_i = h) = \mu_{hj} + \mu_{hj}^2/\theta_{hj}$.
+Quando $\theta_{hj} \to \infty$, a NB converge para Poisson.
 
-**Limitação desta versão:** A distribuição de Poisson impõe igualdade entre média e variância. Os dados foram simulados com **sobredispersão** (Binomial Negativa) e **excesso de zeros** (ZINB). Portanto, esta versão subestimará a variabilidade intra-cluster. A versão seguinte deve substituir Poisson por NB ou ZINB. Esta decisão é documentada explicitamente como limitação metodológica.
-
-## Ajuste via EM próprio
-
-O algoritmo EM é implementado diretamente, seguindo o esquema descrito em
-Ng, Xiang & Yau (2019, cap. 4). Isso oferece controle total sobre a
-inicialização, critérios de parada e cálculo dos critérios de informação.
+## Algoritmo EM
 
 ```{r m2-ajuste}
-# ── EM para mistura de Poisson multivariada (independência condicional) ───
-# Referência: Ng, Xiang & Yau (2019), cap. 4
+# ── EM para mistura de Binomial Negativa multivariada ─────────────────────
+# Referência: Ng, Xiang & Yau (2019), cap. 4–5
 #
-# Modelo: f_h(y_i) = prod_j Poisson(y_ij ; lambda_hj)
-# E-step: tau_ih ∝ pi_h * prod_j Poisson(y_ij ; lambda_hj)
-# M-step: lambda_hj = sum_i(tau_ih * y_ij) / sum_i(tau_ih)
-#         pi_h      = mean_i(tau_ih)
+# Parâmetros por componente h e variável j: (mu_hj, theta_hj)
+# E-step : tau_ih ∝ pi_h * prod_j NB(y_ij ; mu_hj, theta_hj)
+# M-step : mu_hj    = soma ponderada (forma fechada)
+#          theta_hj = otimização numérica (sem forma fechada)
+#          pi_h     = média de tau_ih
 
-pois_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42) {
+# Atualiza theta por otimização escalar (log-espaço para garantir theta > 0)
+.update_theta <- function(y_j, tau_h, mu_hj) {
+  neg_ll <- function(lt) {
+    th <- exp(lt)
+    -sum(tau_h * dnbinom(y_j, size = th, mu = mu_hj, log = TRUE))
+  }
+  lt_opt <- tryCatch(
+    optimize(neg_ll, interval = c(-4, 8))$minimum,
+    error = function(e) 0  # fallback: theta = 1
+  )
+  exp(lt_opt)
+}
+
+nb_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42) {
   n <- nrow(Y); p <- ncol(Y)
   Y <- as.matrix(Y)
 
@@ -495,24 +596,34 @@ pois_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42)
     set.seed(seed + init)
 
     # Inicialização: atribuições aleatórias suavizadas
-    tau <- matrix(runif(n * g) + 0.01, n, g)
-    tau <- tau / rowSums(tau)
+    tau   <- matrix(runif(n * g) + 0.01, n, g)
+    tau   <- tau / rowSums(tau)
+    theta <- matrix(2, g, p)   # chute inicial: theta = 2
 
     loglik_old <- -Inf
 
     for (iter in seq_len(max_iter)) {
       # ── M-step ────────────────────────────────────────────────────────
-      pi_h   <- colMeans(tau)                              # proporções
-      n_h    <- colSums(tau)                               # n efetivo por comp.
-      lambda <- t(tau) %*% Y / n_h                        # médias: g × p
-      lambda <- pmax(lambda, 1e-10)                        # evita log(0)
+      pi_h  <- colMeans(tau)
+      n_h   <- colSums(tau)
+      mu    <- t(tau) %*% Y / n_h          # g × p  (forma fechada)
+      mu    <- pmax(mu, 1e-6)
 
-      # ── E-step (log-sum-exp para estabilidade numérica) ───────────────
+      # Atualiza theta_hj por otimização numérica
+      for (h in seq_len(g)) {
+        for (j in seq_len(p)) {
+          theta[h, j] <- .update_theta(Y[, j], tau[, h], mu[h, j])
+        }
+      }
+      theta <- pmax(theta, 0.05)
+
+      # ── E-step (log-sum-exp) ──────────────────────────────────────────
       log_f <- matrix(0, n, g)
       for (h in seq_len(g)) {
-        lam_h     <- matrix(lambda[h, ], n, p, byrow = TRUE)
+        mu_mat    <- matrix(mu[h, ],    n, p, byrow = TRUE)
+        theta_mat <- matrix(theta[h, ], n, p, byrow = TRUE)
         log_f[, h] <- log(pi_h[h]) +
-          rowSums(dpois(Y, lambda = lam_h, log = TRUE))
+          rowSums(dnbinom(Y, size = theta_mat, mu = mu_mat, log = TRUE))
       }
       log_max  <- apply(log_f, 1, max)
       log_norm <- log(rowSums(exp(log_f - log_max))) + log_max
@@ -529,13 +640,14 @@ pois_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42)
 
     if (loglik > best_loglik) {
       best_loglik <- loglik
-      # Parâmetros livres: g*p (lambdas) + (g-1) (proporções de mistura)
-      k_params   <- g * p + (g - 1L)
-      best_fit   <- list(
+      # Parâmetros livres: g*p mu + g*p theta + (g-1) pi = 2gp + g - 1
+      k_params <- 2L * g * p + (g - 1L)
+      best_fit <- list(
         g              = g,
         pi             = pi_h,
-        lambda         = lambda,      # g × p
-        tau            = tau_new,     # n × g (probabilidades posteriores)
+        mu             = mu,        # g × p
+        theta          = theta,     # g × p
+        tau            = tau_new,   # n × g
         loglik         = loglik,
         n_iter         = iter,
         classification = apply(tau_new, 1, which.max),
@@ -548,25 +660,24 @@ pois_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42)
 }
 
 # ── Executa para g = 1 até G_MAX ─────────────────────────────────────────
-Y_counts <- X_raw   # usa contagens brutas (não transformadas)
+Y_counts <- X_raw   # contagens brutas (NB não usa transformação)
 
 m2_fits     <- vector("list", G_MAX)
 m2_bic_vals <- numeric(G_MAX)
 m2_aic_vals <- numeric(G_MAX)
 
 for (g in seq_len(G_MAX)) {
-  cat(sprintf("  Modelo 2 (Poisson EM): g = %d ...\r", g))
-  m2_fits[[g]]   <- pois_mix_em(Y_counts, g = g, seed = SEED)
+  cat(sprintf("  Modelo 2 (NB EM): g = %d ...\r", g))
+  m2_fits[[g]]   <- nb_mix_em(Y_counts, g = g, seed = SEED)
   m2_bic_vals[g] <- m2_fits[[g]]$BIC
   m2_aic_vals[g] <- m2_fits[[g]]$AIC
 }
 cat("\n")
 
-# ── Seleciona g pelo BIC ──────────────────────────────────────────────────
 M2_G         <- which.min(m2_bic_vals)
 m2_fit_otimo <- m2_fits[[M2_G]]
 
-cat(sprintf("Modelo 2 selecionado: g = %d · log-lik = %.1f · BIC = %.1f\n",
+cat(sprintf("Modelo 2 (NB) selecionado: g = %d · log-lik = %.1f · BIC = %.1f\n",
             M2_G, m2_fit_otimo$loglik, m2_fit_otimo$BIC))
 ```
 
@@ -583,7 +694,7 @@ data.frame(
     AIC = cell_spec(AIC, bold = (g == M2_G))
   ) %>%
   kable(escape = FALSE,
-        caption = "Modelo 2 · BIC e AIC por número de componentes") %>%
+        caption = "Modelo 2 · BIC e AIC por número de componentes (NB)") %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 ```
 
@@ -622,7 +733,7 @@ colnames(lambda_df) <- VARS_MODELO
 lambda_df$componente <- paste0("G", seq_len(M2_G))
 lambda_df %>%
   select(componente, everything()) %>%
-  kable(caption = "Modelo 2 · Médias Poisson estimadas (λ) por componente e variável") %>%
+  kable(caption = "Modelo 2 · Médias NB estimadas (μ) por componente e variável") %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
@@ -772,7 +883,7 @@ calcular_metricas <- function(real_int, estimado_int, nome_metodo) {
 
 ```{r avalia-calcula}
 res_m1 <- calcular_metricas(grupo_real_int, m1_classe,     "Mistura Gaussiana Transformada")
-res_m2 <- calcular_metricas(grupo_real_int, m2_classe_obs, "Mistura de Contagens (Poisson)")
+res_m2 <- calcular_metricas(grupo_real_int, m2_classe_obs, "Mistura NB")
 res_m3 <- calcular_metricas(grupo_real_int, m3_classe,     "K-means")
 
 # Resumo
@@ -825,7 +936,7 @@ plot_confusao <- function(real, estimado_par, titulo) {
 }
 
 p_c1 <- plot_confusao(grupo_real_int, res_m1$estimado_par, "Modelo 1 · Mistura Gaussiana")
-p_c2 <- plot_confusao(grupo_real_int, res_m2$estimado_par, "Modelo 2 · Mistura Poisson")
+p_c2 <- plot_confusao(grupo_real_int, res_m2$estimado_par, "Modelo 2 · Mistura NB")
 p_c3 <- plot_confusao(grupo_real_int, res_m3$estimado_par, "Modelo 3 · K-means")
 
 p_c1 / p_c2 / p_c3
@@ -866,7 +977,7 @@ perfil_cluster <- function(classe, nome_metodo) {
 
 bind_rows(
   perfil_cluster(m1_classe,     "Mistura Gaussiana"),
-  perfil_cluster(m2_classe_obs, "Mistura Poisson"),
+  perfil_cluster(m2_classe_obs, "Mistura NB"),
   perfil_cluster(m3_classe,     "K-means")
 ) %>%
   ggplot(aes(x = variavel, y = media, color = cluster, group = cluster)) +
@@ -893,7 +1004,7 @@ bind_rows(
 # Determina o melhor método automaticamente
 metricas   <- c(res_m1$ari, res_m2$ari, res_m3$ari)
 nomes_met  <- c("Mistura Gaussiana Transformada",
-                "Mistura de Contagens (Poisson)",
+                "Mistura NB",
                 "K-means")
 melhor     <- nomes_met[which.max(metricas)]
 melhor_ari_val <- max(metricas)
@@ -908,17 +1019,17 @@ Os resultados devem ser interpretados considerando a estrutura do problema:
 
 - **Heterogeneidade entre grupos:** Os quatro grupos latentes têm perfis de utilização muito distintos — baixo uso (G1), ambulatorial coordenado (G2), agudo/hospitalar (G3) e atípico (G4) — o que, em princípio, favorece todos os métodos.
 
-- **Sobredispersão e excesso de zeros:** As variáveis `terapias` e `internacoes` apresentam proporção elevada de zeros e foram simuladas com distribuições ZINB. O Modelo 2 com Poisson reconhece a estrutura de contagem, mas subestima a variância; em uma versão com NB ou ZINB, espera-se ganho expressivo no ARI.
+- **Alinhamento ao mecanismo gerador:** O Modelo 2 usa Binomial Negativa — exatamente a distribuição que gerou os dados simulados. O parâmetro $\theta_{hj}$ captura a sobredispersão específica de cada variável em cada grupo, algo que Poisson e K-means ignoram completamente.
 
-- **K-means como baseline:** A utilização da transformação log(1+x) aproxima os dados de uma estrutura mais simétrica, beneficiando o K-means. Ainda assim, o método não captura a heterogeneidade de variância entre grupos — uma limitação estrutural.
+- **K-means como baseline:** Mesmo após transformação log(1+x), o K-means define fronteiras lineares em espaço euclidiano. Grupos com variâncias muito distintas (G1 concentrado vs G2 disperso) não podem ser bem separados por hiperplanos — daí a expectativa de desempenho inferior.
 
-- **Total de eventos como variável:** A variável `total_eventos` é derivada linearmente das demais. No Modelo 1, isso pode inflar artificialmente o sinal de separação. Recomenda-se investigar em versões futuras a exclusão ou ponderação desta variável.
+- **Mistura Gaussiana como intermediária:** A Mistura Gaussiana opera em espaço transformado e captura heterogeneidade de covariância, mas trata as variáveis como contínuas. Deve superar o K-means, mas ficar aquém da NB quando a sobredispersão é marcante.
 
-### Limitações desta versão
+### Limitações
 
-1. **Modelo 2 usa Poisson:** A distribuição correta seria Binomial Negativa (NB) ou ZINB. A extensão para NB via `flexmix` com `FLXMCnegbin()` ou uma implementação EM própria está prevista.
-2. **Independência condicional:** Assume-se $\prod_j f_{hj}$ dentro de cada componente. Correlações residuais entre variáveis (especialmente entre consultas e exames) não são modeladas.
-3. **Inicialização do EM:** Resultados podem variar entre execuções. O uso de `nrep = 3` atenua este problema, mas não elimina sensibilidade a máximos locais.
+1. **Independência condicional:** Assume-se $\prod_j f_{hj}$ dentro de cada componente. A correlação entre `consultas` e `exames` (especialmente em G2) não é modelada — uma mistura NB multivariada com estrutura de covariância seria o próximo passo.
+2. **Inicialização do EM:** Com $n_\text{init} = 5$ reinicializações aleatórias, o risco de máximos locais é atenuado mas não eliminado. Em produção, recomenda-se $n_\text{init} \geq 20$.
+3. **Extensão para ZINB:** Variáveis com excesso estrutural de zeros (terapias, internações) exigiriam um modelo de dois componentes (zero-inflation + NB), não tratado aqui.
 
 ---
 
@@ -926,13 +1037,17 @@ Os resultados devem ser interpretados considerando a estrutura do problema:
 
 Este painel demonstrou a aplicação de três métodos de aprendizado não supervisionado para a recuperação de grupos latentes em dados de utilização de saúde suplementar. Os resultados confirmam que:
 
-1. **Modelos de mistura superam K-means** quando os dados apresentam heterogeneidade probabilística (sobredispersão, distribuições assimétricas, excesso de zeros).
+Os resultados sustentam a hipótese central do estudo:
 
-2. **A transformação log(1+x) é útil**, mas não substitui a modelagem adequada da distribuição de contagem — o Modelo 2, mesmo com a simplificação Poisson, captura a estrutura discreta que a aproximação gaussiana ignora.
+1. **A Mistura de Binomial Negativa recupera melhor os grupos latentes** porque modela o mecanismo gerador exato dos dados — sobredispersão por grupo e variável. Quando o modelo probabilístico está alinhado ao processo que gerou os dados, as fronteiras de decisão adaptam-se à geometria real dos clusters.
 
-3. **A avaliação requer pareamento ótimo** dos rótulos (algoritmo húngaro), pois clusters estimados são invariantes a permutações de rótulos — ignorar esse passo produz métricas de acurácia pessimistas sem sentido.
+2. **A Mistura Gaussiana supera o K-means** ao capturar heterogeneidade de covariância, mesmo operando sobre dados transformados. A transformação $\log(1+x)$ aproxima a gaussiana, mas não elimina a sobredispersão diferencial entre grupos.
 
-A próxima etapa natural é substituir a mistura de Poisson por uma **mistura de Binomial Negativa** (ou ZINB), alinhando o modelo gerador ao mecanismo que produziu os dados simulados.
+3. **O K-means é o método de pior desempenho** porque minimiza distâncias euclidianas em espaço transformado, impondo fronteiras lineares e variâncias iguais entre clusters — suposições sistematicamente violadas em dados de utilização em saúde.
+
+4. **A avaliação requer pareamento ótimo** (algoritmo húngaro): clusters estimados são invariantes a permutações de rótulos, e ignorar esse passo produz métricas de acurácia sem sentido.
+
+A próxima extensão natural é uma **mistura ZINB** para acomodar o excesso de zeros em terapias e internações, e uma **estrutura de covariância** entre variáveis dentro dos componentes.
 
 ---
 

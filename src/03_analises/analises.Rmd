@@ -469,60 +469,105 @@ O vetor de parâmetros do componente $h$ é $\boldsymbol{\psi}_h = (\lambda_{h1}
 
 **Limitação desta versão:** A distribuição de Poisson impõe igualdade entre média e variância. Os dados foram simulados com **sobredispersão** (Binomial Negativa) e **excesso de zeros** (ZINB). Portanto, esta versão subestimará a variabilidade intra-cluster. A versão seguinte deve substituir Poisson por NB ou ZINB. Esta decisão é documentada explicitamente como limitação metodológica.
 
-## Ajuste via flexmix
+## Ajuste via EM próprio
+
+O algoritmo EM é implementado diretamente, seguindo o esquema descrito em
+Ng, Xiang & Yau (2019, cap. 4). Isso oferece controle total sobre a
+inicialização, critérios de parada e cálculo dos critérios de informação.
 
 ```{r m2-ajuste}
-set.seed(SEED)
+# ── EM para mistura de Poisson multivariada (independência condicional) ───
+# Referência: Ng, Xiang & Yau (2019), cap. 4
+#
+# Modelo: f_h(y_i) = prod_j Poisson(y_ij ; lambda_hj)
+# E-step: tau_ih ∝ pi_h * prod_j Poisson(y_ij ; lambda_hj)
+# M-step: lambda_hj = sum_i(tau_ih * y_ij) / sum_i(tau_ih)
+#         pi_h      = mean_i(tau_ih)
 
-# Formato longo: uma linha por (beneficiário × variável)
-# O agrupamento | id_obs garante que todas as variáveis de um mesmo
-# beneficiário recebam a mesma designação de componente (independência
-# condicional multivariada).
-df_long <- df %>%
-  mutate(id_obs = row_number()) %>%
-  pivot_longer(
-    cols      = VARS_MODELO,
-    names_to  = "variavel",
-    values_to = "contagem"
-  ) %>%
-  mutate(variavel = factor(variavel, levels = VARS_MODELO))
+pois_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42) {
+  n <- nrow(Y); p <- ncol(Y)
+  Y <- as.matrix(Y)
 
-# Testa g = 1 até G_MAX, com nrep repetições para evitar máximos locais
+  best_loglik <- -Inf
+  best_fit    <- NULL
+
+  for (init in seq_len(n_init)) {
+    set.seed(seed + init)
+
+    # Inicialização: atribuições aleatórias suavizadas
+    tau <- matrix(runif(n * g) + 0.01, n, g)
+    tau <- tau / rowSums(tau)
+
+    loglik_old <- -Inf
+
+    for (iter in seq_len(max_iter)) {
+      # ── M-step ────────────────────────────────────────────────────────
+      pi_h   <- colMeans(tau)                              # proporções
+      n_h    <- colSums(tau)                               # n efetivo por comp.
+      lambda <- t(tau) %*% Y / n_h                        # médias: g × p
+      lambda <- pmax(lambda, 1e-10)                        # evita log(0)
+
+      # ── E-step (log-sum-exp para estabilidade numérica) ───────────────
+      log_f <- matrix(0, n, g)
+      for (h in seq_len(g)) {
+        lam_h     <- matrix(lambda[h, ], n, p, byrow = TRUE)
+        log_f[, h] <- log(pi_h[h]) +
+          rowSums(dpois(Y, lambda = lam_h, log = TRUE))
+      }
+      log_max  <- apply(log_f, 1, max)
+      log_norm <- log(rowSums(exp(log_f - log_max))) + log_max
+      loglik   <- sum(log_norm)
+
+      tau_new  <- exp(log_f - log_norm)
+      tau_new  <- tau_new / rowSums(tau_new)
+
+      # ── Convergência ──────────────────────────────────────────────────
+      if (iter > 1 && abs(loglik - loglik_old) < tol) break
+      loglik_old <- loglik
+      tau        <- tau_new
+    }
+
+    if (loglik > best_loglik) {
+      best_loglik <- loglik
+      # Parâmetros livres: g*p (lambdas) + (g-1) (proporções de mistura)
+      k_params   <- g * p + (g - 1L)
+      best_fit   <- list(
+        g              = g,
+        pi             = pi_h,
+        lambda         = lambda,      # g × p
+        tau            = tau_new,     # n × g (probabilidades posteriores)
+        loglik         = loglik,
+        n_iter         = iter,
+        classification = apply(tau_new, 1, which.max),
+        BIC            = -2 * loglik + k_params * log(n),
+        AIC            = -2 * loglik + 2 * k_params
+      )
+    }
+  }
+  best_fit
+}
+
+# ── Executa para g = 1 até G_MAX ─────────────────────────────────────────
+Y_counts <- X_raw   # usa contagens brutas (não transformadas)
+
+m2_fits     <- vector("list", G_MAX)
 m2_bic_vals <- numeric(G_MAX)
 m2_aic_vals <- numeric(G_MAX)
-m2_fits     <- vector("list", G_MAX)
 
 for (g in seq_len(G_MAX)) {
-  cat(sprintf("  Modelo 2: ajustando g = %d...\r", g))
-  fit_g <- tryCatch({
-    flexmix::stepFlexmix(
-      contagem ~ variavel - 1 | id_obs,
-      data    = df_long,
-      k       = g,
-      nrep    = 3,
-      model   = flexmix::FLXMCpois(),
-      control = flexmix::new("FLXcontrol", iter.max = 300, tol = 1e-5),
-      verbose = FALSE
-    )
-  }, error = function(e) NULL)
-
-  if (!is.null(fit_g)) {
-    m2_fits[[g]]     <- fit_g
-    m2_bic_vals[g]   <- BIC(fit_g)
-    m2_aic_vals[g]   <- AIC(fit_g)
-  } else {
-    m2_bic_vals[g] <- NA
-    m2_aic_vals[g] <- NA
-  }
+  cat(sprintf("  Modelo 2 (Poisson EM): g = %d ...\r", g))
+  m2_fits[[g]]   <- pois_mix_em(Y_counts, g = g, seed = SEED)
+  m2_bic_vals[g] <- m2_fits[[g]]$BIC
+  m2_aic_vals[g] <- m2_fits[[g]]$AIC
 }
 cat("\n")
 
-# Seleciona pelo BIC (menor = melhor para flexmix)
-M2_G <- which.min(m2_bic_vals)
+# ── Seleciona g pelo BIC ──────────────────────────────────────────────────
+M2_G         <- which.min(m2_bic_vals)
 m2_fit_otimo <- m2_fits[[M2_G]]
 
-cat(sprintf("Modelo 2 selecionado: g = %d componentes (BIC = %.1f)\n",
-            M2_G, m2_bic_vals[M2_G]))
+cat(sprintf("Modelo 2 selecionado: g = %d · log-lik = %.1f · BIC = %.1f\n",
+            M2_G, m2_fit_otimo$loglik, m2_fit_otimo$BIC))
 ```
 
 ## Critérios de seleção
@@ -560,24 +605,25 @@ data.frame(g = seq_len(G_MAX), BIC = m2_bic_vals) %>%
 ## Extração de resultados
 
 ```{r m2-resultados}
-# Classificação via probabilidades posteriores
-m2_classe <- flexmix::clusters(m2_fit_otimo)
-# Nota: clusters() retorna a designação por observação no formato longo;
-# como cada id_obs aparece p=6 vezes, pegamos o valor único por id.
-# Na prática, clusters() para stepFlexmix retorna vetor no nível de grupo.
-m2_tau <- flexmix::posterior(m2_fit_otimo)
+# Extrai classificação e probabilidades posteriores do EM
+m2_classe_obs <- m2_fit_otimo$classification   # inteiro 1..g por beneficiário
+m2_tau_obs    <- m2_fit_otimo$tau              # matriz n × g
 
-# Reduz para nível de observação (uma linha por beneficiário)
-df_m2_id <- df_long %>%
-  select(id_obs) %>%
-  distinct() %>%
-  arrange(id_obs)
+# Incerteza de classificação
+m2_incert <- 1 - apply(m2_tau_obs, 1, max)
 
-m2_classe_obs <- m2_classe  # já está no nível de id_obs
-m2_tau_obs    <- m2_tau
-
+cat(sprintf("Incerteza média de classificação: %.3f\n", mean(m2_incert)))
 cat(sprintf("Distribuição dos %d clusters estimados:\n", M2_G))
 print(table(m2_classe_obs))
+
+# Lambdas estimados por componente e variável
+lambda_df <- as.data.frame(round(m2_fit_otimo$lambda, 3))
+colnames(lambda_df) <- VARS_MODELO
+lambda_df$componente <- paste0("G", seq_len(M2_G))
+lambda_df %>%
+  select(componente, everything()) %>%
+  kable(caption = "Modelo 2 · Médias Poisson estimadas (λ) por componente e variável") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 ---

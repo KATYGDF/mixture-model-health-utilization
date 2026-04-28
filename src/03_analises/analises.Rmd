@@ -727,13 +727,14 @@ cat(sprintf("Incerteza média de classificação: %.3f\n", mean(m2_incert)))
 cat(sprintf("Distribuição dos %d clusters estimados:\n", M2_G))
 print(table(m2_classe_obs))
 
-# Lambdas estimados por componente e variável
-lambda_df <- as.data.frame(round(m2_fit_otimo$lambda, 3))
-colnames(lambda_df) <- VARS_MODELO
-lambda_df$componente <- paste0("G", seq_len(M2_G))
-lambda_df %>%
-  select(componente, everything()) %>%
-  kable(caption = "Modelo 2 · Médias NB estimadas (μ) por componente e variável") %>%
+# Parâmetros NB estimados: médias (mu) e dispersão (theta)
+mu_df <- as.data.frame(round(m2_fit_otimo$mu,    2))
+th_df <- as.data.frame(round(m2_fit_otimo$theta, 2))
+colnames(mu_df) <- paste0("mu_",    VARS_MODELO)
+colnames(th_df) <- paste0("theta_", VARS_MODELO)
+params_df <- cbind(componente = paste0("G", seq_len(M2_G)), mu_df, th_df)
+params_df %>%
+  kable(caption = "Modelo 2 · Parâmetros NB estimados: médias (μ) e dispersão (θ) por componente") %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 

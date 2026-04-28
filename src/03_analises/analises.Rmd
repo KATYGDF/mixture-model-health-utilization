@@ -159,10 +159,12 @@ if (length(vars_ausentes) > 0) {
 }
 
 # ── Dataset limpo ─────────────────────────────────────────────────────────
+# rename_at + complete.cases: compatível com dplyr >= 0.7
 df <- df_raw %>%
-  rename(grupo_real = all_of(col_grupo)) %>%
-  mutate(grupo_real = factor(grupo_real)) %>%
-  filter(if_all(all_of(VARS_MODELO), ~ !is.na(.)))
+  rename_at(col_grupo, ~ "grupo_real") %>%
+  mutate(grupo_real = factor(grupo_real))
+
+df <- df[complete.cases(df[, VARS_MODELO]), ]
 
 G_REAL      <- nlevels(df$grupo_real)       # número real de grupos
 NIVEIS_REAL <- levels(df$grupo_real)        # nomes dos grupos
@@ -178,7 +180,9 @@ cat("Grupos:", paste(NIVEIS_REAL, collapse = ", "), "\n")
 
 ```{r tab-grupos}
 df %>%
-  count(grupo_real, name = "n") %>%
+  group_by(grupo_real) %>%
+  summarise(n = n()) %>%
+  ungroup() %>%
   mutate(
     pct   = n / sum(n),
     grupo = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS)
@@ -235,32 +239,37 @@ O `gasto_total` é uma variável **contínua e assimétrica** (log-normal). Os M
 ## Estatísticas descritivas por grupo
 
 ```{r eda-descritiva}
-df %>%
-  group_by(grupo_real) %>%
-  summarise(across(
-    all_of(VARS_MODELO),
-    list(media = mean, mediana = median, dp = sd),
-    .names = "{.col}_{.fn}"
-  )) %>%
-  pivot_longer(-grupo_real, names_to = c("variavel", "stat"), names_sep = "_(?=[^_]+$)") %>%
-  pivot_wider(names_from = stat, values_from = value) %>%
+# Compatível com dplyr >= 0.8 — sem across(), sem .groups, sem collapse_rows
+desc_list <- lapply(VARS_MODELO, function(v) {
+  df %>%
+    group_by(grupo_real) %>%
+    summarise(
+      variavel = v,
+      media    = round(mean(get(v)),   2),
+      mediana  = round(median(get(v)), 2),
+      dp       = round(sd(get(v)),     2)
+    ) %>%
+    ungroup()
+})
+
+do.call(rbind, desc_list) %>%
   mutate(
-    grupo_real = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS),
-    across(c(media, mediana, dp), ~ round(.x, 2))
+    grupo = dplyr::recode(as.character(grupo_real), !!!NOMES_GRUPOS)
   ) %>%
+  select(grupo, variavel, media, mediana, dp) %>%
+  arrange(grupo, variavel) %>%
   kable(
     col.names = c("Grupo", "Variável", "Média", "Mediana", "DP"),
     caption   = "Estatísticas descritivas das variáveis de contagem por grupo latente"
   ) %>%
-  kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  collapse_rows(columns = 1, valign = "top")
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 ## Distribuição das variáveis de contagem
 
 ```{r eda-densidades, fig.height=8}
 df %>%
-  pivot_longer(all_of(VARS_MODELO), names_to = "variavel", values_to = "valor") %>%
+  pivot_longer(VARS_MODELO, names_to = "variavel", values_to = "valor") %>%
   mutate(
     variavel   = factor(variavel, levels = VARS_MODELO),
     grupo_real = factor(grupo_real, levels = NIVEIS_REAL)
@@ -281,7 +290,7 @@ df %>%
 
 ```{r eda-zeros}
 df %>%
-  summarise(across(all_of(VARS_MODELO), ~ mean(. == 0))) %>%
+  summarise_at(VARS_MODELO, ~ mean(. == 0)) %>%
   pivot_longer(everything(), names_to = "variavel", values_to = "prop_zero") %>%
   ggplot(aes(x = reorder(variavel, prop_zero), y = prop_zero)) +
   geom_col(fill = "#4e79a7", width = 0.6) +
@@ -301,7 +310,7 @@ df %>%
 ```{r eda-zeros-grupo, fig.height=6}
 df %>%
   group_by(grupo_real) %>%
-  summarise(across(all_of(VARS_MODELO), ~ mean(. == 0))) %>%
+  summarise_at(VARS_MODELO, ~ mean(. == 0)) %>%
   pivot_longer(-grupo_real, names_to = "variavel", values_to = "prop_zero") %>%
   mutate(grupo_real = factor(grupo_real, levels = NIVEIS_REAL)) %>%
   ggplot(aes(x = variavel, y = prop_zero, fill = grupo_real)) +
@@ -320,7 +329,7 @@ df %>%
 
 ```{r eda-correlacao, fig.height=5}
 mat_cor <- df %>%
-  select(all_of(VARS_MODELO)) %>%
+  select(one_of(VARS_MODELO)) %>%
   cor(method = "spearman")
 
 corrplot(
@@ -343,7 +352,7 @@ corrplot(
 
 ```{r prepara-dados}
 # ── Matriz de dados de contagem ───────────────────────────────────────────
-X_raw <- df %>% select(all_of(VARS_MODELO)) %>% as.matrix()
+X_raw <- df %>% select(one_of(VARS_MODELO)) %>% as.matrix()
 
 # ── Transformação log(1+x) e padronização (para Modelos 1 e 3) ───────────
 X_log  <- log1p(X_raw)
@@ -472,7 +481,7 @@ set.seed(SEED)
 df_long <- df %>%
   mutate(id_obs = row_number()) %>%
   pivot_longer(
-    cols      = all_of(VARS_MODELO),
+    cols      = VARS_MODELO,
     names_to  = "variavel",
     values_to = "contagem"
   ) %>%
@@ -804,7 +813,7 @@ perfil_cluster <- function(classe, nome_metodo) {
   df %>%
     mutate(cluster = factor(classe)) %>%
     group_by(cluster) %>%
-    summarise(across(all_of(VARS_MODELO), mean)) %>%
+    summarise_at(VARS_MODELO, mean) %>%
     pivot_longer(-cluster, names_to = "variavel", values_to = "media") %>%
     mutate(metodo = nome_metodo)
 }

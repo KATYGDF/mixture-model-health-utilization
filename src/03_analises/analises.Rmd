@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
   message     = FALSE,
   fig.align   = "center",
   out.width   = "100%",
-  cache       = FALSE
+  cache       = FALSE   # cache ativado seletivamente nos chunks pesados
 )
 ```
 
@@ -465,7 +465,7 @@ onde $\phi(\cdot)$ é a densidade gaussiana multivariada.
 
 ## Ajuste e seleção de componentes
 
-```{r m1-ajuste}
+```{r m1-ajuste, cache=TRUE, cache.path="analises_cache/"}
 set.seed(SEED)
 
 # Ajusta BIC para g = 1 até G_MAX componentes, todos os modelos de covariância
@@ -562,7 +562,7 @@ Quando $\theta_{hj} \to \infty$, a NB converge para Poisson.
 
 ## Algoritmo EM
 
-```{r m2-ajuste}
+```{r m2-ajuste, cache=TRUE, cache.path="analises_cache/"}
 # ── EM para mistura de Binomial Negativa multivariada ─────────────────────
 # Referência: Ng, Xiang & Yau (2019), cap. 4–5
 #
@@ -585,7 +585,7 @@ Quando $\theta_{hj} \to \infty$, a NB converge para Poisson.
   exp(lt_opt)
 }
 
-nb_mix_em <- function(Y, g, max_iter = 300, tol = 1e-6, n_init = 5, seed = 42) {
+nb_mix_em <- function(Y, g, max_iter = 150, tol = 1e-5, n_init = 3, seed = 42) {
   n <- nrow(Y); p <- ncol(Y)
   Y <- as.matrix(Y)
 
@@ -750,12 +750,12 @@ Aplicamos o K-means sobre as mesmas variáveis transformadas ($\log(1+x)$ + padr
 
 ## Número ótimo de clusters
 
-```{r m3-nbclust, fig.height=4}
+```{r m3-nbclust, fig.height=4, cache=TRUE, cache.path="analises_cache/"}
 set.seed(SEED)
 
 # Curva do cotovelo (within-cluster sum of squares)
 wcss <- sapply(1:G_MAX, function(k) {
-  kmeans(X_std, centers = k, nstart = 50, iter.max = 300)$tot.withinss
+  kmeans(X_std, centers = k, nstart = 20, iter.max = 200)$tot.withinss
 })
 
 p_cotovelo <- data.frame(k = 1:G_MAX, wcss = wcss) %>%
@@ -772,7 +772,7 @@ p_cotovelo <- data.frame(k = 1:G_MAX, wcss = wcss) %>%
 
 # Silhouette
 sil_vals <- sapply(2:G_MAX, function(k) {
-  km  <- kmeans(X_std, centers = k, nstart = 50, iter.max = 300)
+  km  <- kmeans(X_std, centers = k, nstart = 20, iter.max = 200)
   sil <- cluster::silhouette(km$cluster, dist(X_std))
   mean(sil[, "sil_width"])
 })
@@ -794,12 +794,12 @@ p_cotovelo + p_sil
 
 ## Ajuste final
 
-```{r m3-ajuste}
+```{r m3-ajuste, cache=TRUE, cache.path="analises_cache/"}
 set.seed(SEED)
 
 # Usa o número real de grupos como k final
 M3_K  <- G_REAL
-m3_km <- kmeans(X_std, centers = M3_K, nstart = 100, iter.max = 500)
+m3_km <- kmeans(X_std, centers = M3_K, nstart = 50, iter.max = 300)
 
 m3_classe <- m3_km$cluster
 

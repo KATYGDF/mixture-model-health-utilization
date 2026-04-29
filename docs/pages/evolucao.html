@@ -25,16 +25,32 @@
     <li><a href="eda_simsaude.html">EDA</a></li>
     <li><a href="analises.html">Análises</a></li>
   </ul>
-  <div class="sidebar-footer">Katy · 2026</div>
+  <div class="sidebar-footer">Katy Garcia de Freitas · 2026</div>
 </nav>
 
 <main class="main">
 <div class="prose">
 
-<h1>Evolução do modelo</h1>
-<p class="lead">Histórico do projeto</p>
+<h1>Evolução do projeto</h1>
+<p class="lead">Do protótipo inicial à análise comparativa de modelos de mistura</p>
 
-<p>Do protótipo inicial com limitações conhecidas até a versão calibrada por indicadores ANS.</p>
+<!-- Navegação interna -->
+<nav style="margin:1.5rem 0 2.5rem; padding:1rem 1.25rem; background:var(--sidebar);
+            border:1px solid var(--border); border-radius:4px; font-size:0.88rem;">
+  <strong style="font-family:var(--ff-mono); font-size:0.7rem; letter-spacing:0.08em;
+                 text-transform:uppercase; color:var(--muted);">Nesta página</strong>
+  <ol style="margin:0.5rem 0 0 1.25rem; line-height:2;">
+    <li><a href="#evolucao-modelo">Evolução do modelo de simulação</a></li>
+    <li><a href="#comparativo">Comparativo resumido das versões</a></li>
+    <li><a href="#eda">Análise exploratória dos dados simulados</a></li>
+    <li><a href="#extensoes">Próximas extensões</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="evolucao-modelo">1 · Evolução do modelo de simulação</h2>
+
+<p>Três versões iterativas, cada uma corrigindo limitações identificadas na anterior.</p>
 
 <div class="timeline-full">
 
@@ -44,26 +60,26 @@
     <div class="tl-meta">Versão 1.0 · Protótipo inicial</div>
     <div class="tl-title">Estrutura base do modelo</div>
     <div class="tl-body">
-      <p>Primeira versão funcional do script de simulação. Estabeleceu a arquitetura fundamental: mistura de grupos latentes, log-link para a média condicional, e distribuição Binomial Negativa como distribuição de contagem.</p>
+      <p>Primeira versão funcional do script de simulação. Estabeleceu a arquitetura fundamental: mistura de grupos latentes, log-link para a média condicional, e Binomial Negativa como distribuição de contagem.</p>
       <p>Os dados gerados tinham estrutura estatística correta, mas os parâmetros ainda não haviam sido calibrados para refletir indicadores reais da saúde suplementar brasileira.</p>
     </div>
     <ul class="tl-changes">
-      <li>Estrutura de grupos latentes com proporções $\pi = (0{,}50, 0{,}25, 0{,}20, 0{,}05)$</li>
+      <li>Proporções dos grupos latentes: $\pi = (0{,}50,\ 0{,}25,\ 0{,}20,\ 0{,}05)$</li>
       <li>Cinco desfechos: consultas, PS, exames, terapias, internações</li>
       <li>NB₂ para todos os desfechos, ZINB para terapias e internações</li>
       <li>Log-link com interceptos e covariáveis (idade, sexo, tempo, copart, região)</li>
       <li>Gasto total com ruído log-normal ($\sigma = 0{,}25$)</li>
       <li>Três gráficos ggplot2 iniciais</li>
     </ul>
-
     <div style="margin-top:1.2rem">
-      <strong style="font-family:var(--ff-mono);font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Limitações identificadas</strong>
+      <strong style="font-family:var(--ff-mono);font-size:0.75rem;letter-spacing:0.06em;
+                     text-transform:uppercase;color:var(--muted);">Limitações identificadas</strong>
       <ul style="margin-top:0.5rem;font-size:0.9rem;color:var(--muted)">
         <li>Geração de idades com <code>sapply</code> — lento para $n$ grande</li>
-        <li>Coeficientes $\boldsymbol{\beta}_{gk} = \boldsymbol{\beta}_k$ — idênticos para todos os grupos, sem heterogeneidade real de resposta às covariáveis</li>
-        <li><code>meses_utilizacao</code> gerado via <code>pmin(12, rpois(...))</code> — acúmulo artificial no valor máximo 12</li>
+        <li>Coeficientes $\boldsymbol{\beta}_{gk} = \boldsymbol{\beta}_k$ — idênticos entre grupos, sem heterogeneidade real de resposta às covariáveis</li>
+        <li><code>meses_utilizacao</code> via <code>pmin(12, rpois(...))</code> — acúmulo artificial no máximo 12</li>
         <li><code>prestadores_distintos</code> sem controle de outliers extremos</li>
-        <li>$\sigma_\varepsilon = 0{,}25$ no gasto total — inflação excessiva da cauda direita combinada com internações</li>
+        <li>$\sigma_\varepsilon = 0{,}25$ — inflação excessiva da cauda do gasto</li>
         <li>Parâmetros sem referência a indicadores externos validados</li>
       </ul>
     </div>
@@ -75,8 +91,8 @@
     <div class="tl-meta">Versão 2.0 · Revisão metodológica</div>
     <div class="tl-title">Correções estruturais e modelagem mais realista</div>
     <div class="tl-body">
-      <p>Versão focada em corrigir os pontos fracos identificados na v1.0. As mudanças mais relevantes foram a introdução dos coeficientes grupo-específicos e o modelo Beta-Binomial para meses com utilização.</p>
-      <p>Os coeficientes grupo-específicos permitem que o mesmo efeito de coparticipação, por exemplo, atue de forma diferente em cada grupo — o G3 (agudo/hospitalar) é menos sensível ao preço do que o G1 (baixo uso), o que reflete comportamento real de pacientes em condições agudas.</p>
+      <p>Versão focada em corrigir os pontos fracos da v1.0. As mudanças mais relevantes foram os coeficientes grupo-específicos e o modelo Beta-Binomial para meses com utilização.</p>
+      <p>Os coeficientes grupo-específicos permitem que o mesmo efeito de coparticipação atue diferentemente em cada grupo — G3 (agudo/hospitalar) é menos sensível ao preço do que G1 (baixo uso), refletindo o comportamento real de pacientes em condições agudas.</p>
     </div>
     <ul class="tl-changes">
       <li>Geração de idades vetorizada — substituição do <code>sapply</code> por indexação direta</li>
@@ -85,7 +101,6 @@
       <li><code>meses_utilizacao</code> via Beta-Binomial: $p_i \sim \text{Beta}(a_i, b_i)$, $M_i \sim \text{Binomial}(12, p_i)$</li>
       <li><code>prestadores_distintos</code> com cap pelo percentil 99</li>
       <li>Ruído do gasto reduzido: $\sigma_\varepsilon = 0{,}20$ (CV ≈ 20%)</li>
-      <li><code>group</code> explícito nos <code>aes()</code> dos boxplots — evita warnings no ggplot2 recente</li>
       <li>Dois gráficos adicionais: dispersão gasto × eventos e histograma de meses</li>
       <li>Bloco de validação: médias simuladas vs. médias-alvo por grupo</li>
     </ul>
@@ -97,9 +112,8 @@
     <div class="tl-meta">Versão 3.0 · Atual · Calibração ANS</div>
     <div class="tl-title">Calibração por indicadores oficiais e validação expandida</div>
     <div class="tl-body">
-      <p>Versão definitiva para o pôster científico. Os interceptos $\alpha_{gk}$ foram recalibrados iterativamente para que as médias populacionais simuladas se aproximem dos indicadores publicados no Painel de Indicadores da ANS.</p>
-      <p>O processo de calibração envolveu comparar as médias simuladas com os alvos após cada ajuste nos interceptos, convergindo para desvios percentuais inferiores a 3% em todos os desfechos.</p>
-      <p>Foram adicionados também o bloco de comparação direta com alvos ANS e a tabela de prevalência das flags por grupo — que evidencia como o grupo atípico (G4) concentra os alertas de baixa coerência.</p>
+      <p>Versão definitiva para o pôster científico. Os interceptos $\alpha_{gk}$ foram recalibrados iterativamente para que as médias populacionais simuladas se aproximem dos indicadores do Painel de Indicadores da ANS.</p>
+      <p>O processo convergiu para desvios percentuais inferiores a 10% em todos os desfechos. Foram adicionados o bloco de comparação direta com alvos ANS e a tabela de prevalência das flags por grupo — que evidencia como G4 (atípico) concentra os alertas de baixa coerência.</p>
     </div>
     <ul class="tl-changes">
       <li>Interceptos recalibrados com ajustes aditivos: ex. <code>log(c(2.5, 8.0, 4.0, 1.5)) - 0.588</code></li>
@@ -108,19 +122,17 @@
       <li>Intercepto de exames do G4 suavizado (evitava médias irrealistas)</li>
       <li>Tabela de prevalência de flags por grupo latente</li>
       <li>Sétimo gráfico: boxplot razão PS/consultas por grupo</li>
-      <li>Sexto gráfico: prevalência das flags (barras agrupadas)</li>
       <li>Adição de <code>library(scales)</code> e uso de <code>percent_format()</code></li>
-      <li>Path de exportação definido para o diretório do projeto de doutorado</li>
     </ul>
-
     <div class="callout" style="margin-top:1.2rem">
-      <strong>Status:</strong> versão validada e pronta para uso no pôster. Nenhuma alteração de parâmetros é esperada; mudanças futuras seriam apenas para extensões do modelo (ex: modelo longitudinal, análise de clustering não supervisionado).
+      <strong>Status:</strong> versão validada e pronta para uso no pôster. Mudanças futuras serão apenas extensões do modelo (ex: longitudinal, clustering não supervisionado).
     </div>
   </div>
 
 </div>
 
-<h2>Comparativo resumido das versões</h2>
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="comparativo">2 · Comparativo resumido das versões</h2>
 
 <table>
   <thead>
@@ -144,15 +156,213 @@
   </tbody>
 </table>
 
-<h2>Próximas extensões possíveis</h2>
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="eda">3 · Análise exploratória dos dados simulados</h2>
+
+<p>
+  A análise exploratória foi conduzida sobre a amostra sintética final (v3.0) com o objetivo de
+  verificar a qualidade da simulação, caracterizar os perfis de cada grupo latente e identificar
+  as variáveis com maior poder discriminativo para os modelos de mistura.
+</p>
+
+<h3>Composição da amostra</h3>
+
+<p>A amostra contém <strong>5.000 beneficiários</strong>, distribuídos em quatro grupos latentes
+com proporções próximas às especificadas no modelo gerador:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Grupo latente</th>
+      <th>Código</th>
+      <th style="text-align:right">n</th>
+      <th style="text-align:right">Proporção</th>
+      <th>Perfil resumido</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Baixo Uso</td>
+      <td><code>G1</code></td>
+      <td style="text-align:right">2.493</td>
+      <td style="text-align:right">49,9%</td>
+      <td>Poucos eventos, gastos reduzidos, concentrado em consultas esporádicas</td>
+    </tr>
+    <tr>
+      <td>Ambulatorial Coordenado</td>
+      <td><code>G2</code></td>
+      <td style="text-align:right">1.268</td>
+      <td style="text-align:right">25,4%</td>
+      <td>Alta frequência de consultas e exames, presença relevante de terapias</td>
+    </tr>
+    <tr>
+      <td>Agudo / Hospitalar</td>
+      <td><code>G3</code></td>
+      <td style="text-align:right">982</td>
+      <td style="text-align:right">19,6%</td>
+      <td>Elevado uso de pronto-socorro e internações, consultas moderadas</td>
+    </tr>
+    <tr>
+      <td>Padrão Atípico</td>
+      <td><code>G4</code></td>
+      <td style="text-align:right">257</td>
+      <td style="text-align:right">5,1%</td>
+      <td>Alto volume de exames e PS; razão exames/consultas muito acima da média</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Perfis de utilização por grupo</h3>
+
+<p>As médias abaixo revelam a heterogeneidade entre grupos — o principal motivador para o uso de modelos de mistura em vez de métodos globais.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variável</th>
+      <th style="text-align:right">G1 · Baixo Uso</th>
+      <th style="text-align:right">G2 · Ambulatorial</th>
+      <th style="text-align:right">G3 · Agudo/Hosp.</th>
+      <th style="text-align:right">G4 · Atípico</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Consultas / ano</td>
+      <td style="text-align:right">2,35</td>
+      <td style="text-align:right"><strong>8,83</strong></td>
+      <td style="text-align:right">3,54</td>
+      <td style="text-align:right">0,79</td>
+    </tr>
+    <tr>
+      <td>Pronto-socorro / ano</td>
+      <td style="text-align:right">0,16</td>
+      <td style="text-align:right">0,41</td>
+      <td style="text-align:right"><strong>4,20</strong></td>
+      <td style="text-align:right"><strong>5,82</strong></td>
+    </tr>
+    <tr>
+      <td>Exames / ano</td>
+      <td style="text-align:right">7,47</td>
+      <td style="text-align:right"><strong>56,04</strong></td>
+      <td style="text-align:right">17,37</td>
+      <td style="text-align:right">25,73</td>
+    </tr>
+    <tr>
+      <td>Terapias / ano</td>
+      <td style="text-align:right">0,02</td>
+      <td style="text-align:right"><strong>3,34</strong></td>
+      <td style="text-align:right">0,36</td>
+      <td style="text-align:right">6,57</td>
+    </tr>
+    <tr>
+      <td>Internações / ano</td>
+      <td style="text-align:right">0,00</td>
+      <td style="text-align:right">0,01</td>
+      <td style="text-align:right"><strong>0,80</strong></td>
+      <td style="text-align:right">0,14</td>
+    </tr>
+    <tr>
+      <td>Gasto total médio (R$)</td>
+      <td style="text-align:right">948</td>
+      <td style="text-align:right"><strong>6.280</strong></td>
+      <td style="text-align:right">5.839</td>
+      <td style="text-align:right">5.269</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:0.88rem;color:var(--muted);margin-top:0.5rem;">
+  Em negrito: valor máximo da linha — indica a variável que mais distingue o grupo.
+</p>
+
+<h3>Sobredispersão e excesso de zeros</h3>
+
+<p>
+  Todas as variáveis de contagem exibem <strong>sobredispersão</strong> ($\text{Var}/\mathbb{E} > 1$),
+  com destaque para exames (razão ≈ 45). Terapias e internações apresentam ainda
+  <strong>excesso estrutural de zeros</strong>, justificando a distribuição ZINB no modelo gerador e a
+  exclusão dessas variáveis dos modelos de clustering (onde foram usados apenas consultas, PS e exames).
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variável</th>
+      <th style="text-align:right">Zeros (%)</th>
+      <th style="text-align:right">Var / Média</th>
+      <th>Distribuição adequada</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Consultas</td>
+      <td style="text-align:right">15,6%</td>
+      <td style="text-align:right">6,0</td>
+      <td>NB₂</td>
+    </tr>
+    <tr>
+      <td>Pronto-socorro</td>
+      <td style="text-align:right">63,9%</td>
+      <td style="text-align:right">6,5</td>
+      <td>NB₂</td>
+    </tr>
+    <tr>
+      <td>Exames</td>
+      <td style="text-align:right">2,8%</td>
+      <td style="text-align:right">44,9</td>
+      <td>NB₂</td>
+    </tr>
+    <tr>
+      <td>Terapias</td>
+      <td style="text-align:right">80,1%</td>
+      <td style="text-align:right">11,8</td>
+      <td>ZINB — excesso estrutural de zeros</td>
+    </tr>
+    <tr>
+      <td>Internações</td>
+      <td style="text-align:right">94,1%</td>
+      <td style="text-align:right">6,0</td>
+      <td>ZINB — excesso estrutural de zeros</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Gasto total</h3>
+
+<p>
+  O gasto total (em R$) foi gerado com ruído log-normal sobre a soma dos eventos ponderados,
+  resultando em distribuição fortemente assimétrica à direita — típica de dados de saúde.
+</p>
+
+<div class="callout">
+  <strong>Estatísticas globais:</strong>
+  Média R$&nbsp;3.483 · Mediana R$&nbsp;1.723 · P95 R$&nbsp;11.519
+  <br>
+  <span style="font-size:0.88rem;color:var(--muted)">
+    A distância entre média e mediana (razão ≈ 2,0) evidencia a assimetria e o peso das caudas,
+    especialmente nos grupos G2 e G3.
+  </span>
+</div>
+
+<p style="margin-top:1rem">
+  Os grupos G2 (ambulatorial) e G3 (agudo/hospitalar) têm gastos médios semelhantes (R$&nbsp;6.280 e
+  R$&nbsp;5.839), mas por razões distintas: G2 acumula muitos eventos ambulatoriais de menor custo
+  unitário; G3 concentra o gasto em poucos eventos de alta complexidade (internações e PS).
+  Essa diferença de estrutura é capturada pelos modelos de mistura, mas não pelo K-means.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="extensoes">4 · Próximas extensões possíveis</h2>
 
 <p>A estrutura atual pode ser naturalmente estendida para:</p>
 
 <ul>
   <li><strong>Modelo longitudinal:</strong> gerar múltiplos períodos por beneficiário, com transições entre grupos latentes via cadeia de Markov</li>
-  <li><strong>Clustering não supervisionado:</strong> usar os dados simulados como benchmark para avaliar algoritmos de segmentação (k-means, LCA, HMM) — verificando se recuperam os grupos latentes verdadeiros</li>
+  <li><strong>Clustering não supervisionado:</strong> usar os dados simulados como benchmark para avaliar algoritmos de segmentação (K-means, LCA, HMM) — verificando se recuperam os grupos latentes verdadeiros</li>
   <li><strong>Modelo de custo separado:</strong> substituir o gasto log-normal por um modelo two-part (logístico para utilização + gamma/log-normal para o valor condicional)</li>
-  <li><strong>Covariáveis correlacionadas:</strong> introduzir correlação entre <code>idade</code> e <code>tempo_no_plano</code>, e entre <code>grupo_latente</code> e características observadas (ex: idosos mais prováveis no G3)</li>
+  <li><strong>Covariáveis correlacionadas:</strong> introduzir correlação entre <code>idade</code> e <code>tempo_no_plano</code>, e entre grupo latente e características observadas (ex: idosos mais prováveis no G3)</li>
+  <li><strong>Mistura ZINB:</strong> acomodar o excesso estrutural de zeros em terapias e internações dentro do próprio modelo de mistura, expandindo o número de variáveis discriminativas</li>
 </ul>
 
 </div>

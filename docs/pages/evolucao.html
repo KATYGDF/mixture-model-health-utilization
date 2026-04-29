@@ -43,7 +43,6 @@
     <li><a href="#evolucao-modelo">Evolução do modelo de simulação</a></li>
     <li><a href="#comparativo">Comparativo resumido das versões</a></li>
     <li><a href="#eda">Análise exploratória dos dados simulados</a></li>
-    <li><a href="#extensoes">Próximas extensões</a></li>
   </ol>
 </nav>
 
@@ -352,18 +351,6 @@ com proporções próximas às especificadas no modelo gerador:</p>
   Essa diferença de estrutura é capturada pelos modelos de mistura, mas não pelo K-means.
 </p>
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="extensoes">4 · Próximas extensões possíveis</h2>
-
-<p>A estrutura atual pode ser naturalmente estendida para:</p>
-
-<ul>
-  <li><strong>Modelo longitudinal:</strong> gerar múltiplos períodos por beneficiário, com transições entre grupos latentes via cadeia de Markov</li>
-  <li><strong>Clustering não supervisionado:</strong> usar os dados simulados como benchmark para avaliar algoritmos de segmentação (K-means, LCA, HMM) — verificando se recuperam os grupos latentes verdadeiros</li>
-  <li><strong>Modelo de custo separado:</strong> substituir o gasto log-normal por um modelo two-part (logístico para utilização + gamma/log-normal para o valor condicional)</li>
-  <li><strong>Covariáveis correlacionadas:</strong> introduzir correlação entre <code>idade</code> e <code>tempo_no_plano</code>, e entre grupo latente e características observadas (ex: idosos mais prováveis no G3)</li>
-  <li><strong>Mistura ZINB:</strong> acomodar o excesso estrutural de zeros em terapias e internações dentro do próprio modelo de mistura, expandindo o número de variáveis discriminativas</li>
-</ul>
 
 </div>
 </main>

@@ -2,3 +2,12 @@
 .RData
 .Rproj.user/
 *.Rproj
+
+# Objetos R gerados localmente (re-criados por explorar_modelos.R)
+src/03_analises/rds/
+src/03_analises/analises_cache/
+
+# Material de referência — não versionar
+src/livro/
+src/04_livro/
+src/05_Artigos/

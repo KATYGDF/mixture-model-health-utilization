@@ -107,6 +107,77 @@ pre.r-code .com { color: #6c7086; font-style: italic; }
   margin: 1rem 0;
 }
 
+/* ── Citação direta ─────────────────────────────────────────── */
+blockquote.cit {
+  margin: 1.2rem 0 1.2rem 0;
+  padding: 0.75rem 1.2rem;
+  border-left: 3px solid var(--accent, #4a7c59);
+  background: var(--surface, #f8f7f4);
+  font-style: italic;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+}
+blockquote.cit cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+
+/* ── Referências ────────────────────────────────────────────── */
+.ref-group { margin-bottom: 2rem; }
+
+.ref-entry {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  border-left: 2px solid var(--border, #ddd);
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.ref-entry cite {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+.ref-entry .ref-note {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted, #666);
+  font-size: 0.83rem;
+}
+.ref-entry .ref-count {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.75rem;
+  color: var(--muted, #888);
+  margin-left: 0.4em;
+}
+
+/* ── Tabela de decisões metodológicas ───────────────────────── */
+.dec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  margin: 1.2rem 0;
+}
+.dec-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.dec-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: top;
+}
+.dec-table tr:last-child td { border-bottom: none; }
+
 </style>
 </head>
 <body>
@@ -145,6 +216,7 @@ pre.r-code .com { color: #6c7086; font-style: italic; }
     <li><a href="#gasto">Gasto total</a></li>
     <li><a href="#calibracao">Calibração aos indicadores ANS</a></li>
     <li><a href="#codigo">Código R completo</a></li>
+    <li><a href="#referencias">Referências</a></li>
   </ol>
 </div>
 
@@ -161,16 +233,56 @@ metodológicas:
 
 <ol>
   <li>O grupo latente verdadeiro de cada beneficiário é conhecido — o que permite avaliar métricas
-      de recuperação como ARI e acurácia, impossíveis de calcular com dados reais sem gabarito;</li>
-  <li>Os parâmetros podem ser calibrados a indicadores públicos do
-      <strong>Painel de Indicadores da ANS</strong>, tornando a simulação realista.</li>
+      de recuperação como ARI e acurácia, impossíveis de calcular com dados reais sem gabarito.
+      Gonzales et al. (2023) identificam <em>simulação e pesquisa preditiva</em> como o principal
+      caso de uso de dados sintéticos em saúde, destacando que permitem expandir amostras e testar
+      algoritmos em condições controladas. Tucker et al. (2020) complementam:</li>
 </ol>
+
+<blockquote class="cit">
+  "One possible solution to this problem is the use of synthetic data as an alternative to assist
+  in the rapid development and validation of new tools. This data must capture all of the correct
+  (potentially non-linear and multivariate) dependencies and distributions that are apparent in the
+  real data sets."
+  <cite>Tucker et al. (2020, p. 1)</cite>
+</blockquote>
+
+<ol start="2">
+  <li>Os parâmetros podem ser calibrados a indicadores públicos do
+      <strong>Painel de Indicadores da ANS</strong>, tornando a simulação realista.
+      Avanzi et al. (2021) fundamentam essa abordagem ao argumentar que modelos propostos
+      devem sempre ser testados contra dados sintéticos, pois</li>
+</ol>
+
+<blockquote class="cit">
+  "the features contained in the synthetic data set will be known, by construction. One is then
+  able to test the extent to which the proposed model is successful in identifying them."
+  <cite>Avanzi et al. (2021, p. 296)</cite>
+</blockquote>
 
 <p>Os dados são inteiramente sintéticos. Nenhum beneficiário real está representado.</p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="mistura">2 · Mistura finita de distribuições</h2>
 
+<p>
+Deb &amp; Trivedi (1997) foram os primeiros a aplicar modelos de mistura finita em econometria
+da saúde, motivados pela insuficiência dos modelos padrão para capturar heterogeneidade latente
+na utilização de serviços médicos:
+</p>
+
+<blockquote class="cit">
+  "The finite mixture model allows for additional population heterogeneity but avoids the sharp
+  dichotomy between the population of 'users' and 'non-users'. [...] the underlying unobserved
+  heterogeneity which splits the population into latent classes is assumed to be based on the
+  person's latent long-term health status."
+  <cite>Deb &amp; Trivedi (1997, p. 314)</cite>
+</blockquote>
+
+<p>
+A fundamentação teórica completa da estrutura de mistura finita — incluindo condições de
+identificabilidade e propriedades assintóticas — encontra-se em McLachlan &amp; Peel (2000).
+</p>
 <p>
 Seja \(Y_i\) o vetor de contagens do beneficiário \(i\) (consultas, pronto-socorro, exames,
 terapias, internações). A hipótese central é que a população é composta por \(G = 4\)
@@ -211,7 +323,18 @@ $$Y_{ij} \mid Z_i = h \;\sim\; \mathrm{NB}(\mu_{ihj},\, \theta_{hj})$$
 
 <p>
 A estimação da mistura por máxima verossimilhança é realizada pelo
-<strong>Algoritmo EM</strong> (Expectation-Maximization), que alterna dois passos até convergência.
+<strong>Algoritmo EM</strong> (Expectation-Maximization, Redner &amp; Walker, 1984), que alterna
+dois passos até convergência. Para misturas de GLMs com log-link, Jansen (1993) deriva o
+Passo M analiticamente. Eckardt et al. (2017) descrevem a implementação prática:</p>
+
+<blockquote class="cit">
+  "Because of the analytical limitations of solving the maximum likelihood equation [...] we
+  implemented an expectation maximization (EM) algorithm for estimation purpose [...]. Thus, an
+  iterative procedure was chosen, in which the component membership was taken as missing value."
+  <cite>Eckardt et al. (2017, p. 588)</cite>
+</blockquote>
+
+<p>
 </p>
 
 <p><strong>Passo E</strong> — calcular as probabilidades de pertença <em>a posteriori</em>
@@ -244,15 +367,34 @@ $$\mathrm{BIC} = -2\,\hat{\ell} + k \cdot \log n$$
 
 <p>
 onde \(k\) é o número de parâmetros livres. Menor BIC indica melhor equilíbrio entre ajuste
-e parcimônia.
+e parcimônia. A escolha de valores iniciais adequados é crítica para a convergência do EM,
+dado o risco de mínimos locais (Karlis &amp; Xekalaki, 2003); por isso são utilizadas múltiplas
+inicializações, com a primeira baseada em K-means sobre \(\log(1 + Y)\).
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="grupos">3 · Os quatro grupos latentes</h2>
 
 <p>
-Os quatro grupos foram definidos a partir de padrões clínicos reconhecíveis em populações de
-beneficiários de planos de saúde, com proporções populacionais:
+A estrutura de grupos latentes tem precedente direto na literatura. Deb &amp; Holmes (2000)
+identificaram classes distintas — os <em>worried well</em> e os severamente enfermos — e
+mostraram que modelos padrão subestimam sistematicamente os usuários de alta intensidade:
+
+<blockquote class="cit">
+  "Unlike standard specifications, the FMM has the ability to distinguish between distinct
+  classes of users of behavioural health care (e.g. the 'worried well' and the severely mentally
+  ill). [...] Standard models consistently fail to accurately estimate the resource consumption
+  needs of this group [high intensity users]."
+  <cite>Deb &amp; Holmes (2000, pp. 475–477)</cite>
+</blockquote>
+
+<p>
+Lourenço &amp; Ferreira (2005) reforçam que ignorar a heterogeneidade não observada em
+modelos de utilização "leads to inconsistent parameters estimates" (p. 945). No contexto
+brasileiro, o Mapa Assistencial da ANS (IESS, 2024) documenta crescimento diferenciado de
+7,4 % nos beneficiários entre 2019 e 2023, com padrões heterogêneos por faixa etária —
+base empírica para as proporções e perfis adotados.
+As proporções populacionais adotadas são:
 </p>
 
 <div class="eq">
@@ -296,9 +438,25 @@ $$(\pi_1,\, \pi_2,\, \pi_3,\, \pi_4) = (0{,}50;\; 0{,}25;\; 0{,}20;\; 0{,}05)$$
 
 <p>
 Dados de utilização de serviços de saúde são contagens com <strong>sobredispersão</strong> —
-variância muito maior que a média — o que inviabiliza a distribuição de Poisson
-(\(\mathrm{Var}[Y] = \mu\)). A parametrização <strong>NB₂</strong> (Binomial Negativa de média)
-é a escolha padrão neste contexto, com função de massa de probabilidade:
+variância muito maior que a média — o que inviabiliza a distribuição de Poisson.
+Wagner et al. (2015) alertam para as consequências de ignorar esse fenômeno:
+
+<blockquote class="cit">
+  "Overdispersion is common and occurs when patient variability results in data variance which
+  is greater than that assumed by the distribution. Unaccounted for, overdispersion will result
+  in incorrect predictions and will tend to overestimate standard errors increasing the type I
+  error rate [...] The overdispersion parameter was significant in all models, indicating that a
+  simpler Poisson or binomial model for these data would be inadequate."
+  <cite>Wagner et al. (2015, p. 490)</cite>
+</blockquote>
+
+<p>
+Abu Bakar et al. (2022) confirmam, ao comparar sistematicamente Poisson, NB, ZIP e ZINB
+para utilização ambulatorial: "the NB model is equipped for a parameter to account for
+overdispersion. It is deemed to be a better model for an overdispersion variance to mean"
+(p. 3). Lee et al. (2023) complementam com critérios práticos de seleção de modelo.
+A parametrização <strong>NB₂</strong> (Binomial Negativa de média) adotada tem função de
+massa de probabilidade:
 </p>
 
 <div class="eq">
@@ -338,9 +496,26 @@ Valores pequenos de \(\theta\) indicam alta sobredispersão. Na simulação:
 
 <p>
 Terapias (~80 % de zeros) e internações (~94 % de zeros) apresentam excesso de zeros impossível
-de acomodar pela NB₂ sozinha. A explicação é que muitos beneficiários <em>nunca utilizariam</em>
-esses serviços num determinado período — são <strong>zeros estruturais</strong>.
-O modelo <strong>ZINB</strong> mistura um componente degenerado em zero com a NB:
+de acomodar pela NB₂ sozinha. Abu Bakar et al. (2022) distinguem dois tipos de zeros em dados
+de utilização: "true zero reflects non-users because they did not get sick during the reference
+period, while frequency zero reflects individuals who fell sick during the reference period but
+did not seek care" (p. 3). Wagner et al. (2015) descrevem o mecanismo gerador no contexto
+de dados de saúde:
+
+<blockquote class="cit">
+  "These zero counts are thought to occur for two reasons: (i) the subject does not use that
+  particular drug (true zero) or (ii) the subject does use the drug but did not report use
+  during the time of observation [...] a zero-inflated (ZI) model is attractive in assuming
+  that zero counts result from a mixture of two distributions, one where subjects always
+  produce zero counts (non-users) and one where subjects who do use the substance produce
+  zero counts by chance."
+  <cite>Wagner et al. (2015, p. 491)</cite>
+</blockquote>
+
+<p>
+Preisser et al. (2016) e Lewsey &amp; Thomson (2004) documentam a mesma estrutura em dados
+dentários e longitudinais de saúde. O modelo <strong>ZINB</strong> mistura um componente
+degenerado em zero com a NB:
 </p>
 
 <div class="eq">
@@ -380,7 +555,9 @@ uso intensivo e atípico de serviços especializados.
 
 <p>
 A média condicional de cada desfecho depende do grupo latente e das covariáveis observadas
-via <strong>modelo de regressão com log-link</strong>:
+via <strong>modelo de regressão com log-link</strong>. Essa estrutura — em que cada componente
+da mistura é um GLM com log-link — foi formalizada por Jansen (1993) e aplicada ao contexto
+de custos assistenciais com covariáveis socioeconômicas por Eckardt et al. (2017):
 </p>
 
 <div class="eq">
@@ -433,8 +610,24 @@ As covariáveis incluídas são:
 
 <p>
 Os coeficientes \(\boldsymbol{\beta}_{hj}\) variam entre grupos, permitindo que o efeito de
-cada covariável seja calibrado ao perfil de cada subpopulação. A tabela abaixo apresenta os
-valores para o desfecho <strong>consultas</strong>:
+cada covariável seja calibrado ao perfil de cada subpopulação. Os valores foram definidos para
+refletir a heterogeneidade observada no uso de serviços de saúde suplementar no Brasil.
+Evidências empíricas do setor indicam crescimento diferenciado entre tipos de procedimentos
+e faixas etárias, sugerindo a existência de subpopulações com distintos padrões de utilização
+(IESS, 2024; Albuquerque et al., 2008; Vitorino et al., 2024). Nesse contexto, os parâmetros
+foram calibrados para capturar:
+</p>
+<ul>
+  <li>maior utilização associada ao envelhecimento (coeficiente positivo de \(\texttt{idade10}\)
+      nos grupos \(G_1\)–\(G_3\));</li>
+  <li>redução do uso em função da coparticipação financeira (coeficiente negativo de
+      \(\texttt{copart}\) em todos os grupos);</li>
+  <li>diferenças comportamentais entre grupos latentes, incluindo perfis de baixa utilização
+      (\(G_1\)), alta necessidade clínica (\(G_2\), \(G_3\)) e padrões atípicos potencialmente
+      associados a fraude (\(G_4\)).</li>
+</ul>
+<p>
+A tabela abaixo apresenta os coeficientes para o desfecho <strong>consultas</strong>:
 </p>
 
 <table class="param-table">
@@ -459,8 +652,10 @@ valores para o desfecho <strong>consultas</strong>:
 
 <p>
 A coparticipação tem efeito negativo em todos os grupos (desincentiva o uso), mais pronunciado
-em \(G_1\). O coeficiente negativo de \(\texttt{idade10}\) em \(G_4\) reflete que, nesse grupo,
-a propensão ao uso atípico não cresce com a idade — é determinada por outros fatores.
+em \(G_1\), padrão consistente com a literatura sobre elasticidade-preço da demanda por serviços
+de saúde (Andrade et al., 2013). O coeficiente negativo de \(\texttt{idade10}\) em \(G_4\)
+reflete que, nesse grupo, a propensão ao uso atípico não cresce com a idade — é determinada
+por outros fatores não modelados explicitamente.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -469,7 +664,23 @@ a propensão ao uso atípico não cresce com a idade — é determinada por outr
 <p>
 A variável \(\texttt{meses\_utilizacao}\) conta os meses com pelo menos um evento registrado.
 É limitada ao intervalo inteiro \([1, 12]\) e apresenta distribuição bimodal em U —
-incompatível com a NB₂ (sem limite superior). O modelo adotado é a
+padrão em que a maioria dos beneficiários usa o plano ou esporadicamente ou durante quase
+todos os meses. Liu et al. (2013) documentaram exatamente essa forma em dados de utilização
+de VA e caracterizaram a especificação adequada:
+
+<blockquote class="cit">
+  "Beta-binomial regression is a rarely used model in health services research that has the
+  flexibility to fit various distributions, including bimodal and U-shaped distributions. [...]
+  The beta-binomial model [...] is most useful in the case of extreme over-dispersion that
+  cannot be addressed with a negative binomial model, such as U-shaped distributions with
+  finite support bounded between 0 and 1."
+  <cite>Liu et al. (2013, p. 1772)</cite>
+</blockquote>
+
+<p>
+Wagner et al. (2015) confirmam empiricamente a superioridade da Beta-Binomial sobre NB e
+ZINB para variáveis limitadas com distribuição em U: "the beta-binomial better captured the
+counts represented by the observed distribution" (p. 494). O modelo adotado é a
 <strong>distribuição Beta-Binomial</strong> em dois estágios:
 </p>
 
@@ -505,7 +716,11 @@ com poucos eventos têm \(b_i \gg a_i\) (uso pontual).
 
 <p>
 O gasto total é calculado como combinação linear das contagens por tipo de evento, multiplicada
-por um ruído log-normal que representa a variação de preços entre prestadores e regiões:
+por um ruído log-normal que representa a variação de preços entre prestadores e regiões.
+Os custos médios unitários foram calibrados com referência em Andrade et al. (2013),
+que analisam indicadores de gastos desagregados por tipo de serviço no setor suplementar
+brasileiro, e em Avanzi et al. (2021), que adotam estrutura análoga em simuladores de
+sinistros individuais:
 </p>
 
 <div class="eq">
@@ -539,8 +754,12 @@ assimétrica à direita, compatível com dados reais de sinistralidade.
 
 <p>
 Os interceptos \(\alpha_{hj}\) foram ajustados iterativamente para que as médias marginais
-simuladas — média ponderada pelas proporções dos grupos e pelas covariáveis — fiquem dentro
-de 10 % dos alvos do Painel de Indicadores da ANS:
+simuladas fiquem dentro de 10 % dos alvos do Painel de Indicadores da ANS. As séries de
+referência provêm do Mapa Assistencial publicado pelo IESS (2024), que registra a produção
+de 1,7 bilhão de procedimentos médico-hospitalares em 2023 — crescimento de 7,5 % em relação
+a 2022 e de 18,5 % em relação a 2019, com exames complementares crescendo 27,4 % no mesmo
+período (IESS, 2024, pp. 9–10). Nardão (2024) utiliza as mesmas séries do IESS como fonte
+primária para projeção de custos no setor suplementar:
 </p>
 
 <table class="param-table">
@@ -1063,11 +1282,182 @@ write.csv(
 cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
 </pre>
 
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">12 · Referências</h2>
+
+<div class="ref-group">
+
+  <div class="ref-entry">
+    Abu Bakar, N. S., Razali, A. M., Masseran, N., &amp; Zulkifli, M. H. (2022).
+    Count data models for outpatient health services utilisation.
+    <em>BMC Medical Research Methodology, 22</em>, Article 87.
+  </div>
+
+  <div class="ref-entry">
+    Albuquerque, C., Piovesan, M. F., Santos, I. S., Martins, A. C. M., Carvalho, J. A. D.,
+    Moura, L., &amp; Guimarães, R. B. (2008).
+    A situação atual do mercado da saúde suplementar no Brasil e apontamentos para o futuro.
+    <em>Ciência &amp; Saúde Coletiva, 13</em>(5), 1421–1430.
+  </div>
+
+  <div class="ref-entry">
+    Andrade, M. V., Maia, A. C., &amp; Rodrigues, C. G. (2013).
+    Indicadores de gastos com serviços médicos no setor de saúde suplementar no Brasil.
+    <em>Revista Brasileira de Estudos de População, 30</em>(2), 495–516.
+  </div>
+
+  <div class="ref-entry">
+    Avanzi, B., Taylor, G., Wang, M., &amp; Wong, B. (2021).
+    SynthETIC: An individual insurance claim simulator with feature control.
+    <em>Insurance: Mathematics and Economics, 100</em>, 296–308.
+  </div>
+
+  <div class="ref-entry">
+    Deb, P., &amp; Holmes, A. M. (2000).
+    Estimates of use and costs of behavioural health care: A comparison of standard and
+    finite mixture models.
+    <em>Health Economics, 9</em>(6), 475–489.
+  </div>
+
+  <div class="ref-entry">
+    Deb, P., &amp; Trivedi, P. K. (1997).
+    Demand for medical care by the elderly: A finite mixture approach.
+    <em>Journal of Applied Econometrics, 12</em>(3), 313–336.
+  </div>
+
+  <div class="ref-entry">
+    Eckardt, M., Brettschneider, C., Bussche, H., Kaduszkiewicz, H., Koller, D., Leicht, H.,
+    &amp; König, H. H. (2017).
+    Analysis of health care costs in elderly patients with multiple chronic conditions using
+    a finite mixture of generalized linear models.
+    <em>Health Economics, 26</em>(5), 582–599.
+  </div>
+
+  <div class="ref-entry">
+    Gange, S. J., Muñoz, A., Chmiel, J. S., &amp; Detels, R. (1996).
+    Use of the beta-binomial distribution to model the effect of policy changes on
+    appropriateness of hospital stays.
+    <em>Journal of the Royal Statistical Society: Series C (Applied Statistics), 45</em>(4), 371–382.
+  </div>
+
+  <div class="ref-entry">
+    Gonzales, A., Guruswamy, G., &amp; Smith, S. R. (2023).
+    Synthetic data in health care: A narrative review.
+    <em>PLOS Digital Health, 2</em>(1), e0000082.
+  </div>
+
+  <div class="ref-entry">
+    Howley, P. P., &amp; Gibberd, R. (2003).
+    Using hierarchical models to analyse clinical indicators: A comparison of the
+    gamma-Poisson and beta-binomial models.
+    <em>International Journal for Quality in Health Care, 15</em>(4), 319–329.
+  </div>
+
+  <div class="ref-entry">
+    IESS — Instituto de Estudos de Saúde Suplementar. (2024).
+    <em>Panorama da saúde suplementar brasileira: 2019 a 2023 — análise do mapa assistencial da ANS</em>
+    (Minami, B.). São Paulo: IESS.
+  </div>
+
+  <div class="ref-entry">
+    Jansen, R. C. (1993).
+    Maximum likelihood in a generalized linear finite mixture model by using the EM algorithm.
+    <em>Biometrics, 49</em>(1), 227–231.
+  </div>
+
+  <div class="ref-entry">
+    Karlis, D., &amp; Xekalaki, E. (2003).
+    Choosing initial values for the EM algorithm for finite mixtures.
+    <em>Computational Statistics &amp; Data Analysis, 41</em>(3–4), 577–590.
+  </div>
+
+  <div class="ref-entry">
+    Lee, K. H., Pedroza, C., Van Buren, E., &amp; Gutierrez-Colina, A. M. (2023).
+    Comparison of negative binomial and zero-inflated negative binomial models for the
+    analysis of zero-inflated count data.
+    <em>Trials, 24</em>, Article 219.
+  </div>
+
+  <div class="ref-entry">
+    Lewsey, J. D., &amp; Thomson, W. M. (2004).
+    The utility of the zero-inflated Poisson and zero-inflated negative binomial models:
+    A case study of cross-sectional and longitudinal DMF data examining the effect of
+    socio-economic status.
+    <em>Community Dentistry and Oral Epidemiology, 32</em>(3), 183–189.
+  </div>
+
+  <div class="ref-entry">
+    Liu, C. F., Burgess, J. F., &amp; Manning, W. G. (2013).
+    Beta-binomial regression and bimodal utilization.
+    <em>Health Services Research, 48</em>(2 Pt 1), 580–598.
+  </div>
+
+  <div class="ref-entry">
+    Lourenço, Ó. D., &amp; Ferreira, P. L. (2005).
+    Utilization of public health centres in Portugal: Finite mixture models applied to
+    truncated samples.
+    <em>Health Economics, 14</em>(9), 939–953.
+  </div>
+
+  <div class="ref-entry">
+    McLachlan, G. J. (1997).
+    On the EM algorithm for overdispersed count data.
+    <em>Statistical Methods in Medical Research, 6</em>(1), 76–98.
+  </div>
+
+  <div class="ref-entry">
+    McLachlan, G. J., &amp; Peel, D. (2000).
+    <em>Finite mixture models.</em> Wiley.
+  </div>
+
+  <div class="ref-entry">
+    Nardão, D. G. S. (2024).
+    <em>Projeção dos custos médicos nos planos de saúde suplementar no Brasil via modelo Getzen</em>
+    [Dissertação de mestrado]. Universidade Federal do Rio Grande do Sul.
+  </div>
+
+  <div class="ref-entry">
+    Ng, S. K., Xiang, L., &amp; Yau, K. K. W. (2019).
+    <em>Mixture modelling for medical and health sciences.</em> Chapman &amp; Hall/CRC.
+  </div>
+
+  <div class="ref-entry">
+    Preisser, J. S., Das, K., Long, D. L., &amp; Divaris, K. (2016).
+    Marginalized zero-inflated negative binomial regression with application to dental caries.
+    <em>Statistics in Medicine, 35</em>(10), 1722–1735.
+  </div>
+
+  <div class="ref-entry">
+    Redner, R. A., &amp; Walker, H. F. (1984).
+    Mixture densities, maximum likelihood and the EM algorithm.
+    <em>SIAM Review, 26</em>(2), 195–239.
+  </div>
+
+  <div class="ref-entry">
+    Tucker, A., Wang, Z., Rotalinti, Y., &amp; Myles, P. (2020).
+    Generating high-fidelity synthetic patient data for assessing machine learning healthcare
+    software.
+    <em>NPJ Digital Medicine, 3</em>, Article 147.
+  </div>
+
+  <div class="ref-entry">
+    Vitorino, R. S., Boing, A. F., Rocha, T. A. H., &amp; Schweickardt, J. C. (2024).
+    Utilização do SUS por beneficiários de operadoras privadas no Brasil.
+    <em>Journal of Health Informatics, 16</em>(especial), 1–8.
+  </div>
+
+  <div class="ref-entry">
+    Wagner, B., Riggs, P., &amp; Mikulich-Gilbertson, S. (2015).
+    The importance of distribution-choice in modeling substance use data: A comparison of
+    negative binomial, beta binomial, and zero-inflated distributions.
+    <em>The American Journal of Drug and Alcohol Abuse, 41</em>(6), 489–497.
+  </div>
+
+</div>
+
 <hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
 
 <p style="color:var(--muted); font-size:0.9rem;">
-  Referência metodológica: Ng, Xiang &amp; Yau (2019),
-  <em>Mixture Modelling for Medical and Health Sciences</em>, Chapman &amp; Hall/CRC. ·
   Todos os dados são inteiramente simulados — nenhum beneficiário real está representado.
 </p>
 

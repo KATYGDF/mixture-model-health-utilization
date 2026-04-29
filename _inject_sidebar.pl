@@ -39,7 +39,7 @@ sub nav_html {
 <!-- ss-nav-start -->
 <nav class="sidebar">
   <a href="../index.html" class="sidebar-brand">SimSa\x{FA}de</a>
-  <p class="sidebar-subtitle">Simula\x{E7}\x{E3}o de Utiliza\x{E7}\x{E3}o<br>em Sa\x{FA}de Suplementar</p>
+  <p class="sidebar-subtitle">Modelagem de Heterogeneidade<br>em Sa\x{FA}de Suplementar</p>
   <ul class="sidebar-nav">
 $items  </ul>
   <div class="sidebar-footer">Katy Garcia de Freitas \x{B7} 2026</div>

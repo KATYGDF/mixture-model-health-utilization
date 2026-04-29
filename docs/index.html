@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SimSaúde · Simulação de Utilização em Saúde Suplementar</title>
+<title>Modelagem de Heterogeneidade em Dados de Saúde Suplementar via Modelos de Mistura</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
@@ -12,7 +12,7 @@
 
 <nav class="sidebar">
   <a href="index.html" class="sidebar-brand">SimSaúde</a>
-  <p class="sidebar-subtitle">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <p class="sidebar-subtitle">Modelagem de Heterogeneidade<br>em Saúde Suplementar</p>
   <ul class="sidebar-nav">
     <li><a href="index.html" class="active">Início</a></li>
     <li><a href="pages/estudo.html">O Estudo</a></li>
@@ -21,132 +21,99 @@
     <li><a href="pages/eda_simsaude.html">EDA</a></li>
     <li><a href="pages/analises.html">Análises</a></li>
   </ul>
-  <div class="sidebar-footer">Katy Garcia de Freitas · 2026<br></div>
+  <div class="sidebar-footer">Katy Garcia de Freitas · 2026</div>
 </nav>
 
 <main class="main">
 <div class="prose">
 
-<h1>Simulação de Dados de Utilização em Saúde Suplementar</h1>
-<p class="lead">Estudo preliminar · Pôster científico · v3.0</p>
+<h1>Modelagem de Heterogeneidade em Dados de Saúde Suplementar via Modelos de Mistura</h1>
+<p class="lead">Estudo preliminar · Pôster científico · Doutorado</p>
 
 <p>
-Este projeto gera uma amostra sintética de beneficiários de planos de saúde usando um
-<strong>modelo de mistura finita</strong> com grupos latentes de utilização.
-Os parâmetros foram calibrados para reproduzir indicadores oficiais do
-<strong>Painel de Indicadores da ANS</strong>.
+Este projeto investiga a estrutura latente de utilização de serviços de saúde por beneficiários de
+planos privados, utilizando <strong>modelos de mistura finita</strong> para identificar perfis heterogêneos
+de uso. Os dados são inteiramente sintéticos, gerados com parâmetros calibrados a indicadores
+oficiais do <strong>Painel de Indicadores da ANS</strong>.
 </p>
 
-<p>Nenhum dado real de beneficiários foi utilizado — todos os dados são inteiramente simulados.</p>
+<p>
+A hipótese central é que modelos probabilísticos — em particular a mistura de Binomial Negativa —
+são mais capazes de recuperar grupos latentes em dados de contagem com sobredispersão do que
+métodos de clusterização geométrica como o K-means.
+</p>
 
-<div class="callout callout-info" style="margin-top:2rem;margin-bottom:2rem">
-  <strong>Destaques dos Resultados (v3.0):</strong><br>
-  ✓ Calibração perfeita (desvios &lt; 3% vs. Painel ANS)<br>
-  ✓ 4 grupos latentes com padrões heterogêneos<br>
-  ✓ 5.000 beneficiários sintéticos com características realistas<br>
-  ✓ Indicadores de alerta capturando anomalias esperadas<br>
-  👉 <a href="pages/simulacao.html" style="color:inherit;font-weight:600">Ver simulação dos dados em detalhes →</a>
+<hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
+
+<h2>Etapas do projeto</h2>
+
+<div style="display:grid; gap:1.5rem; margin-top:1.5rem;">
+
+  <!-- Etapa 1 -->
+  <div class="callout">
+    <div style="display:flex; align-items:baseline; gap:0.75rem; margin-bottom:0.5rem;">
+      <span style="font-family:var(--ff-mono); font-size:0.7rem; letter-spacing:0.1em;
+                   text-transform:uppercase; color:var(--muted);">Etapa 1</span>
+      <strong style="font-size:1.05rem;">
+        <a href="pages/simulacao.html" style="color:var(--ink); text-decoration:none;">
+          Simulação dos Dados
+        </a>
+      </strong>
+    </div>
+    <p style="margin:0; color:var(--text);">
+      Geração de uma amostra sintética de 5.000 beneficiários por meio de uma mistura finita com
+      quatro grupos latentes de utilização (baixo uso, ambulatorial coordenado, agudo/hospitalar
+      e padrão atípico). Os parâmetros foram calibrados iterativamente para reproduzir indicadores
+      do Painel ANS com desvio inferior a 3%.
+    </p>
+  </div>
+
+  <!-- Etapa 2 -->
+  <div class="callout">
+    <div style="display:flex; align-items:baseline; gap:0.75rem; margin-bottom:0.5rem;">
+      <span style="font-family:var(--ff-mono); font-size:0.7rem; letter-spacing:0.1em;
+                   text-transform:uppercase; color:var(--muted);">Etapa 2</span>
+      <strong style="font-size:1.05rem;">
+        <a href="pages/eda_simsaude.html" style="color:var(--ink); text-decoration:none;">
+          Análise Exploratória
+        </a>
+      </strong>
+    </div>
+    <p style="margin:0; color:var(--text);">
+      Caracterização descritiva dos dados simulados: distribuição dos desfechos de contagem por
+      grupo latente, proporção de zeros, sobredispersão, correlações e indicadores de alerta.
+      Verificação da qualidade da simulação e identificação das variáveis com maior poder
+      discriminativo entre os grupos.
+    </p>
+  </div>
+
+  <!-- Etapa 3 -->
+  <div class="callout">
+    <div style="display:flex; align-items:baseline; gap:0.75rem; margin-bottom:0.5rem;">
+      <span style="font-family:var(--ff-mono); font-size:0.7rem; letter-spacing:0.1em;
+                   text-transform:uppercase; color:var(--muted);">Etapa 3</span>
+      <strong style="font-size:1.05rem;">
+        <a href="pages/analises.html" style="color:var(--ink); text-decoration:none;">
+          Modelagem
+        </a>
+      </strong>
+    </div>
+    <p style="margin:0; color:var(--text);">
+      Comparação de três métodos não supervisionados para recuperação dos grupos latentes:
+      mistura gaussiana, mistura de Binomial Negativa (algoritmo EM implementado do zero)
+      e K-means como baseline geométrico. A qualidade de recuperação é avaliada por ARI,
+      NMI e acurácia após pareamento ótimo via algoritmo húngaro.
+    </p>
+  </div>
+
 </div>
 
-<h2>O modelo em resumo</h2>
+<hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
 
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Amostra</strong></td>
-      <td>5.000 beneficiários simulados</td>
-    </tr>
-    <tr>
-      <td><strong>Grupos latentes</strong></td>
-      <td>4 grupos com proporções fixas na população</td>
-    </tr>
-    <tr>
-      <td><strong>Desfechos de contagem</strong></td>
-      <td>Consultas · Pronto-socorro · Exames · Terapias · Internações</td>
-    </tr>
-    <tr>
-      <td><strong>Distribuições</strong></td>
-      <td>Binomial Negativa NB₂ / ZINB / Beta-Binomial</td>
-    </tr>
-    <tr>
-      <td><strong>Calibração</strong></td>
-      <td>Indicadores ANS — desvio &lt; 3% em todos os desfechos</td>
-    </tr>
-    <tr>
-      <td><strong>Implementação</strong></td>
-      <td>R · <code>dplyr</code> · <code>ggplot2</code> · <code>MASS</code></td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>Os quatro grupos latentes</h2>
-
-<p>
-Cada beneficiário pertence a exatamente um grupo latente g<sub>i</sub> ∈ {1, 2, 3, 4},
-com proporções fixas π = (0,50; 0,25; 0,20; 0,05).
+<p style="color:var(--muted); font-size:0.9rem;">
+  Nenhum dado real de beneficiários foi utilizado — todos os dados são inteiramente simulados. ·
+  Referência metodológica: Ng, Xiang &amp; Yau (2019), <em>Mixture Modelling for Medical and Health Sciences</em>, Chapman &amp; Hall/CRC.
 </p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Grupo</th>
-      <th>Nome</th>
-      <th>Proporção</th>
-      <th>Perfil de utilização</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>G1</code></td>
-      <td>Baixo Uso</td>
-      <td>50%</td>
-      <td>~3 consultas/ano · ~2 exames · &lt;5% internação</td>
-    </tr>
-    <tr>
-      <td><code>G2</code></td>
-      <td>Ambulatorial Coordenado</td>
-      <td>25%</td>
-      <td>~8 consultas/ano · ~10 exames · alta taxa de terapias</td>
-    </tr>
-    <tr>
-      <td><code>G3</code></td>
-      <td>Agudo / Hospitalar</td>
-      <td>20%</td>
-      <td>~5 consultas/ano · ~3 PS/ano · ~80% com internação</td>
-    </tr>
-    <tr>
-      <td><code>G4</code></td>
-      <td>Padrão Atípico</td>
-      <td>5%</td>
-      <td>~4 PS/ano · ~18 exames · razão exame/consulta ↑↑</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>Conteúdo desta documentação</h2>
-
-<ul>
-  <li>
-    <a href="pages/metodologia.html"><strong>Metodologia</strong></a> —
-    Fundamentos matemáticos: distribuição NB₂, modelo ZINB, Beta-Binomial
-    para meses, log-link com coeficientes grupo-específicos, calibração ANS.
-  </li>
-  <li>
-    <a href="pages/documentacao.html"><strong>Documentação</strong></a> —
-    Passo a passo das 16 etapas do script R, com o raciocínio por trás
-    de cada decisão de modelagem.
-  </li>
-  <li>
-    <a href="pages/evolucao.html"><strong>Evolução</strong></a> —
-    Histórico das versões 1.0, 2.0 e 3.0: limitações identificadas e
-    correções aplicadas em cada iteração.
-  </li>
-  <li>
-    <a href="pages/simulacao.html"><strong>Simulação</strong></a> —
-    Análise descritiva completa: validação ANS, estatísticas por grupo, distribuição de custos,
-    indicadores de alerta, e qualidade dos dados sintéticos gerados.
-  </li>
-</ul>
 
 </div>
 </main>

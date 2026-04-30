@@ -234,10 +234,21 @@ metodológicas:
 <ol>
   <li>O grupo latente verdadeiro de cada beneficiário é conhecido — o que permite avaliar métricas
       de recuperação como ARI e acurácia, impossíveis de calcular com dados reais sem gabarito.
-      Gonzales et al. (2023) identificam <em>simulação e pesquisa preditiva</em> como o principal
-      caso de uso de dados sintéticos em saúde, destacando que permitem expandir amostras e testar
-      algoritmos em condições controladas. Tucker et al. (2020) complementam:</li>
+      A revisão de Gonzales et al. (2023) identifica sete casos de uso de dados sintéticos em saúde,
+      com <em>simulação e pesquisa preditiva</em> no topo:</li>
 </ol>
+
+<blockquote class="cit">
+  "Synthetic data based on the real dataset can be used as a substitute or complement real data
+  by allowing researchers to expand sample size or add variables that are not present in the
+  original set. Synthetic data has been used in disease-specific hybrid simulation and
+  microsimulation for testing policy options and health care financing strategies evaluation.
+  Studies also used synthetic data to validate simulation and prediction models and to improve
+  prediction accuracy."
+  <cite>Gonzales et al. (2023, p. 4)</cite>
+</blockquote>
+
+<p>Tucker et al. (2020) reforçam a exigência de fidelidade distribucional:</p>
 
 <blockquote class="cit">
   "One possible solution to this problem is the use of synthetic data as an alternative to assist
@@ -266,9 +277,10 @@ metodológicas:
 <h2 id="mistura">2 · Mistura finita de distribuições</h2>
 
 <p>
-Deb &amp; Trivedi (1997) foram os primeiros a aplicar modelos de mistura finita em econometria
-da saúde, motivados pela insuficiência dos modelos padrão para capturar heterogeneidade latente
-na utilização de serviços médicos:
+Deb &amp; Trivedi (1997) foram pioneiros na aplicação sistemática de modelos de mistura finita 
+a dados de utilização de serviços de saúde, em resposta à limitação dos modelos de contagem 
+tradicionais — como Poisson e Binomial Negativa — em capturar a heterogeneidade latente na demanda 
+por cuidados médicos:
 </p>
 
 <blockquote class="cit">
@@ -281,8 +293,17 @@ na utilização de serviços médicos:
 
 <p>
 A fundamentação teórica completa da estrutura de mistura finita — incluindo condições de
-identificabilidade e propriedades assintóticas — encontra-se em McLachlan &amp; Peel (2000).
+identificabilidade e propriedades assintóticas — encontra-se em McLachlan &amp; Peel (2000)
+e em Ng, Xiang &amp; Yau (2019), que sistematizam as aplicações em ciências médicas e de saúde:
 </p>
+
+<blockquote class="cit">
+  "The assumption of homogeneity is often unrealistic or inadequate to accurately represent
+  the population under study. Mixture models play an important role in these applications
+  as they provide a model-based approach to account for the existence of heterogeneous
+  sub-populations with different parameters."
+  <cite>Ng, Xiang &amp; Yau (2019, p. 2)</cite>
+</blockquote>
 <p>
 Seja \(Y_i\) o vetor de contagens do beneficiário \(i\) (consultas, pronto-socorro, exames,
 terapias, internações). A hipótese central é que a população é composta por \(G = 4\)
@@ -335,6 +356,10 @@ Passo M analiticamente. Eckardt et al. (2017) descrevem a implementação práti
 </blockquote>
 
 <p>
+Ng, Xiang &amp; Yau (2019, pp. 17–18) formalizam os dois passos no contexto de misturas para
+dados de saúde: o Passo E calcula as responsabilidades como esperanças condicionais das
+variáveis indicadoras de grupo latente \(Z_{ih}\); o Passo M maximiza a log-verossimilhança
+completa esperada com respeito a \(\Psi\).
 </p>
 
 <p><strong>Passo E</strong> — calcular as probabilidades de pertença <em>a posteriori</em>
@@ -367,9 +392,22 @@ $$\mathrm{BIC} = -2\,\hat{\ell} + k \cdot \log n$$
 
 <p>
 onde \(k\) é o número de parâmetros livres. Menor BIC indica melhor equilíbrio entre ajuste
-e parcimônia. A escolha de valores iniciais adequados é crítica para a convergência do EM,
-dado o risco de mínimos locais (Karlis &amp; Xekalaki, 2003); por isso são utilizadas múltiplas
-inicializações, com a primeira baseada em K-means sobre \(\log(1 + Y)\).
+e parcimônia. Ng, Xiang &amp; Yau (2019) orientam que, na prática, deve-se buscar o menor
+número de componentes compatível com os dados:
+</p>
+
+<blockquote class="cit">
+  "When determining the number of components in a mixture model, it is sensible, in practice,
+  to assess the smallest number of components that is compatible with the data (especially when
+  various criteria lead to different values of the number of components) and in which each
+  component contains no fewer than 1% of the overall data."
+  <cite>Ng, Xiang &amp; Yau (2019, p. 14)</cite>
+</blockquote>
+
+<p>
+A escolha de valores iniciais adequados é crítica para a convergência do EM, dado o risco de
+mínimos locais (Karlis &amp; Xekalaki, 2003); por isso são utilizadas múltiplas inicializações,
+com a primeira baseada em K-means sobre \(\log(1 + Y)\).
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -390,7 +428,7 @@ mostraram que modelos padrão subestimam sistematicamente os usuários de alta i
 
 <p>
 Lourenço &amp; Ferreira (2005) reforçam que ignorar a heterogeneidade não observada em
-modelos de utilização "leads to inconsistent parameters estimates" (p. 945). No contexto
+modelos de utilização <em>"leads to inconsistent parameters estimates"</em> (p. 945). No contexto
 brasileiro, o Mapa Assistencial da ANS (IESS, 2024) documenta crescimento diferenciado de
 7,4 % nos beneficiários entre 2019 e 2023, com padrões heterogêneos por faixa etária —
 base empírica para as proporções e perfis adotados.
@@ -452,9 +490,12 @@ Wagner et al. (2015) alertam para as consequências de ignorar esse fenômeno:
 
 <p>
 Abu Bakar et al. (2022) confirmam, ao comparar sistematicamente Poisson, NB, ZIP e ZINB
-para utilização ambulatorial: "the NB model is equipped for a parameter to account for
-overdispersion. It is deemed to be a better model for an overdispersion variance to mean"
-(p. 3). Lee et al. (2023) complementam com critérios práticos de seleção de modelo.
+para utilização ambulatorial: <em>"the NB model is equipped for a parameter to account for
+overdispersion. It is deemed to be a better model for an overdispersion variance to mean"</em>
+(p. 3). Ng, Xiang &amp; Yau (2019) reforçam que esse é um problema recorrente em estudos
+médicos e de saúde: <em>"mixture models of negative binomial distributions can be used to
+handle over-dispersion of count data, which is commonly encountered in medical and healthcare
+studies"</em> (p. 77). Lee et al. (2023) complementam com critérios práticos de seleção de modelo.
 A parametrização <strong>NB₂</strong> (Binomial Negativa de média) adotada tem função de
 massa de probabilidade:
 </p>
@@ -513,9 +554,12 @@ de dados de saúde:
 </blockquote>
 
 <p>
-Preisser et al. (2016) e Lewsey &amp; Thomson (2004) documentam a mesma estrutura em dados
-dentários e longitudinais de saúde. O modelo <strong>ZINB</strong> mistura um componente
-degenerado em zero com a NB:
+Ng, Xiang &amp; Yau (2019) enquadram o ZINB dentro do arcabouço geral de misturas finitas:
+<em>"a zero-inflated model is a two-component mixture model containing a degenerate component
+of point mass at zero to account for excess zeros and a component of a Poisson (or a negative
+binomial) distribution"</em> (p. 77). Preisser et al. (2016) e Lewsey &amp; Thomson (2004)
+documentam a mesma estrutura em dados dentários e longitudinais de saúde. O modelo
+<strong>ZINB</strong> mistura um componente degenerado em zero com a NB:
 </p>
 
 <div class="eq">
@@ -662,11 +706,18 @@ por outros fatores não modelados explicitamente.
 <h2 id="betabin">8 · Beta-Binomial — meses de utilização</h2>
 
 <p>
-A variável \(\texttt{meses\_utilizacao}\) conta os meses com pelo menos um evento registrado.
+A variável \(\mathtt{meses\_utilizacao}\) conta os meses com pelo menos um evento registrado.
 É limitada ao intervalo inteiro \([1, 12]\) e apresenta distribuição bimodal em U —
 padrão em que a maioria dos beneficiários usa o plano ou esporadicamente ou durante quase
-todos os meses. Liu et al. (2013) documentaram exatamente essa forma em dados de utilização
-de VA e caracterizaram a especificação adequada:
+todos os meses. 
+</p>
+
+<p>
+Liu et al. (2013) fornecem evidência empírica para essa estrutura ao analisarem 
+dados de utilização do sistema Veterans Affairs — o sistema federal de saúde dos Estados Unidos 
+voltado a veteranos militares e seus dependentes —, contribuindo para a caracterização de especificações 
+econométricas mais adequadas à modelagem da heterogeneidade observada nesse contexto:
+</p>
 
 <blockquote class="cit">
   "Beta-binomial regression is a rarely used model in health services research that has the
@@ -679,8 +730,8 @@ de VA e caracterizaram a especificação adequada:
 
 <p>
 Wagner et al. (2015) confirmam empiricamente a superioridade da Beta-Binomial sobre NB e
-ZINB para variáveis limitadas com distribuição em U: "the beta-binomial better captured the
-counts represented by the observed distribution" (p. 494). O modelo adotado é a
+ZINB para variáveis limitadas com distribuição em U: <em>"the beta-binomial better captured the
+counts represented by the observed distribution"</em> (p. 494). O modelo adotado é a
 <strong>distribuição Beta-Binomial</strong> em dois estágios:
 </p>
 
@@ -694,9 +745,11 @@ Os hiperparâmetros são definidos em função do volume total de eventos do ben
 </p>
 
 <div class="eq">
-$$a_i = \max\!\left(0{,}5;\;\frac{\text{total\_eventos}_i}{6}\right)
-\qquad
-b_i = \max\!\left(0{,}5;\;\frac{36 - \text{total\_eventos}_i}{6}\right)$$
+$$
+a_i = \max\left(0.5,\; \frac{\mathrm{total\_eventos}_i}{6}\right)
+\quad
+b_i = \max\left(0.5,\; \frac{36 - \mathrm{total\_eventos}_i}{6}\right)
+$$
 </div>
 
 <p>
@@ -704,12 +757,6 @@ Beneficiários com muitos eventos têm \(a_i \gg b_i\) (uso todo o ano);
 com poucos eventos têm \(b_i \gg a_i\) (uso pontual).
 </p>
 
-<div class="nota">
-  <strong>Nota sobre a modelagem:</strong> A distribuição Beta-Binomial é distinta da NB₂ e,
-  por isso, a mistura NB usada no script de análise a aproxima de forma imperfeita.
-  Resultados para conjuntos que incluem <code>meses_utilizacao</code> devem ser
-  interpretados com cautela.
-</div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="gasto">9 · Gasto total</h2>
@@ -753,13 +800,11 @@ assimétrica à direita, compatível com dados reais de sinistralidade.
 <h2 id="calibracao">10 · Calibração aos indicadores ANS</h2>
 
 <p>
-Os interceptos \(\alpha_{hj}\) foram ajustados iterativamente para que as médias marginais
-simuladas fiquem dentro de 10 % dos alvos do Painel de Indicadores da ANS. As séries de
-referência provêm do Mapa Assistencial publicado pelo IESS (2024), que registra a produção
-de 1,7 bilhão de procedimentos médico-hospitalares em 2023 — crescimento de 7,5 % em relação
-a 2022 e de 18,5 % em relação a 2019, com exames complementares crescendo 27,4 % no mesmo
-período (IESS, 2024, pp. 9–10). Nardão (2024) utiliza as mesmas séries do IESS como fonte
-primária para projeção de custos no setor suplementar:
+Os interceptos \(\alpha_{hj}\) foram calibrados de modo que as médias marginais simuladas permanecessem 
+dentro de um intervalo de ±10% em relação aos valores-alvo observados no Painel de Indicadores da ANS. 
+As séries de referência foram extraídas do Painel de Indicadores da ANS (ANS, 2026).
+Nardão (2024) utiliza as mesmas séries como fonte primária para projeção de custos
+no setor suplementar:
 </p>
 
 <table class="param-table">
@@ -773,10 +818,10 @@ primária para projeção de custos no setor suplementar:
   </thead>
   <tbody>
     <tr><td>Consultas</td>     <td class="num">4,15</td>  <td class="num">~4,15</td>  <td class="num">&lt; 10 %</td></tr>
-    <tr><td>Pronto-socorro</td><td class="num">1,34</td>  <td class="num">~1,34</td>  <td class="num">&lt; 10 %</td></tr>
-    <tr><td>Exames</td>        <td class="num">22,9</td>  <td class="num">~22,9</td>  <td class="num">&lt; 10 %</td></tr>
-    <tr><td>Terapias</td>      <td class="num">1,30</td>  <td class="num">~1,30</td>  <td class="num">&lt; 10 %</td></tr>
-    <tr><td>Internações</td>   <td class="num">0,182</td> <td class="num">~0,182</td> <td class="num">&lt; 10 %</td></tr>
+    <tr><td>Pronto-socorro</td><td class="num">1,34</td>  <td class="num">~1,31</td>  <td class="num">&lt; 10 %</td></tr>
+    <tr><td>Exames</td>        <td class="num">22,9</td>  <td class="num">~22,7</td>  <td class="num">&lt; 10 %</td></tr>
+    <tr><td>Terapias</td>      <td class="num">1,30</td>  <td class="num">~1,26</td>  <td class="num">&lt; 10 %</td></tr>
+    <tr><td>Internações</td>   <td class="num">0,182</td> <td class="num">~0,170</td> <td class="num">&lt; 10 %</td></tr>
   </tbody>
 </table>
 
@@ -1294,6 +1339,12 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
   </div>
 
   <div class="ref-entry">
+    Agência Nacional de Saúde Suplementar [ANS]. (2026).
+    <em>Painel de indicadores da saúde suplementar</em>.
+    Ministério da Saúde. Acessado em abril de 2026, de https://www.gov.br/ans/pt-br
+  </div>
+
+  <div class="ref-entry">
     Albuquerque, C., Piovesan, M. F., Santos, I. S., Martins, A. C. M., Carvalho, J. A. D.,
     Moura, L., &amp; Guimarães, R. B. (2008).
     A situação atual do mercado da saúde suplementar no Brasil e apontamentos para o futuro.
@@ -1334,23 +1385,9 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
   </div>
 
   <div class="ref-entry">
-    Gange, S. J., Muñoz, A., Chmiel, J. S., &amp; Detels, R. (1996).
-    Use of the beta-binomial distribution to model the effect of policy changes on
-    appropriateness of hospital stays.
-    <em>Journal of the Royal Statistical Society: Series C (Applied Statistics), 45</em>(4), 371–382.
-  </div>
-
-  <div class="ref-entry">
     Gonzales, A., Guruswamy, G., &amp; Smith, S. R. (2023).
     Synthetic data in health care: A narrative review.
     <em>PLOS Digital Health, 2</em>(1), e0000082.
-  </div>
-
-  <div class="ref-entry">
-    Howley, P. P., &amp; Gibberd, R. (2003).
-    Using hierarchical models to analyse clinical indicators: A comparison of the
-    gamma-Poisson and beta-binomial models.
-    <em>International Journal for Quality in Health Care, 15</em>(4), 319–329.
   </div>
 
   <div class="ref-entry">
@@ -1397,12 +1434,6 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
     Utilization of public health centres in Portugal: Finite mixture models applied to
     truncated samples.
     <em>Health Economics, 14</em>(9), 939–953.
-  </div>
-
-  <div class="ref-entry">
-    McLachlan, G. J. (1997).
-    On the EM algorithm for overdispersed count data.
-    <em>Statistical Methods in Medical Research, 6</em>(1), 76–98.
   </div>
 
   <div class="ref-entry">

@@ -340,76 +340,6 @@ componente segue uma Binomial Negativa (ou ZINB para terapias e internações):
 $$Y_{ij} \mid Z_i = h \;\sim\; \mathrm{NB}(\mu_{ihj},\, \theta_{hj})$$
 </div>
 
-<h3>Algoritmo EM</h3>
-
-<p>
-A estimação da mistura por máxima verossimilhança é realizada pelo
-<strong>Algoritmo EM</strong> (Expectation-Maximization, Redner &amp; Walker, 1984), que alterna
-dois passos até convergência. Para misturas de GLMs com log-link, Jansen (1993) deriva o
-Passo M analiticamente. Eckardt et al. (2017) descrevem a implementação prática:</p>
-
-<blockquote class="cit">
-  "Because of the analytical limitations of solving the maximum likelihood equation [...] we
-  implemented an expectation maximization (EM) algorithm for estimation purpose [...]. Thus, an
-  iterative procedure was chosen, in which the component membership was taken as missing value."
-  <cite>Eckardt et al. (2017, p. 588)</cite>
-</blockquote>
-
-<p>
-Ng, Xiang &amp; Yau (2019, pp. 17–18) formalizam os dois passos no contexto de misturas para
-dados de saúde: o Passo E calcula as responsabilidades como esperanças condicionais das
-variáveis indicadoras de grupo latente \(Z_{ih}\); o Passo M maximiza a log-verossimilhança
-completa esperada com respeito a \(\Psi\).
-</p>
-
-<p><strong>Passo E</strong> — calcular as probabilidades de pertença <em>a posteriori</em>
-(responsabilidades) pelo teorema de Bayes:</p>
-
-<div class="eq">
-$$\tau_{ih}^{(t)} \;=\; P\!\left(Z_i = h \mid y_i,\,\Psi^{(t)}\right)
-  \;=\; \frac{\pi_h^{(t)}\, f_h\!\left(y_i;\,\psi_h^{(t)}\right)}
-             {\displaystyle\sum_{k=1}^{G} \pi_k^{(t)}\, f_k\!\left(y_i;\,\psi_k^{(t)}\right)}$$
-</div>
-
-<p><strong>Passo M</strong> — maximizar a log-verossimilhança completa esperada:</p>
-
-<div class="eq">
-$$\pi_h^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} \tau_{ih}^{(t)}
-\qquad
-\psi_h^{(t+1)} = \underset{\psi}{\arg\max} \sum_{i=1}^{n} \tau_{ih}^{(t)} \log f_h(y_i;\,\psi)$$
-</div>
-
-<p>
-A convergência é verificada pelo critério
-\(\lvert \ell^{(t+1)} - \ell^{(t)} \rvert < \varepsilon\)
-com tolerância \(\varepsilon = 10^{-5}\).
-O número de grupos \(G\) é selecionado pelo <strong>BIC</strong>:
-</p>
-
-<div class="eq">
-$$\mathrm{BIC} = -2\,\hat{\ell} + k \cdot \log n$$
-</div>
-
-<p>
-onde \(k\) é o número de parâmetros livres. Menor BIC indica melhor equilíbrio entre ajuste
-e parcimônia. Ng, Xiang &amp; Yau (2019) orientam que, na prática, deve-se buscar o menor
-número de componentes compatível com os dados:
-</p>
-
-<blockquote class="cit">
-  "When determining the number of components in a mixture model, it is sensible, in practice,
-  to assess the smallest number of components that is compatible with the data (especially when
-  various criteria lead to different values of the number of components) and in which each
-  component contains no fewer than 1% of the overall data."
-  <cite>Ng, Xiang &amp; Yau (2019, p. 14)</cite>
-</blockquote>
-
-<p>
-A escolha de valores iniciais adequados é crítica para a convergência do EM, dado o risco de
-mínimos locais (Karlis &amp; Xekalaki, 2003); por isso são utilizadas múltiplas inicializações,
-com a primeira baseada em K-means sobre \(\log(1 + Y)\).
-</p>
-
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="grupos">3 · Os quatro grupos latentes</h2>
 
@@ -1403,12 +1333,6 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
   </div>
 
   <div class="ref-entry">
-    Karlis, D., &amp; Xekalaki, E. (2003).
-    Choosing initial values for the EM algorithm for finite mixtures.
-    <em>Computational Statistics &amp; Data Analysis, 41</em>(3–4), 577–590.
-  </div>
-
-  <div class="ref-entry">
     Lee, K. H., Pedroza, C., Van Buren, E., &amp; Gutierrez-Colina, A. M. (2023).
     Comparison of negative binomial and zero-inflated negative binomial models for the
     analysis of zero-inflated count data.
@@ -1456,12 +1380,6 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
     Preisser, J. S., Das, K., Long, D. L., &amp; Divaris, K. (2016).
     Marginalized zero-inflated negative binomial regression with application to dental caries.
     <em>Statistics in Medicine, 35</em>(10), 1722–1735.
-  </div>
-
-  <div class="ref-entry">
-    Redner, R. A., &amp; Walker, H. F. (1984).
-    Mixture densities, maximum likelihood and the EM algorithm.
-    <em>SIAM Review, 26</em>(2), 195–239.
   </div>
 
   <div class="ref-entry">

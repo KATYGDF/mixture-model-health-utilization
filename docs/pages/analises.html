@@ -185,6 +185,7 @@ blockquote.cit cite {
     <li><a href="evolucao.html">Evolução</a></li>
     <li><a href="simulacao.html">Simulação</a></li>
     <li><a href="eda_simsaude.html">EDA</a></li>
+    <li><a href="construcao_progressiva.html">Construção</a></li>
     <li><a href="analises.html" class="active">Análises</a></li>
   </ul>
   <div class="sidebar-footer">Katy Garcia de Freitas · 2026</div>
@@ -445,10 +446,10 @@ a seguir, \(g\) varia de 1 a \(G_{\max} = 6\).
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="metodos">4 · Os dois métodos</h2>
 
-<h3>M2 — Mistura de Binomiais Negativas (EM customizado)</h3>
+<h3>M1 — Mistura de Binomiais Negativas (EM customizado)</h3>
 
 <p>
-O método M2 implementa o algoritmo EM para uma mistura de \(g\) componentes
+O método M1 implementa o algoritmo EM para uma mistura de \(g\) componentes
 em que cada componente é um produto de NBs independentes — uma por variável:
 </p>
 
@@ -465,10 +466,10 @@ preservando o suporte discreto não negativo. O modelo seleciona \(g\) pelo BIC
 conjunto de variáveis.
 </p>
 
-<h3>M3 — K-means (baseline geométrico)</h3>
+<h3>M2 — K-means (baseline geométrico)</h3>
 
 <p>
-O método M3 aplica o algoritmo K-means padrão (Hartigan &amp; Wong, 1979) às
+O método M2 aplica o algoritmo K-means padrão (Hartigan &amp; Wong, 1979) às
 variáveis pré-processadas com \(\log(1+x)\) e padronização (<code>scale()</code>).
 O número de grupos é selecionado independentemente por <strong>silhouette</strong>:
 para cada \(k \in \{2,\ldots,6\}\) calcula-se a largura de silhouette média e
@@ -480,8 +481,8 @@ O custo computacional é de 1–3 segundos por conjunto.
   <thead>
     <tr>
       <th>Característica</th>
-      <th>M2 · Mistura NB</th>
-      <th>M3 · K-means</th>
+      <th>M1 · Mistura NB</th>
+      <th>M2 · K-means</th>
     </tr>
   </thead>
   <tbody>
@@ -796,10 +797,10 @@ loop principal sobre V1–V5, tabela comparativa e exportação dos resultados.
 <span class="com"># Comparação sistemática: 5 conjuntos de variáveis × 2 métodos</span>
 <span class="com">#</span>
 <span class="com"># Métodos (dados de contagem → escolha motivada pela natureza discreta):</span>
-<span class="com">#   M2  Mistura NB  — EM do zero, distribuição NB por componente e variável</span>
-<span class="com">#   M3  K-means     — baseline geométrico livre de distribuição, log1p + scale</span>
+<span class="com">#   M1  Mistura NB  — EM do zero, distribuição NB por componente e variável</span>
+<span class="com">#   M2  K-means     — baseline geométrico livre de distribuição, log1p + scale</span>
 <span class="com">#</span>
-<span class="com"># Critério de seleção de g: BIC (M2) · Silhouette (M3)</span>
+<span class="com"># Critério de seleção de g: BIC (M1) · Silhouette (M2)</span>
 <span class="com"># =============================================================================</span>
 
 
@@ -990,38 +991,38 @@ for (nome_v in names(CONJUNTOS)) {
   Y_raw &lt;- as.matrix(df[, vars])
   Y_std &lt;- scale(log1p(Y_raw))
 
-  <span class="com"># ── M2 · Mistura NB ───────────────────────────────────────────────────────</span>
-  cat("  M2 NB       ... ")
-  m2_fits &lt;- vector("list", G_MAX)
-  m2_bic  &lt;- numeric(G_MAX)
+  <span class="com"># ── M1 · Mistura NB ───────────────────────────────────────────────────────</span>
+  cat("  M1 NB       ... ")
+  M1_fits &lt;- vector("list", G_MAX)
+  M1_bic  &lt;- numeric(G_MAX)
   t0      &lt;- proc.time()
 
   for (g in seq_len(G_MAX)) {
-    m2_fits[[g]] &lt;- nb_mix_em(Y_raw, g = g)
-    m2_bic[g]    &lt;- m2_fits[[g]]$BIC
-    cat(sprintf("[g=%d:%.0f]", g, m2_bic[g]))
+    M1_fits[[g]] &lt;- nb_mix_em(Y_raw, g = g)
+    M1_bic[g]    &lt;- M1_fits[[g]]$BIC
+    cat(sprintf("[g=%d:%.0f]", g, M1_bic[g]))
   }
 
-  M2_G   &lt;- which.min(m2_bic)
-  m2_opt &lt;- m2_fits[[M2_G]]
+  M1_G   &lt;- which.min(M1_bic)
+  M1_opt &lt;- M1_fits[[M1_G]]
   dt     &lt;- (proc.time() - t0)["elapsed"]
-  m2_met &lt;- calc_metricas(grupo_real_int, m2_opt$classification)
+  M1_met &lt;- calc_metricas(grupo_real_int, M1_opt$classification)
 
   cat(sprintf("\n         g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
-              m2_met$g, m2_met$ari, m2_met$acuracia, dt))
+              M1_met$g, M1_met$ari, M1_met$acuracia, dt))
 
-  fits_nb[[nome_v]] &lt;- m2_opt
+  fits_nb[[nome_v]] &lt;- M1_opt
 
   resultados[[length(resultados) + 1]] &lt;- data.frame(
     Conjunto = label, Método = "Mistura NB",
-    g = m2_met$g, ARI = m2_met$ari, NMI = m2_met$nmi,
-    Acuracia = m2_met$acuracia, Pureza = m2_met$pureza,
+    g = M1_met$g, ARI = M1_met$ari, NMI = M1_met$nmi,
+    Acuracia = M1_met$acuracia, Pureza = M1_met$pureza,
     Tempo_s = round(dt, 1), stringsAsFactors = FALSE
   )
 
-  <span class="com"># ── M3 · K-means ─────────────────────────────────────────────────────────</span>
+  <span class="com"># ── M2 · K-means ─────────────────────────────────────────────────────────</span>
   <span class="com"># Seleção de g por silhouette (g = 2..G_MAX); 50 reinícios no ajuste final</span>
-  cat("  M3 K-means  ... ")
+  cat("  M2 K-means  ... ")
   t0       &lt;- proc.time()
   set.seed(SEED)
   dist_std &lt;- dist(Y_std)
@@ -1029,18 +1030,18 @@ for (nome_v in names(CONJUNTOS)) {
     km &lt;- kmeans(Y_std, centers = k, nstart = 15, iter.max = 200)
     mean(cluster::silhouette(km$cluster, dist_std)[, "sil_width"])
   })
-  M3_K   &lt;- (2:G_MAX)[which.max(sil_vals)]
-  m3_km  &lt;- kmeans(Y_std, centers = M3_K, nstart = 50, iter.max = 300)
+  M2_K   &lt;- (2:G_MAX)[which.max(sil_vals)]
+  M2_km  &lt;- kmeans(Y_std, centers = M2_K, nstart = 50, iter.max = 300)
   dt     &lt;- (proc.time() - t0)["elapsed"]
-  m3_met &lt;- calc_metricas(grupo_real_int, m3_km$cluster)
+  M2_met &lt;- calc_metricas(grupo_real_int, M2_km$cluster)
 
   cat(sprintf("g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
-              m3_met$g, m3_met$ari, m3_met$acuracia, dt))
+              M2_met$g, M2_met$ari, M2_met$acuracia, dt))
 
   resultados[[length(resultados) + 1]] &lt;- data.frame(
     Conjunto = label, Método = "K-means",
-    g = m3_met$g, ARI = m3_met$ari, NMI = m3_met$nmi,
-    Acuracia = m3_met$acuracia, Pureza = m3_met$pureza,
+    g = M2_met$g, ARI = M2_met$ari, NMI = M2_met$nmi,
+    Acuracia = M2_met$acuracia, Pureza = M2_met$pureza,
     Tempo_s = round(dt, 1), stringsAsFactors = FALSE
   )
 

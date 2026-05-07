@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Da Poisson à Mistura NB — SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath:  [['\\(', '\\)']],
+    displayMath: [['$$', '$$']],
+    tags: 'none'
+  },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea','pre']
+  }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+<style>
+
+/* ── Equação em bloco ───────────────────────────────────────── */
+.eq {
+  margin: 1.5rem 0;
+  padding: 0.8rem 1.2rem;
+  background: var(--surface, #f8f7f4);
+  border-left: 3px solid var(--accent, #4a7c59);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* ── Código R (tema escuro) ─────────────────────────────────── */
+pre.r-code {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 1.4rem 1.6rem;
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  tab-size: 2;
+  margin: 1.5rem 0;
+}
+pre.r-code .com { color: #6c7086; font-style: italic; }
+
+/* ── Tabela de parâmetros / resultados ──────────────────────── */
+.param-table, .res-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.2rem 0;
+}
+.param-table th, .res-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.param-table td, .res-table td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: top;
+}
+.param-table tr:last-child td,
+.res-table tr:last-child td { border-bottom: none; }
+.param-table .num, .res-table .num {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  text-align: right;
+}
+.res-table tr.best td   { background: #f0f7f2; }
+.res-table tr.best .num { font-weight: 600; }
+.res-table tr.sep td    { border-top: 2px solid var(--border, #ccc); }
+
+/* ── Navegação interna ──────────────────────────────────────── */
+.toc {
+  background: var(--surface, #f8f7f4);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  padding: 1rem 1.4rem;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+.toc ol { margin: 0.4rem 0 0 1.2rem; padding: 0; }
+.toc li { margin: 0.3rem 0; }
+.toc a  { color: var(--accent, #4a7c59); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* ── Nota em bloco ──────────────────────────────────────────── */
+.nota {
+  background: #fffbf0;
+  border-left: 3px solid #e6a817;
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: var(--muted, #666);
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+
+/* ── Nota de limitação (vermelha) ───────────────────────────── */
+.limitacao {
+  background: #fff5f5;
+  border-left: 3px solid #c0392b;
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: #333;
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+
+/* ── Citação direta ─────────────────────────────────────────── */
+blockquote.cit {
+  margin: 1.2rem 0;
+  padding: 0.75rem 1.2rem;
+  border-left: 3px solid var(--accent, #4a7c59);
+  background: var(--surface, #f8f7f4);
+  font-style: italic;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+}
+blockquote.cit cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+
+/* ── Referências ────────────────────────────────────────────── */
+.ref-group { margin-bottom: 2rem; }
+.ref-entry {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  border-left: 2px solid var(--border, #ddd);
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.ref-entry cite {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+
+/* ── Etapas da evolução ─────────────────────────────────────── */
+.etapa-grid {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: 0 1rem;
+  margin: 1.4rem 0;
+}
+.etapa-num {
+  width: 2.2rem;
+  height: 2.2rem;
+  background: var(--accent, #4a7c59);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.etapa-num.falha { background: #c0392b; }
+.etapa-num.parcial { background: #e6a817; color: #222; }
+.etapa-conteudo { padding-bottom: 0.8rem; border-bottom: 1px solid var(--border, #eee); }
+.etapa-conteudo:last-of-type { border-bottom: none; }
+.etapa-conteudo h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+.etapa-conteudo p  { margin: 0; font-size: 0.88rem; color: var(--muted, #555); }
+
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Modelagem de Heterogeneidade<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="estudo.html">O Estudo</a></li>
+    <li><a href="evolucao.html">Evolução</a></li>
+    <li><a href="simulacao.html">Simulação</a></li>
+    <li><a href="eda_simsaude.html">EDA</a></li>
+    <li><a href="construcao_progressiva.html" class="active">Construção</a></li>
+    <li><a href="analises.html">Análises</a></li>
+  </ul>
+  <div class="sidebar-footer">Katy Garcia de Freitas · 2026</div>
+</nav>
+
+<main class="main">
+<div class="prose">
+
+<h1>Da Poisson à Mistura NB</h1>
+<p class="lead">Construção progressiva da modelagem de misturas em dados de utilização de saúde suplementar — V3: consultas, PS, exames, internações, terapias</p>
+
+<div class="toc">
+  <strong>Nesta página</strong>
+  <ol>
+    <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#sobredispersao">Parte I — Sobredispersão: Poisson falha</a></li>
+    <li><a href="#heterogeneidade">Parte II — A Binomial Negativa ainda não basta</a></li>
+    <li><a href="#mixtools">Parte III — Mistura Gaussiana: <code>mixtools</code></a></li>
+    <li><a href="#flexmix">Parte IV — Mixturas de contagem: <code>flexmix</code></a></li>
+    <li><a href="#bic">Curvas de BIC e seleção de <em>g</em></a></li>
+    <li><a href="#posteriores">Probabilidades posteriores</a></li>
+    <li><a href="#transicao">Limitações e necessidade do EM customizado</a></li>
+    <li><a href="#codigo">Código R</a></li>
+    <li><a href="#referencias">Referências</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="objetivo">1 · Objetivo</h2>
+
+<p>
+A página de <a href="analises.html">Análises</a> apresenta diretamente o modelo
+final: uma Mistura de Binomiais Negativas ajustada por um algoritmo EM implementado
+do zero. Para um leitor que encontra esse modelo pela primeira vez, a impressão pode
+ser a de um algoritmo complexo construído arbitrariamente.
+</p>
+
+<p>
+O objetivo desta seção é mostrar que esse modelo <em>não</em> foi arbitrário —
+ele é a consequência natural de uma série de escolhas motivadas pelas limitações
+dos modelos anteriores. A narrativa segue uma trajetória progressiva:
+</p>
+
+<div class="etapa-grid">
+  <div class="etapa-num falha">1</div>
+  <div class="etapa-conteudo">
+    <h4>GLM Poisson — Equidispersão</h4>
+    <p>Assume \(\mathrm{Var}[Y] = \mathbb{E}[Y]\). Dados de utilização violam isso
+    sistematicamente. A Poisson subestima a variabilidade e produz resíduos
+    estruturados.</p>
+  </div>
+
+  <div class="etapa-num parcial">2</div>
+  <div class="etapa-conteudo">
+    <h4>GLM Binomial Negativa — Sobredispersão</h4>
+    <p>Corrige a equidispersão via parâmetro \(\theta\). Mas pressupõe
+    <em>uma única população</em>. Quando existem subgrupos com padrões distintos,
+    a NB global está errada por construção.</p>
+  </div>
+
+  <div class="etapa-num parcial">3</div>
+  <div class="etapa-conteudo">
+    <h4>Mistura Gaussiana (<code>mixtools</code>) — Suporte errado</h4>
+    <p>Introduz a ideia de múltiplos componentes via EM. Mas aplica distribuições
+    Normais a dados discretos: \(P(Y &lt; 0) &gt; 0\) é matematicamente impossível
+    para contagens.</p>
+  </div>
+
+  <div class="etapa-num parcial">4</div>
+  <div class="etapa-conteudo">
+    <h4>Mistura Poisson (<code>flexmix</code>) — Equidispersão intra-componente</h4>
+    <p>Usa a família correta (discreta, não-negativa), mas força equidispersão
+    dentro de cada componente. Dados de saúde suplementar violam isso mesmo
+    dentro de cada subgrupo.</p>
+  </div>
+
+  <div class="etapa-num parcial">5</div>
+  <div class="etapa-conteudo">
+    <h4>Mistura NB univariada (<code>flexmix</code>) — Marginal apenas</h4>
+    <p>Família e dispersão corretas, mas opera variável por variável. A estrutura
+    de agrupamento emerge da <em>combinação</em> das variáveis; modelar cada uma
+    separadamente perde a dependência conjunta.</p>
+  </div>
+
+  <div class="etapa-num">6</div>
+  <div class="etapa-conteudo">
+    <h4>Mistura NB multivariada — EM customizado ✓</h4>
+    <p>Cada componente é um produto de NB independentes por variável, com
+    \((\mu_{hj}, \theta_{hj})\) estimados conjuntamente via E-step / M-step.
+    Inicialização K-means, múltiplos reinícios, seleção por BIC.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="sobredispersao">2 · Parte I — Sobredispersão: por que a Poisson falha</h2>
+
+<h3>A hipótese de equidispersão</h3>
+
+<p>
+A distribuição de Poisson para uma variável de contagem \(Y\) presupõe que
+variância e média coincidem:
+</p>
+
+<div class="eq">
+$$\mathrm{Var}[Y] = \mathbb{E}[Y]$$
+</div>
+
+<p>
+Essa hipótese é violada em praticamente todos os dados de utilização de serviços
+de saúde. A heterogeneidade entre beneficiários — diferenças de idade, cronicidade,
+perfil de risco — produz variâncias muito superiores às médias.
+A razão \(\mathrm{Var}[Y] / \mathbb{E}[Y]\), chamada <em>índice de
+sobredispersão</em>, serve como diagnóstico:
+</p>
+
+<pre class="r-code"><span class="com"># Razão variância/média por variável (V3)</span>
+vars &lt;- c("consultas", "ps", "exames", "internacoes", "terapias")
+
+stats &lt;- data.frame(
+  variavel  = vars,
+  media     = sapply(vars, function(v) round(mean(df[[v]]), 2)),
+  variancia = sapply(vars, function(v) round(var(df[[v]]),  2)),
+  zeros_pct = sapply(vars, function(v) round(100 * mean(df[[v]] == 0), 1))
+)
+stats$razao_v_m &lt;- round(stats$variancia / stats$media, 1)
+print(stats)</pre>
+
+<p>
+A tabela abaixo sintetiza o padrão esperado nos dados simulados:
+</p>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Variável</th>
+      <th class="num">Média</th>
+      <th class="num">Variância</th>
+      <th class="num">Var/Média</th>
+      <th class="num">% zeros</th>
+      <th>Interpretação</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>consultas</code></td>
+      <td class="num">≈ 14</td><td class="num">≈ 120</td>
+      <td class="num">≈ 8,6</td><td class="num">≈ 0%</td>
+      <td>sobredispersão moderada</td>
+    </tr>
+    <tr>
+      <td><code>ps</code></td>
+      <td class="num">≈ 3</td><td class="num">≈ 18</td>
+      <td class="num">≈ 6,0</td><td class="num">≈ 5%</td>
+      <td>sobredispersão moderada</td>
+    </tr>
+    <tr>
+      <td><code>exames</code></td>
+      <td class="num">≈ 12</td><td class="num">≈ 250</td>
+      <td class="num">≈ 20,8</td><td class="num">≈ 2%</td>
+      <td>sobredispersão elevada</td>
+    </tr>
+    <tr>
+      <td><code>internacoes</code></td>
+      <td class="num">≈ 0,6</td><td class="num">≈ 18</td>
+      <td class="num">≈ 30,0</td><td class="num">≈ 55%</td>
+      <td>excesso de zeros + cauda longa</td>
+    </tr>
+    <tr>
+      <td><code>terapias</code></td>
+      <td class="num">≈ 2</td><td class="num">≈ 70</td>
+      <td class="num">≈ 35,0</td><td class="num">≈ 40%</td>
+      <td>excesso de zeros + cauda longa</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="nota">
+  Valores representativos para \(n = 5{,}000\) com \(G = 4\) grupos simulados.
+  Execute <code>construcao_progressiva.R</code> para os valores exatos.
+  Para a Poisson ser adequada, todas as razões deveriam ser ≈ 1.
+</div>
+
+<h3>Comparação Poisson vs Binomial Negativa — GLM univariado</h3>
+
+<p>
+Para tornar a falha da Poisson concreta, ajusta-se um GLM univariado a
+<code>exames</code> — a variável com sobredispersão mais pronunciada —
+com ambas as famílias:
+</p>
+
+<pre class="r-code"><span class="com"># GLM Poisson vs Binomial Negativa (exames)</span>
+library(MASS)
+
+fit_pois &lt;- glm(exames ~ 1, data = df, family = poisson)
+fit_nb   &lt;- MASS::glm.nb(exames ~ 1, data = df)
+
+cat("AIC Poisson:", round(AIC(fit_pois), 1), "\n")
+cat("AIC NB:     ", round(AIC(fit_nb),   1), "\n")
+cat("theta NB:   ", round(fit_nb$theta,  4), "\n")
+<span class="com"># theta pequeno ⟹ sobredispersão intensa (1/theta = índice de dispersão)</span></pre>
+
+<p>
+A diferença de AIC entre os dois modelos é tipicamente da ordem de milhares —
+evidência de que a equidispersão da Poisson é uma restrição inaceitável
+para esses dados.
+</p>
+
+<blockquote class="cit">
+  "Count data from insurance claims are almost invariably overdispersed.
+   Poisson regression systematically underestimates variance, producing
+   anticonservative inference and inflated test statistics."
+  <cite>— Ahmad et al. (2025, p. 192)</cite>
+</blockquote>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="heterogeneidade">3 · Parte II — A Binomial Negativa ainda não basta</h2>
+
+<h3>Sobredispersão global vs heterogeneidade latente</h3>
+
+<p>
+A Binomial Negativa resolve a equidispersão adicionando um parâmetro de
+dispersão \(\theta &gt; 0\). A distribuição marginal de \(Y\) torna-se:
+</p>
+
+<div class="eq">
+$$P(Y = y \mid \mu, \theta) = \binom{y + \theta - 1}{y}
+\left(\frac{\mu}{\mu + \theta}\right)^{y}
+\left(\frac{\theta}{\mu + \theta}\right)^{\theta}$$
+</div>
+
+<p>
+com \(\mathbb{E}[Y] = \mu\) e \(\mathrm{Var}[Y] = \mu + \mu^2/\theta\).
+Quando \(\theta \to \infty\), recupera-se a Poisson; quando \(\theta\) é
+pequeno, a cauda direita é pesada.
+</p>
+
+<p>
+O problema é que um GLM NB pressupõe <strong>uma única população homogênea</strong>:
+os parâmetros \((\mu, \theta)\) são globais. Quando a população é composta por
+subgrupos com perfis de utilização qualitativamente distintos —
+beneficiários jovens e saudáveis, adultos com doenças crônicas, idosos de alta
+complexidade, pacientes em regime de terapias intensivas —
+a NB global está produzindo médias e dispersões que não descrevem nenhum
+dos subgrupos com fidelidade.
+</p>
+
+<pre class="r-code"><span class="com"># Diagnóstico: resíduos de Pearson do modelo NB</span>
+resid_nb &lt;- residuals(fit_nb, type = "pearson")
+
+<span class="com"># Curtose empírica dos resíduos</span>
+<span class="com"># Normal ⟹ curtose ≈ 3; valores elevados indicam estrutura residual</span>
+kurt &lt;- mean((resid_nb - mean(resid_nb))^4) / var(resid_nb)^2
+cat(sprintf("Curtose dos resíduos NB: %.2f\n", kurt))
+
+<span class="com"># Histograma dos resíduos revela bimodalidade</span>
+<span class="com"># hist(resid_nb, breaks = 60, main = "Resíduos Pearson — NB global")</span></pre>
+
+<p>
+Resíduos de Pearson com distribuição bimodal — ou com curtose muito superior a 3 —
+sinalizam que o modelo está misturando observações de subpopulações distintas em
+um único componente. A Binomial Negativa captura o excesso de dispersão, mas não
+<em>explica</em> de onde ele vem.
+</p>
+
+<div class="nota">
+  Analogia: a NB é como calcular a média de peso de homens e mulheres adultos
+  juntos — obtém-se um número válido, mas que não representa bem nenhum dos dois
+  grupos. Um modelo de mistura resolve isso atribuindo cada observação a um
+  componente.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="mixtools">4 · Parte III — Primeiros modelos de mistura: <code>mixtools</code></h2>
+
+<h3>A ideia central dos mixture models</h3>
+
+<p>
+Um modelo de mistura finita supõe que os dados foram gerados por \(g\)
+subpopulações latentes com pesos \(\pi_1, \ldots, \pi_g\) e densidades
+\(f_1, \ldots, f_g\):
+</p>
+
+<div class="eq">
+$$f(y;\Psi) = \sum_{h=1}^{g} \pi_h \, f_h(y;\psi_h), \qquad
+\sum_{h=1}^{g} \pi_h = 1, \quad \pi_h &gt; 0$$
+</div>
+
+<p>
+O pacote <code>mixtools</code> implementa o algoritmo EM para misturas de
+distribuições normais via <code>normalmixEM()</code>. Como primeiro passo
+pedagógico, aplica-se essa mistura à transformação logarítmica de
+<code>exames</code>: \(y^* = \log(1 + y)\).
+</p>
+
+<pre class="r-code"><span class="com"># Mistura Gaussiana via mixtools (aplicada a log1p(exames))</span>
+library(mixtools)
+
+y_log &lt;- log1p(df$exames)
+
+<span class="com"># Seleção de g por BIC (calculado manualmente a partir do log-lik)</span>
+bic_gauss &lt;- numeric(5)   <span class="com"># g = 2..6</span>
+for (g in 2:6) {
+  set.seed(42)
+  fit &lt;- suppressWarnings(
+    mixtools::normalmixEM(y_log, k = g, maxit = 500, epsilon = 1e-6)
+  )
+  k_par        &lt;- 3L * g - 1L   <span class="com"># g médias + g dp + (g-1) pesos</span>
+  bic_gauss[g - 1] &lt;- -2 * fit$loglik + k_par * log(length(y_log))
+}
+
+g_opt &lt;- which.min(bic_gauss) + 1L
+cat("g selecionado:", g_opt, "\n")
+
+<span class="com"># Ajuste final</span>
+set.seed(42)
+fit_gauss &lt;- suppressWarnings(
+  mixtools::normalmixEM(y_log, k = g_opt, maxit = 500, epsilon = 1e-6)
+)
+cat("Pesos:  ", round(fit_gauss$lambda, 3), "\n")
+cat("Médias: ", round(fit_gauss$mu,     3), "(escala log1p)\n")
+cat("DPs:    ", round(fit_gauss$sigma,  3), "\n")</pre>
+
+<h3>Por que a mistura Gaussiana é pedagogicamente útil mas tecnicamente inadequada</h3>
+
+<p>
+A mistura Gaussiana demonstra claramente a mecânica do EM: o E-step
+calcula a probabilidade posterior de cada observação pertencer a cada componente;
+o M-step atualiza médias, desvios e pesos. A convergência da log-verossimilhança
+é monótona e observável.
+</p>
+
+<p>
+Contudo, três problemas tornam essa família inadequada para dados de contagem:
+</p>
+
+<div class="limitacao">
+  <strong>Limitação 1 — Suporte contínuo:</strong> a Normal tem suporte
+  \(\mathbb{R}\), mas contagens pertencem a \(\mathbb{N}_0 = \{0, 1, 2, \ldots\}\).
+  A função de densidade avalia probabilidades para valores negativos, que são
+  matematicamente impossíveis para a variável real. Em escala original,
+  \(P(Y &lt; 0) &gt; 0\).
+</div>
+
+<div class="limitacao">
+  <strong>Limitação 2 — Massa em zero:</strong> variáveis como
+  <code>internacoes</code> e <code>terapias</code> apresentam 40–55% de zeros.
+  Uma Normal, mesmo com média próxima de zero, atribui densidade a
+  valores negativos ao invés de concentrar massa no ponto zero.
+</div>
+
+<div class="limitacao">
+  <strong>Limitação 3 — Assimetria residual:</strong> mesmo após \(\log(1+y)\),
+  as distribuições de utilização retêm assimetria à direita, especialmente em
+  cauda longa. Uma Normal em log1p approxima mal esses dados.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="flexmix">5 · Parte IV — Mixturas com famílias de contagem: <code>flexmix</code></h2>
+
+<h3>Mistura Poisson</h3>
+
+<p>
+O pacote <code>flexmix</code> permite especificar modelos de mistura com
+componentes GLM, corrigindo o problema do suporte. A mistura Poisson é o
+primeiro passo dentro das distribuições discretas:
+</p>
+
+<pre class="r-code"><span class="com"># Mistura Poisson via flexmix</span>
+library(flexmix)
+
+set.seed(42)
+fit_pois_mix &lt;- flexmix::flexmix(
+  exames ~ 1, data = df, k = 3,
+  model   = flexmix::FLXMRglm(family = "poisson"),
+  control = list(iter.max = 300, minprior = 0.02)
+)
+BIC(fit_pois_mix)
+summary(fit_pois_mix)   <span class="com"># tamanho e parâmetros dos componentes</span></pre>
+
+<p>
+A mistura Poisson resolve os problemas de suporte e de massa em zero.
+Entretanto, ao assumir equidispersão <em>dentro</em> de cada componente
+(\(\mathrm{Var}[Y_h] = \mathbb{E}[Y_h]\)), ela tende a fragmentar clusters
+reais em múltiplos componentes espúrios para absorver a dispersão residual.
+</p>
+
+<div class="limitacao">
+  <strong>Limitação — Equidispersão intra-componente:</strong> a Poisson
+  impõe \(\mathrm{Var}[Y_h] = \mu_h\) em cada grupo \(h\). Se beneficiários
+  do mesmo grupo ainda apresentam variabilidade extra, o algoritmo cria
+  componentes adicionais desnecessários — o BIC tende a superestimar \(g\).
+</div>
+
+<h3>Mistura Binomial Negativa</h3>
+
+<p>
+A mistura NB substitui cada componente Poisson por uma NB, permitindo
+sobredispersão livre dentro de cada grupo:
+</p>
+
+<pre class="r-code"><span class="com"># Mistura Binomial Negativa via flexmix</span>
+set.seed(42)
+fit_nb_mix &lt;- flexmix::flexmix(
+  exames ~ 1, data = df, k = 3,
+  model   = flexmix::FLXMRnegbin(),
+  control = list(iter.max = 300, minprior = 0.02)
+)
+BIC(fit_nb_mix)
+
+<span class="com"># Parâmetros estimados por componente</span>
+parameters(fit_nb_mix)</pre>
+
+<p>
+A mistura NB via <code>flexmix</code> combina família adequada com
+flexibilidade de dispersão por componente. É um modelo correto do ponto de
+vista distribuicional — e confirma a estrutura de múltiplos grupos.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="bic">6 · Curvas de BIC e seleção de <em>g</em></h2>
+
+<p>
+O BIC penaliza a log-verossimilhança pelo número de parâmetros livres
+\(d(g)\) e pelo tamanho amostral \(n\):
+</p>
+
+<div class="eq">
+$$\mathrm{BIC}(g) = -2\,\hat{\ell}(\hat{\Psi}_g) + d(g)\,\log n$$
+</div>
+
+<p>
+Comparar as curvas de BIC ao longo de \(g = 2, \ldots, 6\) para os três
+modelos de mistura revela como cada família responde ao critério de seleção:
+</p>
+
+<pre class="r-code"><span class="com"># BIC para g = 2..6 em três famílias (exames, univariado)</span>
+bic_gauss   &lt;- numeric(5)
+bic_pois_fx &lt;- numeric(5)
+bic_nb_fx   &lt;- numeric(5)
+
+for (g in 2:6) {
+  set.seed(42)
+  <span class="com"># Gaussiana (log1p)</span>
+  fit_g &lt;- suppressWarnings(
+    mixtools::normalmixEM(log1p(df$exames), k = g, maxit = 500, epsilon = 1e-6)
+  )
+  bic_gauss[g-1] &lt;- -2 * fit_g$loglik + (3L*g - 1L) * log(nrow(df))
+
+  <span class="com"># Poisson</span>
+  mod_p &lt;- flexmix::flexmix(exames ~ 1, data = df, k = g,
+    model = flexmix::FLXMRglm(family = "poisson"),
+    control = list(iter.max = 300, minprior = 0.02))
+  bic_pois_fx[g-1] &lt;- BIC(mod_p)
+
+  <span class="com"># NB</span>
+  mod_nb &lt;- tryCatch(
+    flexmix::flexmix(exames ~ 1, data = df, k = g,
+      model = flexmix::FLXMRnegbin(),
+      control = list(iter.max = 300, minprior = 0.02)),
+    error = function(e) NULL)
+  if (!is.null(mod_nb)) bic_nb_fx[g-1] &lt;- BIC(mod_nb)
+}
+
+<span class="com"># Curvas (opcional: ggplot2)</span>
+bic_df &lt;- data.frame(
+  g      = rep(2:6, 3),
+  BIC    = c(bic_gauss, bic_pois_fx, bic_nb_fx),
+  modelo = rep(c("Gaussiana", "Poisson", "NB"), each = 5)
+)</pre>
+
+<p>
+Interpretação esperada das curvas:
+</p>
+
+<ul>
+  <li>
+    <strong>Gaussiana (log1p):</strong> mínimo em \(g \approx 3\) ou 4.
+    A transformação log1p melhora a simetria, mas a mistura Normal ainda
+    não captura com fidelidade os padrões discretos.
+  </li>
+  <li>
+    <strong>Poisson:</strong> mínimo em \(g \geq 4\), frequentemente em 5 ou 6,
+    pois componentes extras são criados para absorver a sobredispersão residual.
+  </li>
+  <li>
+    <strong>NB:</strong> mínimo em \(g = 3\) ou 4 para a variável
+    <code>exames</code> isolada. Para o modelo multivariado em V3 (EM customizado),
+    o BIC seleciona corretamente \(g = 4\) — o número verdadeiro de grupos.
+  </li>
+</ul>
+
+<div class="nota">
+  As curvas acima são para o modelo <strong>univariado</strong> em
+  <code>exames</code>. O EM customizado da página de Análises opera sobre
+  \(\mathbf{Y} = (\texttt{consultas}, \texttt{ps}, \texttt{exames},
+  \texttt{internacoes}, \texttt{terapias})\) em conjunto — a informação
+  multivariada é que permite ao BIC convergir para \(g = 4\) de forma estável.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="posteriores">7 · Probabilidades posteriores</h2>
+
+<p>
+Uma das vantagens centrais dos modelos de mistura em relação ao K-means é que
+o pertencimento a um grupo não é binário: cada observação recebe uma
+probabilidade posterior \(\hat{\tau}_{ih}\) de pertencer ao componente \(h\):
+</p>
+
+<div class="eq">
+$$\hat{\tau}_{ih} = \frac{\hat{\pi}_h \, f_h(y_i;\hat{\psi}_h)}
+{\sum_{k=1}^{g} \hat{\pi}_k \, f_k(y_i;\hat{\psi}_k)}$$
+</div>
+
+<pre class="r-code"><span class="com"># Probabilidades posteriores do modelo NB (flexmix)</span>
+post     &lt;- flexmix::posterior(fit_nb_mix)   <span class="com"># matriz n × g</span>
+prob_max &lt;- apply(post, 1, max)              <span class="com"># prob. máxima por observação</span>
+
+cat(sprintf("Média das prob. máximas:   %.3f\n", mean(prob_max)))
+cat(sprintf("Mediana das prob. máximas: %.3f\n", median(prob_max)))
+cat(sprintf("Proporção > 0,90:          %.1f%%\n", 100 * mean(prob_max > 0.9)))</pre>
+
+<p>
+Três padrões são informativos:
+</p>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Padrão</th>
+      <th>Probabilidade máxima</th>
+      <th>Interpretação</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Classificação clara</td>
+      <td class="num">&gt; 0,95</td>
+      <td>Beneficiário bem separado do grupo adjacente</td>
+    </tr>
+    <tr>
+      <td>Região híbrida</td>
+      <td class="num">0,60 – 0,85</td>
+      <td>Perfil intermediário entre dois componentes</td>
+    </tr>
+    <tr>
+      <td>Alta ambiguidade</td>
+      <td class="num">≈ 0,50</td>
+      <td>Sobreposição acentuada; grupos mal separados</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+Probabilidades intermediárias não representam falha do modelo — representam
+heterogeneidade contínua real. Em contextos de auditoria de saúde suplementar,
+beneficiários na região híbrida são especialmente relevantes: padrões suspeitos
+raramente exibem separação perfeita.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="transicao">8 · Limitações e necessidade do EM customizado</h2>
+
+<h3>O que a mistura NB univariada com <code>flexmix</code> não faz</h3>
+
+<p>
+A mistura NB via <code>flexmix</code> é um passo correto e importante.
+Contudo, ela opera em uma variável de cada vez. A estrutura de agrupamento
+em saúde suplementar emerge da combinação de variáveis: um beneficiário
+com alta utilização de <code>exames</code> e <code>terapias</code>
+simultaneamente pertence a um grupo diferente de quem tem alta utilização
+apenas de <code>exames</code>.
+</p>
+
+<p>
+Para capturar essa estrutura <strong>multivariada</strong>, é necessário
+modelar a distribuição conjunta
+\(\mathbf{Y} = (Y_1, \ldots, Y_p)\) dentro de cada componente.
+Sob a hipótese de independência condicional — razoável após condicionar no
+grupo latente —, o E-step opera sobre o produto de densidades NB:
+</p>
+
+<div class="eq">
+$$f_h(\mathbf{y};\psi_h) = \prod_{j=1}^{p}
+\mathrm{NB}\!\left(y_j;\, \mu_{hj},\, \theta_{hj}\right)$$
+</div>
+
+<p>
+Isso exige estimar \(2gp\) parâmetros de componente (médias e dispersões)
+mais \(g-1\) pesos, totalizando \(d(g) = 2gp + (g-1)\) parâmetros.
+Para \(g = 4\) e \(p = 5\) (V3), isso resulta em \(d(4) = 43\) parâmetros.
+</p>
+
+<h3>Limitações específicas do <code>flexmix</code> para este problema</h3>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Aspecto</th>
+      <th>flexmix</th>
+      <th>EM customizado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Escopo</td>
+      <td>univariado por componente ou multivariado via fórmula cbind</td>
+      <td>produto de NB independentes por variável, multivariado nativo</td>
+    </tr>
+    <tr>
+      <td>Inicialização</td>
+      <td>aleatória (padrão)</td>
+      <td>K-means em log1p(Y) + múltiplos reinícios aleatórios</td>
+    </tr>
+    <tr>
+      <td>Atualização de θ</td>
+      <td>otimização numérica interna</td>
+      <td>otimização em log-espaço com log(θ) para garantir θ &gt; 0</td>
+    </tr>
+    <tr>
+      <td>Controle de convergência</td>
+      <td>iter.max, minprior</td>
+      <td>tol na variação da log-verossimilhança entre iterações</td>
+    </tr>
+    <tr>
+      <td>Múltiplos reinícios</td>
+      <td>via loop externo</td>
+      <td>nativo (n_init = 8), melhor fit selecionado pelo BIC</td>
+    </tr>
+    <tr>
+      <td>Critério de seleção de g</td>
+      <td>BIC via BIC(mod)</td>
+      <td>BIC calculado como −2·ℓ̂ + d(g)·log(n)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="nota">
+  O EM customizado não é metodologicamente superior ao <code>flexmix</code>
+  em todos os contextos — é adequado especificamente para este problema:
+  mistura NB multivariada com variáveis de contagem de saúde suplementar,
+  onde o controle fino sobre inicialização e convergência é determinante
+  para a estabilidade do BIC.
+</div>
+
+<p>
+Com essa motivação estabelecida, a
+<a href="analises.html">página de Análises</a> apresenta o EM customizado
+aplicado sistematicamente a cinco conjuntos de variáveis (V1–V5),
+comparando com K-means como baseline geométrico livre de distribuição.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="codigo">9 · Código R</h2>
+
+<p>
+Script completo: <code>src/03_analises/construcao_progressiva.R</code>
+</p>
+
+<pre class="r-code"><span class="com"># =============================================================================</span>
+<span class="com"># construcao_progressiva.R</span>
+<span class="com"># Evolução metodológica: da Poisson à Mistura NB customizada</span>
+<span class="com"># V3 = consultas + ps + exames + internacoes + terapias</span>
+<span class="com"># =============================================================================</span>
+
+
+<span class="com"># ── 1. Parâmetros ─────────────────────────────────────────────────────────────</span>
+
+CAMINHO_CSV &lt;- "../../dados/dados_simulados.csv"
+SEED        &lt;- 42L
+G_MAX       &lt;- 6L
+VARS_V3     &lt;- c("consultas", "ps", "exames", "internacoes", "terapias")
+DIR_RDS     &lt;- "rds"
+
+
+<span class="com"># ── 2. Pacotes ────────────────────────────────────────────────────────────────</span>
+
+pkgs  &lt;- c("MASS", "mixtools", "flexmix")
+novos &lt;- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(novos) > 0) install.packages(novos, repos = "https://cloud.r-project.org")
+suppressPackageStartupMessages({
+  library(MASS); library(mixtools); library(flexmix)
+})
+
+
+<span class="com"># ── 3. Dados ──────────────────────────────────────────────────────────────────</span>
+
+df_raw &lt;- read.csv(CAMINHO_CSV, stringsAsFactors = FALSE, encoding = "UTF-8")
+candidatos &lt;- c("grupo_latente", "grupo", "grupo_real", "grupo_idx")
+col_grupo   &lt;- candidatos[candidatos %in% names(df_raw)][1]
+df &lt;- df_raw
+names(df)[names(df) == col_grupo] &lt;- "grupo_real"
+df$grupo_real &lt;- factor(df$grupo_real)
+
+cat(sprintf("\nDados: %d obs · %d grupos reais · V3\n", nrow(df), nlevels(df$grupo_real)))
+
+
+<span class="com"># ── PARTE I: Sobredispersão ───────────────────────────────────────────────────</span>
+
+stats_mv &lt;- data.frame(
+  variavel  = VARS_V3,
+  media     = sapply(VARS_V3, function(v) round(mean(df[[v]]), 2)),
+  variancia = sapply(VARS_V3, function(v) round(var(df[[v]]),  2)),
+  zeros_pct = sapply(VARS_V3, function(v) round(100 * mean(df[[v]] == 0), 1))
+)
+stats_mv$razao_v_m &lt;- round(stats_mv$variancia / stats_mv$media, 1)
+print(stats_mv)
+
+y_exames &lt;- df$exames
+fit_pois  &lt;- glm(y_exames ~ 1, family = poisson)
+fit_nb    &lt;- MASS::glm.nb(y_exames ~ 1)
+cat(sprintf("AIC Poisson: %.1f | AIC NB: %.1f\n", AIC(fit_pois), AIC(fit_nb)))
+
+
+<span class="com"># ── PARTE II: Heterogeneidade latente ─────────────────────────────────────────</span>
+
+resid_nb &lt;- residuals(fit_nb, type = "pearson")
+kurt_nb  &lt;- mean((resid_nb - mean(resid_nb))^4) / var(resid_nb)^2
+cat(sprintf("Curtose resíduos NB: %.2f\n", kurt_nb))
+
+
+<span class="com"># ── PARTE III: mixtools — mistura Gaussiana em log1p ─────────────────────────</span>
+
+y_log     &lt;- log1p(y_exames)
+bic_gauss &lt;- numeric(G_MAX - 1)
+for (g in 2:G_MAX) {
+  set.seed(SEED)
+  fit_tmp        &lt;- suppressWarnings(
+    mixtools::normalmixEM(y_log, k = g, maxit = 500, epsilon = 1e-6))
+  k_par          &lt;- 3L * g - 1L
+  bic_gauss[g-1] &lt;- -2 * fit_tmp$loglik + k_par * log(length(y_log))
+  cat(sprintf("  [g=%d: BIC=%.1f]", g, bic_gauss[g-1]))
+}
+cat("\n")
+g_gauss   &lt;- which.min(bic_gauss) + 1L
+set.seed(SEED)
+fit_gauss &lt;- suppressWarnings(
+  mixtools::normalmixEM(y_log, k = g_gauss, maxit = 500, epsilon = 1e-6))
+
+
+<span class="com"># ── PARTE IV: flexmix — Poisson e NB ─────────────────────────────────────────</span>
+
+<span class="com"># Mistura Poisson</span>
+bic_pois_fx &lt;- sapply(2:G_MAX, function(g) {
+  set.seed(SEED)
+  mod &lt;- flexmix::flexmix(y_exames ~ 1, k = g,
+    model   = flexmix::FLXMRglm(family = "poisson"),
+    control = list(iter.max = 300, minprior = 0.02))
+  BIC(mod)
+})
+
+<span class="com"># Mistura NB</span>
+bic_nb_fx  &lt;- numeric(G_MAX - 1)
+fits_nb_fx &lt;- vector("list", G_MAX - 1)
+for (g in 2:G_MAX) {
+  set.seed(SEED)
+  mod &lt;- tryCatch(
+    flexmix::flexmix(y_exames ~ 1, k = g,
+      model   = flexmix::FLXMRnegbin(),
+      control = list(iter.max = 300, minprior = 0.02)),
+    error = function(e) NULL)
+  if (!is.null(mod)) { bic_nb_fx[g-1] &lt;- BIC(mod); fits_nb_fx[[g-1]] &lt;- mod }
+  cat(sprintf("  [g=%d: BIC=%.1f]", g, bic_nb_fx[g-1]))
+}
+cat("\n")
+g_nb_fx    &lt;- which.min(bic_nb_fx[bic_nb_fx > 0]) + 1L
+mod_nb_best &lt;- fits_nb_fx[[g_nb_fx - 1L]]
+
+
+<span class="com"># ── PARTE V: Probabilidades posteriores e resumo ──────────────────────────────</span>
+
+post_nb  &lt;- flexmix::posterior(mod_nb_best)
+prob_max &lt;- apply(post_nb, 1, max)
+cat(sprintf("Prob. máxima — média: %.3f · pct>0,9: %.1f%%\n",
+            mean(prob_max), 100 * mean(prob_max > 0.9)))
+cat(sprintf("AIC Poisson: %.1f · AIC NB: %.1f\n", AIC(fit_pois), AIC(fit_nb)))
+cat(sprintf("BIC Mix Pois (g=%d): %.1f\n", which.min(bic_pois_fx)+1L, min(bic_pois_fx)))
+cat(sprintf("BIC Mix NB   (g=%d): %.1f\n", g_nb_fx, min(bic_nb_fx[bic_nb_fx > 0])))
+
+
+<span class="com"># ── 6. Salvar ─────────────────────────────────────────────────────────────────</span>
+
+if (!dir.exists(DIR_RDS)) dir.create(DIR_RDS, recursive = TRUE)
+saveRDS(list(
+  stats_mv    = stats_mv,  fit_pois    = fit_pois,  fit_nb      = fit_nb,
+  fit_gauss   = fit_gauss, bic_gauss   = bic_gauss,
+  bic_pois_fx = bic_pois_fx, bic_nb_fx = bic_nb_fx, post_nb = post_nb
+), file.path(DIR_RDS, "construcao_progressiva.rds"))
+cat("\nSalvo em 'rds/construcao_progressiva.rds'\n")
+cat("Próximo: analises.html — EM customizado multivariado (V1–V5)\n")</pre>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">10 · Referências</h2>
+
+<div class="ref-group">
+
+  <div class="ref-entry">
+    <cite>Ahmad, M., Amin, K., Ali, A., Ahmad, R. W., &amp; Khan, R. (2025).</cite>
+    A comparative evaluation of Poisson, negative binomial, and zero-inflated
+    models for count data.
+    <em>Dialogue Social Science Review</em>, <em>3</em>(8), 188–200.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Benaglia, T., Chauveau, D., Hunter, D. R., &amp; Young, D. (2009).</cite>
+    mixtools: An R package for analyzing finite mixture models.
+    <em>Journal of Statistical Software</em>, <em>32</em>(6), 1–29.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Deb, P., &amp; Trivedi, P. K. (1997).</cite>
+    Demand for medical care by the elderly: A finite mixture approach.
+    <em>Journal of Applied Econometrics</em>, <em>12</em>(3), 313–336.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977).</cite>
+    Maximum likelihood from incomplete data via the EM algorithm.
+    <em>Journal of the Royal Statistical Society — Series B</em>,
+    <em>39</em>(1), 1–38.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Grün, B., &amp; Leisch, F. (2008).</cite>
+    FlexMix version 2: Finite mixtures with concomitant variables and varying
+    and constant parameters.
+    <em>Journal of Statistical Software</em>, <em>28</em>(4), 1–35.
+  </div>
+
+  <div class="ref-entry">
+    <cite>McLachlan, G. J., &amp; Peel, D. (2000).</cite>
+    <em>Finite mixture models.</em> John Wiley &amp; Sons.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Ng, S. K., Xiang, L., &amp; Yau, K. K. W. (2019).</cite>
+    <em>Mixture modelling for medical and health sciences.</em>
+    CRC Press / Taylor &amp; Francis. ISBN 978-1-4822-3675-0.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Venables, W. N., &amp; Ripley, B. D. (2002).</cite>
+    <em>Modern applied statistics with S</em> (4th ed.). Springer.
+    [Pacote MASS — <code>glm.nb()</code>]
+  </div>
+
+</div>
+
+</div><!-- .prose -->
+</main>
+
+</body>
+</html>

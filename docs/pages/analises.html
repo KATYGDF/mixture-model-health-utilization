@@ -1,12 +1,171 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>O Estudo · SimSaúde</title>
+<title>Análises — SimSaúde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath:  [['\\(', '\\)']],
+    displayMath: [['$$', '$$']],
+    tags: 'none'
+  },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea','pre']
+  }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+<style>
+
+/* ── Equação em bloco ───────────────────────────────────────── */
+.eq {
+  margin: 1.5rem 0;
+  padding: 0.8rem 1.2rem;
+  background: var(--surface, #f8f7f4);
+  border-left: 3px solid var(--accent, #4a7c59);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* ── Tabela de parâmetros ───────────────────────────────────── */
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.2rem 0;
+}
+.param-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.param-table td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: top;
+}
+.param-table tr:last-child td { border-bottom: none; }
+.param-table .num {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  text-align: right;
+}
+
+/* ── Navegação interna ──────────────────────────────────────── */
+.toc {
+  background: var(--surface, #f8f7f4);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  padding: 1rem 1.4rem;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+.toc ol { margin: 0.4rem 0 0 1.2rem; padding: 0; }
+.toc li { margin: 0.3rem 0; }
+.toc a  { color: var(--accent, #4a7c59); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* ── Nota em bloco ──────────────────────────────────────────── */
+.nota {
+  background: #fffbf0;
+  border-left: 3px solid #e6a817;
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: var(--muted, #666);
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+
+/* ── Citação direta ─────────────────────────────────────────── */
+blockquote.cit {
+  margin: 1.2rem 0 1.2rem 0;
+  padding: 0.75rem 1.2rem;
+  border-left: 3px solid var(--accent, #4a7c59);
+  background: var(--surface, #f8f7f4);
+  font-style: italic;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+}
+blockquote.cit cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+
+/* ── Referências ────────────────────────────────────────────── */
+.ref-group { margin-bottom: 2rem; }
+.ref-entry {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  border-left: 2px solid var(--border, #ddd);
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.ref-entry cite {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+
+/* ── Tabela de resultados ───────────────────────────────────── */
+.res-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  margin: 1.2rem 0;
+}
+.res-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.res-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: middle;
+}
+.res-table tr:last-child td { border-bottom: none; }
+.res-table .num {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  text-align: right;
+}
+.res-table tr.best td {
+  background: #f0f7f2;
+}
+.res-table tr.best td.num { font-weight: 600; }
+.res-table .na {
+  color: var(--muted, #aaa);
+  font-style: italic;
+  text-align: right;
+}
+.res-table tr.sep td {
+  border-top: 2px solid var(--border, #ccc);
+}
+
+</style>
 </head>
 <body>
 
@@ -25,13 +184,643 @@
 </nav>
 
 <main class="main">
-<div class="prose" style="text-align:center;padding-top:4rem;">
+<div class="prose">
 
-  <div style="font-size:5rem;line-height:1;margin-bottom:1.5rem;">🚧</div>
-  <h1 style="margin-bottom:0.5rem;">Em construção</h1>
-  <p class="lead">Esta página está sendo preparada.</p>
-  <p style="color:var(--muted);max-width:36rem;margin:1.5rem auto 0;">    
-  </p>
+<h1>Análises Iniciais</h1>
+<p class="lead">Comparação de três métodos não supervisionados em cinco conjuntos de variáveis de utilização</p>
+
+<div class="toc">
+  <strong>Nesta página</strong>
+  <ol>
+    <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#em">Algoritmo EM e seleção do número de componentes</a></li>
+    <li><a href="#metodos">Os três métodos de agrupamento</a></li>
+    <li><a href="#variaveis">Conjuntos de variáveis</a></li>
+    <li><a href="#metricas">Métricas de avaliação</a></li>
+    <li><a href="#resultados">Resultados</a></li>
+    <li><a href="#discussao">Discussão</a></li>
+    <li><a href="#referencias">Referências</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="objetivo">1 · Objetivo</h2>
+
+<p>
+Uma das vantagens do processo generativo descrito na página de
+<a href="simulacao.html">Simulação</a> é que o grupo latente verdadeiro de cada
+beneficiário é conhecido por construção. Isso permite a avaliação quantitativa de
+métodos de agrupamento não supervisionado: algoritmos aplicados aos dados
+observados — sem acesso ao rótulo de grupo — podem ter sua capacidade de
+recuperação medida contra o gabarito simulado.
+</p>
+
+<p>
+O objetivo desta análise é comparar três métodos não supervisionados quanto à sua
+capacidade de recuperar a estrutura latente de \(G = 4\) grupos em dados sintéticos
+de utilização de planos de saúde. Os métodos diferem em suas suposições distribucionais
+e no mecanismo de estimação:
+</p>
+
+<ul>
+  <li><strong>M1 — Mistura Gaussiana</strong> (<em>mclust</em>): mistura de distribuições
+      normais multivariadas, com seleção automática de \(g\) e estrutura de covariância
+      por BIC (Scrucca et al., 2016).</li>
+  <li><strong>M2 — Mistura de Binomiais Negativas</strong> (EM customizado): cada
+      componente é um produto de NBs independentes, adequado à natureza discreta e
+      sobredispersa das contagens de utilização (Ng, Xiang &amp; Yau, 2019).</li>
+  <li><strong>M3 — K-means</strong>: agrupamento por distância euclidiana em variáveis
+      padronizadas, servindo como linha de base computacionalmente eficiente
+      (Hartigan &amp; Wong, 1979).</li>
+</ul>
+
+<p>
+Cada método foi aplicado a cinco conjuntos de variáveis — do subconjunto mínimo (V1)
+ao conjunto completo (V5) — com o objetivo de identificar quais variáveis contribuem
+mais para a discriminação entre grupos.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="em">2 · Algoritmo EM e seleção do número de componentes</h2>
+
+<p>
+Para uma mistura finita com \(G\) componentes, os parâmetros
+\(\Psi = (\pi_1,\ldots,\pi_G,\,\psi_1,\ldots,\psi_G)\) são estimados por máxima
+verossimilhança. Como o vetor de pertença de grupo \(\mathbf{z}_i = (z_{i1},\ldots,z_{iG})\)
+é latente, a maximização direta da log-verossimilhança observada é intratável.
+O <strong>algoritmo EM</strong> (<em>Expectation-Maximization</em>) contorna essa
+dificuldade operando sobre a log-verossimilhança completa:
+</p>
+
+<div class="eq">
+$$\ell_c(\Psi) \;=\; \sum_{i=1}^n \sum_{h=1}^G z_{ih}\,\bigl[\log \pi_h + \log f_h(y_i;\,\psi_h)\bigr]$$
+</div>
+
+<p>
+Ng, Xiang &amp; Yau (2019, pp. 8–9) descrevem o EM como o método canônico para estimar
+modelos de mistura: a solução de máxima verossimilhança é obtida iterando dois passos
+até convergência.
+</p>
+
+<h3>Passo E (Expectation)</h3>
+
+<p>
+Na iteração \(t\), o passo E calcula a probabilidade a posteriori de cada observação
+\(y_i\) pertencer ao componente \(h\), dados os parâmetros atuais:
+</p>
+
+<div class="eq">
+$$\hat{\tau}_{ih}^{(t)} \;=\;
+  \frac{\hat{\pi}_h^{(t)}\,f_h\!\left(y_i;\,\hat{\psi}_h^{(t)}\right)}
+       {\displaystyle\sum_{k=1}^G \hat{\pi}_k^{(t)}\,f_k\!\left(y_i;\,\hat{\psi}_k^{(t)}\right)}$$
+</div>
+
+<p>
+Essas probabilidades substituem os indicadores de grupo latente na esperança da
+log-verossimilhança completa (\(Q\)-função):
+</p>
+
+<div class="eq">
+$$Q\!\left(\Psi;\,\hat{\Psi}^{(t)}\right) \;=\;
+  \sum_{i=1}^n \sum_{h=1}^G \hat{\tau}_{ih}^{(t)}\,
+  \bigl[\log \pi_h + \log f_h(y_i;\,\psi_h)\bigr]$$
+</div>
+
+<h3>Passo M (Maximization)</h3>
+
+<p>
+O passo M maximiza \(Q\) em relação a \(\Psi\). Para as proporções de mistura:
+</p>
+
+<div class="eq">
+$$\hat{\pi}_h^{(t+1)} \;=\; \frac{1}{n}\sum_{i=1}^n \hat{\tau}_{ih}^{(t)}$$
+</div>
+
+<p>
+Os parâmetros componente-específicos \(\hat{\psi}_h^{(t+1)}\) são obtidos por
+MLE ponderado — a contribuição de cada observação é pesada por \(\hat{\tau}_{ih}^{(t)}\).
+As atualizações em forma fechada dependem da família distributiva escolhida
+(Ng, Xiang &amp; Yau, 2019, p. 17).
+</p>
+
+<h3>Convergência e múltiplos inícios</h3>
+
+<p>
+O algoritmo itera os passos E e M até que a variação na \(Q\)-função caia abaixo de
+um limiar \(\varepsilon\):
+</p>
+
+<div class="eq">
+$$\Bigl|Q\!\left(\hat{\Psi}^{(t+1)};\,\hat{\Psi}^{(t)}\right)
+  - Q\!\left(\hat{\Psi}^{(t)};\,\hat{\Psi}^{(t-1)}\right)\Bigr| \;<\; \varepsilon$$
+</div>
+
+<p>
+Uma propriedade fundamental é a <strong>monotonicidade</strong>: a log-verossimilhança
+observada \(\ell(\hat{\Psi}^{(t)})\) nunca decresce a cada iteração
+(Ng, Xiang &amp; Yau, 2019, p. 18). Todavia, o EM pode convergir para ótimos locais.
+Ng, Xiang &amp; Yau (2019, p. 19) recomendam múltiplos pontos de partida com
+inicialização via K-means como estratégia padrão para obter a solução global.
+</p>
+
+<h3>Seleção do número de componentes — BIC</h3>
+
+<p>
+O número de componentes \(g\) é desconhecido e deve ser selecionado a partir dos dados.
+O <strong>Critério de Informação Bayesiano</strong> (BIC) penaliza a log-verossimilhança
+maximizada pela complexidade do modelo:
+</p>
+
+<div class="eq">
+$$\mathrm{BIC}(g) \;=\; -2\log\hat{L}(\hat{\Psi}) + d(g)\log n$$
+</div>
+
+<p>
+onde \(d(g)\) é o número de parâmetros livres no modelo com \(g\) componentes e
+\(n\) é o tamanho da amostra. O modelo com menor BIC é preferido.
+Ng, Xiang &amp; Yau (2019, p. 12) apresentam o BIC como critério padrão para seleção
+do número de componentes em misturas finitas. A penalidade \(d(g)\log n\) desincentiva
+o sobreajuste ao número de grupos, e a condição mínima de estabilidade numérica
+— pelo menos dois pontos por componente — é discutida pelos mesmos autores (p. 14).
+Nas análises a seguir, \(g\) varia de 1 a \(G_{\max} = 6\) e o valor com menor BIC
+é selecionado automaticamente para cada método e conjunto de variáveis.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="metodos">3 · Os três métodos de agrupamento</h2>
+
+<h3>M1 — Mistura Gaussiana (<em>mclust</em>)</h3>
+
+<p>
+O método M1 usa o pacote <em>mclust</em> (Scrucca et al., 2016) para ajustar modelos
+de mistura de normais multivariadas. O BIC é calculado para todas as combinações de
+\(g \in \{1,\ldots,6\}\) e estrutura de covariância (diagonal, esférica, geral, entre
+outras), e a combinação de menor BIC determina o modelo final.
+</p>
+
+<p>
+As variáveis são pré-processadas com transformação \(\log(1+x)\) e padronização
+(<code>scale()</code>) antes do ajuste. Embora a mistura gaussiana seja bem fundamentada
+teoricamente para dados contínuos (McLachlan &amp; Peel, 2000), sua adequação é limitada
+para dados de contagem: a hipótese de normalidade condicional é inconsistente com a
+natureza discreta e sobredispersa das variáveis de utilização. Além disso, variáveis
+com suporte limitado — como \(\texttt{meses\_utilizacao} \in [1,12]\) — podem gerar
+matrizes de covariância mal-condicionadas após a transformação, levando a falhas
+numéricas por decomposição SVD singular.
+</p>
+
+<div class="nota">
+  <strong>Atenção (V5):</strong> no conjunto V5, que inclui
+  \(\texttt{meses\_utilizacao}\), o método M1 falhou com erro de SVD
+  (<em>"valores infinitos ou faltantes em 'x'"</em>). As métricas para M1/V5
+  foram registradas como NA.
+</div>
+
+<h3>M2 — Mistura de Binomiais Negativas (EM customizado)</h3>
+
+<p>
+O método M2 implementa o algoritmo EM para uma mistura de \(g\) componentes em que
+cada componente é um produto de distribuições Binomiais Negativas independentes —
+uma por variável de utilização:
+</p>
+
+<div class="eq">
+$$f_h(y_i;\,\psi_h) \;=\; \prod_{j=1}^p P_{\mathrm{NB}}(y_{ij};\,\mu_{hj},\,\theta_{hj})$$
+</div>
+
+<p>
+Essa especificação é diretamente motivada pela literatura de utilização de serviços
+de saúde. Deb &amp; Trivedi (1997) demonstraram que a mistura NB captura heterogeneidade
+latente em demanda médica que modelos padrão não conseguem identificar, e Ng, Xiang
+&amp; Yau (2019, p. 77) reforçam que modelos de mistura de NBs são adequados para
+dados de contagem sobredispersos em estudos médicos e de saúde.
+Ahmad et al. (2025) confirmam, em comparação sistemática entre Poisson, NB, ZIP e
+ZINB, a superioridade dos modelos NB para dados com sobredispersão.
+</p>
+
+<p>
+No passo M, \(\mu_{hj}\) é atualizado como a média ponderada das observações
+(pesos \(\hat{\tau}_{ih}\)), e \(\theta_{hj}\) é estimado por otimização numérica
+da log-verossimilhança NB ponderada. O algoritmo emprega múltiplos inícios com
+inicialização via K-means e reinícios aleatórios. O custo computacional é
+significativamente mais alto que M1 e M3 — da ordem de 1–2 horas por conjunto
+de variáveis, contra segundos para K-means.
+</p>
+
+<h3>M3 — K-means</h3>
+
+<p>
+O método M3 aplica o algoritmo K-means padrão (Hartigan &amp; Wong, 1979) às mesmas
+variáveis pré-processadas (\(\log(1+x)\) + <code>scale()</code>). O número de grupos
+\(g\) é fixado no valor selecionado pelo BIC do método M2 para o mesmo conjunto de
+variáveis, garantindo comparação em condições equivalentes.
+</p>
+
+<p>
+O K-means minimiza a variância intracluster (soma de distâncias euclidianas quadráticas
+ao centroide). Embora seja uma aproximação determinística sem fundamento probabilístico
+explícito para dados de contagem, serve como linha de base eficiente: é interpretável,
+robusto a falhas numéricas e computacionalmente trivial. Ng, Xiang &amp; Yau (2019, p. 19)
+recomendam sua saída como ponto de partida para inicializar o EM, o que também o
+coloca como referência comparativa natural.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="variaveis">4 · Conjuntos de variáveis</h2>
+
+<p>
+Os conjuntos de variáveis foram construídos incrementalmente, adicionando uma variável
+de cada vez em ordem crescente de disponibilidade típica em dados administrativos de
+planos de saúde:
+</p>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Conjunto</th><th>Rótulo</th><th>Variáveis incluídas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>V1</strong></td><td>Baseline</td>
+      <td>\(\texttt{consultas}\), \(\texttt{exames}\), \(\texttt{pronto\_socorro}\)</td>
+    </tr>
+    <tr>
+      <td><strong>V2</strong></td><td>+ internações</td>
+      <td>V1 + \(\texttt{internacoes}\)</td>
+    </tr>
+    <tr>
+      <td><strong>V3</strong></td><td>+ terapias</td>
+      <td>V2 + \(\texttt{terapias}\)</td>
+    </tr>
+    <tr>
+      <td><strong>V4</strong></td><td>+ prestadores</td>
+      <td>V3 + \(\texttt{prestadores\_distintos}\)</td>
+    </tr>
+    <tr>
+      <td><strong>V5</strong></td><td>+ meses de utilização</td>
+      <td>V4 + \(\texttt{meses\_utilizacao}\)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+As três primeiras variáveis (V1) representam o subconjunto mínimo frequentemente
+disponível em painéis administrativos. As adições subsequentes incorporam informações
+clinicamente relevantes (\(\texttt{internacoes}\), \(\texttt{terapias}\)) e padrões
+de acesso (\(\texttt{prestadores\_distintos}\), \(\texttt{meses\_utilizacao}\)).
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="metricas">5 · Métricas de avaliação</h2>
+
+<p>
+Como os rótulos verdadeiros de grupo são conhecidos por construção da simulação,
+a recuperação da estrutura latente é avaliada por quatro métricas externas —
+todas invariantes à permutação dos rótulos de grupo.
+</p>
+
+<h3>Índice de Rand Ajustado (ARI)</h3>
+
+<p>
+O ARI compara a partição prevista com a verdadeira, contando pares de observações
+concordantes: pares que estão no mesmo cluster em ambas as partições, ou em clusters
+diferentes em ambas. A <em>correção pelo acaso</em> garante que uma classificação
+aleatória produza \(\text{ARI} = 0\) e a atribuição perfeita produza
+\(\text{ARI} = 1\) (Hubert &amp; Arabie, 1985):
+</p>
+
+<div class="eq">
+$$\text{ARI} \;=\; \frac{\text{RI} - \mathbb{E}[\text{RI}]}{\max(\text{RI}) - \mathbb{E}[\text{RI}]}$$
+</div>
+
+<p>
+O ARI pode assumir valores levemente negativos quando o agrupamento é pior que o
+acaso. É a métrica primária desta análise por corrigir o viés de concordância aleatória
+que afeta o Índice de Rand não ajustado.
+</p>
+
+<h3>Informação Mútua Normalizada (NMI)</h3>
+
+<p>
+O NMI mede a quantidade de informação compartilhada entre a partição prevista \(U\)
+e a verdadeira \(V\), normalizada pelas entropias individuais (Strehl &amp; Ghosh, 2002):
+</p>
+
+<div class="eq">
+$$\text{NMI}(U,V) \;=\; \frac{2\,I(U;V)}{H(U)+H(V)}$$
+</div>
+
+<p>
+onde \(I(U;V) = H(U) - H(U|V)\) é a informação mútua e \(H(\cdot)\) é a entropia de
+Shannon. \(\text{NMI} = 1\) indica recuperação perfeita; \(\text{NMI} = 0\) indica
+independência. O NMI é sensível ao número de clusters: modelos com \(g > G_{\text{real}}\)
+podem obter NMI artificialmente elevado por fragmentação espúria de grupos.
+</p>
+
+<h3>Acurácia (correspondência húngara)</h3>
+
+<p>
+Os rótulos de grupo previstos são permutações arbitrárias dos verdadeiros.
+A acurácia é calculada após resolver o problema de atribuição ótima pelo algoritmo
+húngaro (Kuhn-Munkres), que encontra a bijeção entre grupos previstos e verdadeiros
+que maximiza a concordância:
+</p>
+
+<div class="eq">
+$$\text{acurácia} \;=\; \frac{\text{número de atribuições corretas após correspondência ótima}}{n}$$
+</div>
+
+<h3>Pureza</h3>
+
+<p>
+A pureza mede, para cada cluster previsto, a proporção de observações pertencentes
+à classe verdadeira majoritária:
+</p>
+
+<div class="eq">
+$$\text{pureza} \;=\; \frac{1}{n}\sum_{k=1}^K \max_j\,|C_k \cap T_j|$$
+</div>
+
+<p>
+onde \(C_k\) é o \(k\)-ésimo cluster previsto e \(T_j\) é a \(j\)-ésima classe
+verdadeira. Ao contrário do ARI, a pureza cresce monotonicamente com \(g\):
+modelos que produzem muitos clusters pequenos podem obter pureza alta sem recuperar
+adequadamente a estrutura latente verdadeira.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="resultados">6 · Resultados</h2>
+
+<p>
+A tabela abaixo consolida os resultados de todas as 15 combinações método × conjunto
+de variáveis. O destaque em verde indica o melhor resultado global por ARI (★).
+O símbolo — em V5/Gaussiano reflete a falha numérica por SVD.
+</p>
+
+<table class="res-table">
+  <thead>
+    <tr>
+      <th>Conjunto</th>
+      <th>Método</th>
+      <th class="num">g</th>
+      <th class="num">ARI</th>
+      <th class="num">NMI</th>
+      <th class="num">Acurácia</th>
+      <th class="num">Pureza</th>
+      <th class="num">Tempo (s)</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- V1 ─────────────────────────────────────── -->
+    <tr>
+      <td>V1 · Baseline</td><td>Gaussiana</td>
+      <td class="num">6</td><td class="num">0,189</td><td class="num">0,235</td>
+      <td class="num">0,447</td><td class="num">0,724</td><td class="num">10,2</td>
+    </tr>
+    <tr>
+      <td></td><td>Mistura NB</td>
+      <td class="num">3</td><td class="num">0,630</td><td class="num">0,483</td>
+      <td class="num">0,820</td><td class="num">0,796</td><td class="num">4.067,5</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">3</td><td class="num">0,570</td><td class="num">0,445</td>
+      <td class="num">0,797</td><td class="num">0,768</td><td class="num">2,6</td>
+    </tr>
+
+    <!-- V2 ─────────────────────────────────────── -->
+    <tr class="sep">
+      <td>V2 · + internações</td><td>Gaussiana</td>
+      <td class="num">2</td><td class="num">0,277</td><td class="num">0,190</td>
+      <td class="num">0,605</td><td class="num">0,578</td><td class="num">13,7</td>
+    </tr>
+    <tr>
+      <td></td><td>Mistura NB</td>
+      <td class="num">3</td><td class="num">0,658</td><td class="num">0,513</td>
+      <td class="num">0,836</td><td class="num">0,814</td><td class="num">4.217,8</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
+      <td class="num">0,777</td><td class="num">0,803</td><td class="num">1,6</td>
+    </tr>
+
+    <!-- V3 ─────────────────────────────────────── -->
+    <tr class="sep">
+      <td>V3 · + terapias</td><td>Gaussiana</td>
+      <td class="num">6</td><td class="num">0,438</td><td class="num">0,369</td>
+      <td class="num">0,678</td><td class="num">0,752</td><td class="num">17,1</td>
+    </tr>
+    <tr class="best">
+      <td></td><td>Mistura NB ★</td>
+      <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
+      <td class="num">0,877</td><td class="num">0,861</td><td class="num">4.400,2</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
+      <td class="num">0,815</td><td class="num">0,843</td><td class="num">1,0</td>
+    </tr>
+
+    <!-- V4 ─────────────────────────────────────── -->
+    <tr class="sep">
+      <td>V4 · + prestadores</td><td>Gaussiana</td>
+      <td class="num">2</td><td class="num">0,305</td><td class="num">0,212</td>
+      <td class="num">0,600</td><td class="num">0,589</td><td class="num">5,5</td>
+    </tr>
+    <tr>
+      <td></td><td>Mistura NB</td>
+      <td class="num">6</td><td class="num">0,442</td><td class="num">0,354</td>
+      <td class="num">0,621</td><td class="num">0,775</td><td class="num">5.788,4</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,662</td><td class="num">0,525</td>
+      <td class="num">0,810</td><td class="num">0,836</td><td class="num">2,0</td>
+    </tr>
+
+    <!-- V5 ─────────────────────────────────────── -->
+    <tr class="sep">
+      <td>V5 · + meses util.</td><td>Gaussiana</td>
+      <td class="na">—</td><td class="na">—</td><td class="na">—</td>
+      <td class="na">—</td><td class="na">—</td><td class="num">11,1</td>
+    </tr>
+    <tr>
+      <td></td><td>Mistura NB</td>
+      <td class="num">6</td><td class="num">0,348</td><td class="num">0,327</td>
+      <td class="num">0,519</td><td class="num">0,794</td><td class="num">7.703,7</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">3</td><td class="num">0,475</td><td class="num">0,329</td>
+      <td class="num">0,736</td><td class="num">0,773</td><td class="num">1,9</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<div class="nota">
+  ★ melhor resultado global (ARI = 0,729) · — falha numérica por SVD:
+  \(\texttt{meses\_utilizacao} \in [1,12]\) produziu matriz de covariância
+  singular no método Gaussiano.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="discussao">7 · Discussão</h2>
+
+<h3>V3 com Mistura NB: melhor recuperação geral</h3>
+
+<p>
+O melhor resultado global (ARI = 0,729; acurácia = 0,877) foi obtido pelo método M2
+(Mistura NB) no conjunto V3, que inclui consultas, exames, pronto-socorro, internações
+e terapias. Esse resultado confirma a hipótese central da análise: quando o modelo
+distributivo é adequado aos dados, a estrutura latente é recuperada com precisão
+substancialmente maior do que métodos baseados em normalidade ou distância euclidiana.
+Em V3, o BIC selecionou \(g = 4\) — exatamente o número verdadeiro de grupos —
+evidência de que BIC identifica corretamente a estrutura quando as variáveis são
+informativas e a família distributiva é adequada.
+</p>
+
+<p>
+A transição V2 → V3, que adiciona \(\texttt{terapias}\), produziu o maior ganho
+isolado em todos os métodos: ARI aumentou de 0,658 para 0,729 em M2, de 0,580 para
+0,673 em M3, e de 0,277 para 0,438 em M1. Isso reflete o poder discriminativo de
+\(\texttt{terapias}\): na simulação, \(G_4\) (padrão atípico) tem probabilidade de
+zero estrutural \(\omega = 0{,}35\) — o menor valor entre todos os grupos —
+enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria cria um sinal de
+separação que a mistura NB captura diretamente por meio da estrutura ZINB
+de seu componente.
+</p>
+
+<h3>Degradação no V4: o papel de \(\texttt{prestadores\_distintos}\)</h3>
+
+<p>
+O acréscimo de \(\texttt{prestadores\_distintos}\) em V4 causou queda expressiva no
+método M2 (ARI: 0,729 → 0,442) e deterioração moderada em M1 (0,438 → 0,305).
+O K-means foi o mais robusto nesse ponto, mantendo ARI = 0,662 e tornando-se o
+método de melhor desempenho no conjunto V4.
+</p>
+
+<p>
+A degradação de M2 tem origem na seleção de \(g = 6\) pelo BIC — o dobro do número
+verdadeiro de grupos. \(\texttt{prestadores\_distintos}\) apresenta distribuição com
+concentração em valores baixos e cauda longa, cujo padrão difere das variáveis clínicas
+com excesso de zeros. A mistura NB, ao tentar acomodar essa nova variável, fragmentou
+subgrupos reais em componentes espúrios, inflando artificialmente \(g\). K-means,
+por operar no espaço \(\log(1+x)\) padronizado, neutralizou parcialmente essa distorção.
+</p>
+
+<h3>Falha no V5: instabilidade numérica no método Gaussiano</h3>
+
+<p>
+Em V5, \(\texttt{meses\_utilizacao} \in [1,12]\) foi incluída após transformação
+\(\log(1+x)\), restringindo seus valores ao intervalo
+\([\log 2,\, \log 13] \approx [0{,}69;\,2{,}56]\). Esse intervalo limitado, combinado
+com a escala das demais variáveis, gerou matriz de covariância amostral próxima de
+singular, e o método Gaussiano falhou ao calcular sua decomposição SVD. Esse
+comportamento é consistente com o alerta de McLachlan &amp; Peel (2000) sobre
+degenerescência da verossimilhança quando componentes colapsam em subespaços
+de dimensão reduzida.
+</p>
+
+<p>
+M2 e M3 não sofreram essa falha: M2 modela cada variável marginalmente (NB univariada
+por componente), evitando inversão de matriz conjunta; M3 usa apenas distâncias
+euclidianas. Em ambos, a adição de \(\texttt{meses\_utilizacao}\) reduziu o desempenho
+em relação a V4 (ARI: 0,442 → 0,348 em M2; 0,662 → 0,475 em M3), sugerindo que essa
+variável introduz ruído em relação à estrutura de 4 grupos — possivelmente porque seu
+padrão Beta-Binomial não se alinha à especificação NB de M2.
+</p>
+
+<h3>K-means: eficiência a baixo custo computacional</h3>
+
+<p>
+K-means mostrou desempenho consistentemente próximo ao da Mistura NB em V1–V3,
+a uma fração ínfima do tempo de execução (1–3 segundos versus 1–2 horas).
+Em V4 superou ambos os modelos baseados em mistura. Isso sugere que, para
+aplicações em que velocidade é prioritária ou os dados apresentam variáveis de
+natureza mista, K-means em espaço transformado pode ser preferível ao EM completo,
+como ponto de partida operacional antes de análises mais custosas.
+</p>
+
+<h3>Síntese</h3>
+
+<p>
+Os resultados apontam para três conclusões práticas: (i) a adequação distributiva
+importa — Mistura NB supera consistentemente Gaussiana em dados de contagem;
+(ii) a seleção de variáveis é crítica — \(\texttt{terapias}\) foi a variável mais
+discriminativa, enquanto \(\texttt{prestadores\_distintos}\) degradou os modelos
+baseados em mistura; (iii) K-means oferece uma linha de base surpreendentemente
+competitiva para uma análise preliminar. A robustez empírica de V3+NB sustenta
+a hipótese de que a estrutura de 4 grupos latentes é recuperável a partir de dados
+administrativos de utilização com a especificação distributiva correta.
+</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">8 · Referências</h2>
+
+<div class="ref-group">
+
+  <div class="ref-entry">
+    <cite>Ahmad, M., Amin, K., Ali, A., Ahmad, R. W., &amp; Khan, R. (2025).</cite>
+    A comparative evaluation of Poisson, negative binomial, and zero-inflated models
+    for count data.
+    <em>Dialogue Social Science Review</em>, <em>3</em>(8), 188–200.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Deb, P., &amp; Trivedi, P. K. (1997).</cite>
+    Demand for medical care by the elderly: A finite mixture approach.
+    <em>Journal of Applied Econometrics</em>, <em>12</em>(3), 313–336.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Deb, P., &amp; Holmes, A. M. (2000).</cite>
+    Estimates of use and costs of behavioural health care: A comparison of standard
+    and finite mixture models.
+    <em>Health Economics</em>, <em>9</em>(6), 475–489.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Hartigan, J. A., &amp; Wong, M. A. (1979).</cite>
+    Algorithm AS 136: A K-means clustering algorithm.
+    <em>Journal of the Royal Statistical Society — Series C (Applied Statistics)</em>,
+    <em>28</em>(1), 100–108.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Hubert, L., &amp; Arabie, P. (1985).</cite>
+    Comparing partitions.
+    <em>Journal of Classification</em>, <em>2</em>(1), 193–218.
+  </div>
+
+  <div class="ref-entry">
+    <cite>McLachlan, G. J., &amp; Peel, D. (2000).</cite>
+    <em>Finite mixture models.</em> John Wiley &amp; Sons.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Ng, S. K., Xiang, L., &amp; Yau, K. K. W. (2019).</cite>
+    <em>Mixture modelling for medical and health sciences.</em>
+    CRC Press / Taylor &amp; Francis. ISBN 978-1-4822-3675-0.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Scrucca, L., Fop, M., Murphy, T. B., &amp; Raftery, A. E. (2016).</cite>
+    mclust 5: Clustering, classification and density estimation using Gaussian finite
+    mixture models.
+    <em>The R Journal</em>, <em>8</em>(1), 289–317.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Strehl, A., &amp; Ghosh, J. (2002).</cite>
+    Cluster ensembles — a knowledge reuse framework for combining multiple partitions.
+    <em>Journal of Machine Learning Research</em>, <em>3</em>, 583–617.
+  </div>
+
+</div>
 
 </div>
 </main>

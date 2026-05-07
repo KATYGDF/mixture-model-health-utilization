@@ -38,6 +38,22 @@ MathJax = {
   text-align: center;
 }
 
+/* ── Código R (tema escuro) ─────────────────────────────────── */
+pre.r-code {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 1.4rem 1.6rem;
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  tab-size: 2;
+  margin: 1.5rem 0;
+}
+pre.r-code .com { color: #6c7086; font-style: italic; }
+
 /* ── Tabela de parâmetros ───────────────────────────────────── */
 .param-table {
   width: 100%;
@@ -152,18 +168,9 @@ blockquote.cit cite {
   font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
   text-align: right;
 }
-.res-table tr.best td {
-  background: #f0f7f2;
-}
-.res-table tr.best td.num { font-weight: 600; }
-.res-table .na {
-  color: var(--muted, #aaa);
-  font-style: italic;
-  text-align: right;
-}
-.res-table tr.sep td {
-  border-top: 2px solid var(--border, #ccc);
-}
+.res-table tr.best td   { background: #f0f7f2; }
+.res-table tr.best .num { font-weight: 600; }
+.res-table tr.sep td    { border-top: 2px solid var(--border, #ccc); }
 
 </style>
 </head>
@@ -187,18 +194,20 @@ blockquote.cit cite {
 <div class="prose">
 
 <h1>Análises Iniciais</h1>
-<p class="lead">Comparação de três métodos não supervisionados em cinco conjuntos de variáveis de utilização</p>
+<p class="lead">Recuperação de grupos latentes por Mistura de Binomiais Negativas e K-means em cinco conjuntos de variáveis de contagem</p>
 
 <div class="toc">
   <strong>Nesta página</strong>
   <ol>
     <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#justificativa">Justificativa da escolha dos métodos</a></li>
     <li><a href="#em">Algoritmo EM e seleção do número de componentes</a></li>
-    <li><a href="#metodos">Os três métodos de agrupamento</a></li>
+    <li><a href="#metodos">Os dois métodos</a></li>
     <li><a href="#variaveis">Conjuntos de variáveis</a></li>
     <li><a href="#metricas">Métricas de avaliação</a></li>
     <li><a href="#resultados">Resultados</a></li>
     <li><a href="#discussao">Discussão</a></li>
+    <li><a href="#codigo">Código R</a></li>
     <li><a href="#referencias">Referências</a></li>
   </ol>
 </div>
@@ -207,77 +216,170 @@ blockquote.cit cite {
 <h2 id="objetivo">1 · Objetivo</h2>
 
 <p>
-Uma das vantagens do processo generativo descrito na página de
+Uma das vantagens centrais do processo generativo descrito na página de
 <a href="simulacao.html">Simulação</a> é que o grupo latente verdadeiro de cada
 beneficiário é conhecido por construção. Isso permite a avaliação quantitativa de
 métodos de agrupamento não supervisionado: algoritmos aplicados aos dados
-observados — sem acesso ao rótulo de grupo — podem ter sua capacidade de
-recuperação medida contra o gabarito simulado.
+observados — sem acesso ao rótulo de grupo — podem ter sua capacidade de recuperação
+medida contra o gabarito simulado por métricas externas como ARI e acurácia.
 </p>
 
 <p>
-O objetivo desta análise é comparar três métodos não supervisionados quanto à sua
+O objetivo desta análise é comparar dois métodos não supervisionados quanto à
 capacidade de recuperar a estrutura latente de \(G = 4\) grupos em dados sintéticos
-de utilização de planos de saúde. Os métodos diferem em suas suposições distribucionais
-e no mecanismo de estimação:
+de utilização de planos de saúde, variando sistematicamente o conjunto de variáveis
+disponíveis (V1 a V5). A comparação examina:
 </p>
 
 <ul>
-  <li><strong>M1 — Mistura Gaussiana</strong> (<em>mclust</em>): mistura de distribuições
-      normais multivariadas, com seleção automática de \(g\) e estrutura de covariância
-      por BIC (Scrucca et al., 2016).</li>
-  <li><strong>M2 — Mistura de Binomiais Negativas</strong> (EM customizado): cada
-      componente é um produto de NBs independentes, adequado à natureza discreta e
-      sobredispersa das contagens de utilização (Ng, Xiang &amp; Yau, 2019).</li>
-  <li><strong>M3 — K-means</strong>: agrupamento por distância euclidiana em variáveis
-      padronizadas, servindo como linha de base computacionalmente eficiente
-      (Hartigan &amp; Wong, 1979).</li>
+  <li>como o desempenho evolui à medida que variáveis são adicionadas
+      progressivamente;</li>
+  <li>se o BIC seleciona o número correto de componentes \(g = 4\); e</li>
+  <li>em quais conjuntos o método paramétrico (Mistura NB) supera o baseline
+      geométrico (K-means) — e quando a relação se inverte.</li>
 </ul>
 
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="justificativa">2 · Justificativa da escolha dos métodos</h2>
+
 <p>
-Cada método foi aplicado a cinco conjuntos de variáveis — do subconjunto mínimo (V1)
-ao conjunto completo (V5) — com o objetivo de identificar quais variáveis contribuem
-mais para a discriminação entre grupos.
+A escolha dos métodos de agrupamento é inseparável da natureza dos dados.
+As variáveis de utilização — consultas, exames, internações, terapias,
+pronto-socorro — são <strong>contagens</strong>: valores inteiros não negativos
+gerados por processos com sobredispersão. Essa característica exclui, por
+princípio, métodos que pressupõem normalidade condicional dentro dos grupos.
 </p>
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="em">2 · Algoritmo EM e seleção do número de componentes</h2>
+<h3>Por que a Mistura de Binomiais Negativas?</h3>
 
 <p>
-Para uma mistura finita com \(G\) componentes, os parâmetros
-\(\Psi = (\pi_1,\ldots,\pi_G,\,\psi_1,\ldots,\psi_G)\) são estimados por máxima
-verossimilhança. Como o vetor de pertença de grupo \(\mathbf{z}_i = (z_{i1},\ldots,z_{iG})\)
-é latente, a maximização direta da log-verossimilhança observada é intratável.
-O <strong>algoritmo EM</strong> (<em>Expectation-Maximization</em>) contorna essa
-dificuldade operando sobre a log-verossimilhança completa:
+Dados de utilização de serviços de saúde exibem dois fenômenos distributivos
+recorrentes: <strong>sobredispersão</strong> (\(\mathrm{Var}[Y] \gg \mathbb{E}[Y]\))
+e <strong>excesso de zeros</strong> em procedimentos de alta complexidade.
+A distribuição de Poisson é inadequada por assumir equidispersão
+(\(\mathrm{Var}[Y] = \mathbb{E}[Y]\)). Ahmad et al. (2025) demonstram
+empiricamente essa inadequação em comparação direta entre Poisson, NB, ZIP e ZINB:
+</p>
+
+<blockquote class="cit">
+  "The Poisson model performs poorly due to overdispersion, while the NB improves
+  fit by relaxing the equidispersion assumption. [...] The ZINB model consistently
+  outperforms all alternatives, achieving the lowest AIC, BIC, RMSE, and MAE,
+  alongside the best goodness-of-fit statistics."
+  <cite>Ahmad et al. (2025, p. 188)</cite>
+</blockquote>
+
+<p>
+A Binomial Negativa NB\(_2\) parametriza a sobredispersão explicitamente por
+meio do parâmetro de dispersão \(\theta\):
 </p>
 
 <div class="eq">
-$$\ell_c(\Psi) \;=\; \sum_{i=1}^n \sum_{h=1}^G z_{ih}\,\bigl[\log \pi_h + \log f_h(y_i;\,\psi_h)\bigr]$$
+$$\mathrm{Var}[Y] \;=\; \mu + \frac{\mu^2}{\theta}$$
 </div>
 
 <p>
-Ng, Xiang &amp; Yau (2019, pp. 8–9) descrevem o EM como o método canônico para estimar
-modelos de mistura: a solução de máxima verossimilhança é obtida iterando dois passos
-até convergência.
+Quando \(\theta \to \infty\), a variância tende a \(\mu\) e a NB converge para
+a Poisson. Valores pequenos de \(\theta\) indicam sobredispersão elevada — padrão
+documentado por Wagner et al. (2015) para todas as categorias de procedimentos
+em dados de utilização de saúde.
 </p>
 
-<h3>Passo E (Expectation)</h3>
+<p>
+No contexto de <em>mistura finita</em>, cada componente \(h\) recebe seus
+próprios parâmetros \((\mu_{hj},\,\theta_{hj})\) por variável \(j\).
+Isso permite ao modelo capturar simultaneamente a heterogeneidade
+<em>entre</em> grupos (por meio das médias grupo-específicas \(\mu_{hj}\)) e
+a sobredispersão <em>dentro</em> de cada grupo (por meio de \(\theta_{hj}\)).
+Deb &amp; Trivedi (1997) foram os primeiros a aplicar sistematicamente essa
+estrutura a dados de utilização médica, e Ng, Xiang &amp; Yau (2019, p. 77)
+consolidam-na como abordagem padrão para dados de saúde sobredispersos.
+</p>
+
+<h3>Por que não a Mistura Gaussiana?</h3>
 
 <p>
-Na iteração \(t\), o passo E calcula a probabilidade a posteriori de cada observação
-\(y_i\) pertencer ao componente \(h\), dados os parâmetros atuais:
+A mistura de normais multivariadas pressupõe que os dados dentro de cada
+componente são contínuos e simetricamente distribuídos em \(\mathbb{R}^p\).
+Três características dos dados de utilização violam diretamente essa suposição:
+</p>
+
+<ol>
+  <li><strong>Suporte discreto e não negativo.</strong> Contagens pertencem a
+      \(\{0,1,2,\ldots\}\); a Gaussiana distribui probabilidade em
+      \((-\infty,0)\), o que é probabilisticamente inconsistente.</li>
+  <li><strong>Massa em zero.</strong> Variáveis como \(\texttt{terapias}\)
+      (~80&nbsp;% de zeros) e \(\texttt{internacoes}\) (~94&nbsp;% de zeros)
+      produzem, após \(\log(1+x)\), uma massa pontual em \(0\) incompatível com
+      a densidade gaussiana contínua.</li>
+  <li><strong>Assimetria residual.</strong> Mesmo após transformação logarítmica,
+      contagens com sobredispersão elevada mantêm assimetria pronunciada à direita
+      que a normal não captura adequadamente.</li>
+</ol>
+
+<p>
+Na prática, essas limitações se traduzem em seleção distorcida do número de
+componentes e em instabilidade numérica para variáveis com suporte limitado —
+comportamentos observados em testes preliminares e que motivaram a exclusão da
+mistura gaussiana desta análise.
+</p>
+
+<h3>Por que o K-means como baseline?</h3>
+
+<p>
+O K-means é <strong>livre de suposições distribucionais</strong>: opera
+exclusivamente com distâncias euclidianas no espaço transformado
+\(\log(1+x)\) + <code>scale()</code>, sem postular forma alguma para a
+distribuição intra-cluster. Isso o torna robusto a qualquer violação dos
+pressupostos paramétricos e justifica dois papéis nesta análise:
+</p>
+
+<ul>
+  <li><strong>Baseline prático.</strong> Representa a abordagem mais simples
+      disponível para dados heterogêneos sem custo de modelagem. Ng, Xiang &amp;
+      Yau (2019, p. 19) recomendam o K-means como inicialização padrão para o
+      EM — o que o coloca como referência comparativa natural.</li>
+  <li><strong>Diagnóstico de robustez.</strong> Quando K-means supera a Mistura
+      NB, isso sinaliza que a especificação NB está sobreajustando — por exemplo,
+      quando o BIC seleciona \(g\) excessivo ao tentar acomodar variáveis com
+      distribuição distinta das demais.</li>
+</ul>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="em">3 · Algoritmo EM e seleção do número de componentes</h2>
+
+<p>
+Para uma mistura finita com \(G\) componentes, os parâmetros
+\(\Psi = (\pi_1,\ldots,\pi_G,\,\psi_1,\ldots,\psi_G)\) são estimados por
+máxima verossimilhança. Como o vetor de pertença de grupo
+\(\mathbf{z}_i = (z_{i1},\ldots,z_{iG})\) é latente, a maximização direta da
+log-verossimilhança observada é intratável. O <strong>algoritmo EM</strong>
+(<em>Expectation-Maximization</em>) contorna essa dificuldade operando sobre
+a log-verossimilhança completa (Ng, Xiang &amp; Yau, 2019, pp. 8–9):
+</p>
+
+<div class="eq">
+$$\ell_c(\Psi) \;=\; \sum_{i=1}^n \sum_{h=1}^G
+  z_{ih}\,\bigl[\log \pi_h + \log f_h(y_i;\,\psi_h)\bigr]$$
+</div>
+
+<h3>Passo E</h3>
+
+<p>
+Na iteração \(t\), calcula-se a probabilidade a posteriori de \(y_i\) pertencer
+ao componente \(h\):
 </p>
 
 <div class="eq">
 $$\hat{\tau}_{ih}^{(t)} \;=\;
   \frac{\hat{\pi}_h^{(t)}\,f_h\!\left(y_i;\,\hat{\psi}_h^{(t)}\right)}
-       {\displaystyle\sum_{k=1}^G \hat{\pi}_k^{(t)}\,f_k\!\left(y_i;\,\hat{\psi}_k^{(t)}\right)}$$
+       {\displaystyle\sum_{k=1}^G
+        \hat{\pi}_k^{(t)}\,f_k\!\left(y_i;\,\hat{\psi}_k^{(t)}\right)}$$
 </div>
 
 <p>
-Essas probabilidades substituem os indicadores de grupo latente na esperança da
-log-verossimilhança completa (\(Q\)-função):
+Essas probabilidades definem a \(Q\)-função — esperança da log-verossimilhança
+completa:
 </p>
 
 <div class="eq">
@@ -286,10 +388,10 @@ $$Q\!\left(\Psi;\,\hat{\Psi}^{(t)}\right) \;=\;
   \bigl[\log \pi_h + \log f_h(y_i;\,\psi_h)\bigr]$$
 </div>
 
-<h3>Passo M (Maximization)</h3>
+<h3>Passo M</h3>
 
 <p>
-O passo M maximiza \(Q\) em relação a \(\Psi\). Para as proporções de mistura:
+O passo M maximiza \(Q\). Para as proporções de mistura:
 </p>
 
 <div class="eq">
@@ -298,37 +400,36 @@ $$\hat{\pi}_h^{(t+1)} \;=\; \frac{1}{n}\sum_{i=1}^n \hat{\tau}_{ih}^{(t)}$$
 
 <p>
 Os parâmetros componente-específicos \(\hat{\psi}_h^{(t+1)}\) são obtidos por
-MLE ponderado — a contribuição de cada observação é pesada por \(\hat{\tau}_{ih}^{(t)}\).
-As atualizações em forma fechada dependem da família distributiva escolhida
-(Ng, Xiang &amp; Yau, 2019, p. 17).
+MLE ponderado pelos \(\hat{\tau}_{ih}^{(t)}\).
+Para a mistura NB, \(\mu_{hj}\) tem atualização em forma fechada e \(\theta_{hj}\)
+é estimado por otimização numérica unidimensional (Ng, Xiang &amp; Yau, 2019,
+p. 17).
 </p>
 
 <h3>Convergência e múltiplos inícios</h3>
 
 <p>
-O algoritmo itera os passos E e M até que a variação na \(Q\)-função caia abaixo de
-um limiar \(\varepsilon\):
+O algoritmo itera até que a variação da \(Q\)-função caia abaixo de \(\varepsilon\):
 </p>
 
 <div class="eq">
 $$\Bigl|Q\!\left(\hat{\Psi}^{(t+1)};\,\hat{\Psi}^{(t)}\right)
-  - Q\!\left(\hat{\Psi}^{(t)};\,\hat{\Psi}^{(t-1)}\right)\Bigr| \;<\; \varepsilon$$
+  - Q\!\left(\hat{\Psi}^{(t)};\,\hat{\Psi}^{(t-1)}\right)\Bigr|
+  \;&lt;\; \varepsilon$$
 </div>
 
 <p>
-Uma propriedade fundamental é a <strong>monotonicidade</strong>: a log-verossimilhança
-observada \(\ell(\hat{\Psi}^{(t)})\) nunca decresce a cada iteração
-(Ng, Xiang &amp; Yau, 2019, p. 18). Todavia, o EM pode convergir para ótimos locais.
-Ng, Xiang &amp; Yau (2019, p. 19) recomendam múltiplos pontos de partida com
-inicialização via K-means como estratégia padrão para obter a solução global.
+O EM garante <strong>monotonicidade</strong>: a log-verossimilhança observada
+nunca decresce a cada iteração (Ng, Xiang &amp; Yau, 2019, p. 18). Para evitar
+ótimos locais, empregam-se múltiplos inícios: o primeiro usa atribuições do
+K-means como ponto de partida; os demais usam pesos aleatórios
+(Ng, Xiang &amp; Yau, 2019, p. 19).
 </p>
 
-<h3>Seleção do número de componentes — BIC</h3>
+<h3>BIC para seleção de \(g\)</h3>
 
 <p>
-O número de componentes \(g\) é desconhecido e deve ser selecionado a partir dos dados.
-O <strong>Critério de Informação Bayesiano</strong> (BIC) penaliza a log-verossimilhança
-maximizada pela complexidade do modelo:
+O número de componentes é desconhecido e selecionado pelo BIC:
 </p>
 
 <div class="eq">
@@ -336,102 +437,88 @@ $$\mathrm{BIC}(g) \;=\; -2\log\hat{L}(\hat{\Psi}) + d(g)\log n$$
 </div>
 
 <p>
-onde \(d(g)\) é o número de parâmetros livres no modelo com \(g\) componentes e
-\(n\) é o tamanho da amostra. O modelo com menor BIC é preferido.
-Ng, Xiang &amp; Yau (2019, p. 12) apresentam o BIC como critério padrão para seleção
-do número de componentes em misturas finitas. A penalidade \(d(g)\log n\) desincentiva
-o sobreajuste ao número de grupos, e a condição mínima de estabilidade numérica
-— pelo menos dois pontos por componente — é discutida pelos mesmos autores (p. 14).
-Nas análises a seguir, \(g\) varia de 1 a \(G_{\max} = 6\) e o valor com menor BIC
-é selecionado automaticamente para cada método e conjunto de variáveis.
+onde \(d(g) = 2gp + (g-1)\) é o número de parâmetros livres (\(g\) proporções,
+\(gp\) médias e \(gp\) dispersões) e \(n\) é o tamanho da amostra. Nas análises
+a seguir, \(g\) varia de 1 a \(G_{\max} = 6\).
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="metodos">3 · Os três métodos de agrupamento</h2>
-
-<h3>M1 — Mistura Gaussiana (<em>mclust</em>)</h3>
-
-<p>
-O método M1 usa o pacote <em>mclust</em> (Scrucca et al., 2016) para ajustar modelos
-de mistura de normais multivariadas. O BIC é calculado para todas as combinações de
-\(g \in \{1,\ldots,6\}\) e estrutura de covariância (diagonal, esférica, geral, entre
-outras), e a combinação de menor BIC determina o modelo final.
-</p>
-
-<p>
-As variáveis são pré-processadas com transformação \(\log(1+x)\) e padronização
-(<code>scale()</code>) antes do ajuste. Embora a mistura gaussiana seja bem fundamentada
-teoricamente para dados contínuos (McLachlan &amp; Peel, 2000), sua adequação é limitada
-para dados de contagem: a hipótese de normalidade condicional é inconsistente com a
-natureza discreta e sobredispersa das variáveis de utilização. Além disso, variáveis
-com suporte limitado — como \(\texttt{meses\_utilizacao} \in [1,12]\) — podem gerar
-matrizes de covariância mal-condicionadas após a transformação, levando a falhas
-numéricas por decomposição SVD singular.
-</p>
-
-<div class="nota">
-  <strong>Atenção (V5):</strong> no conjunto V5, que inclui
-  \(\texttt{meses\_utilizacao}\), o método M1 falhou com erro de SVD
-  (<em>"valores infinitos ou faltantes em 'x'"</em>). As métricas para M1/V5
-  foram registradas como NA.
-</div>
+<h2 id="metodos">4 · Os dois métodos</h2>
 
 <h3>M2 — Mistura de Binomiais Negativas (EM customizado)</h3>
 
 <p>
-O método M2 implementa o algoritmo EM para uma mistura de \(g\) componentes em que
-cada componente é um produto de distribuições Binomiais Negativas independentes —
-uma por variável de utilização:
+O método M2 implementa o algoritmo EM para uma mistura de \(g\) componentes
+em que cada componente é um produto de NBs independentes — uma por variável:
 </p>
 
 <div class="eq">
-$$f_h(y_i;\,\psi_h) \;=\; \prod_{j=1}^p P_{\mathrm{NB}}(y_{ij};\,\mu_{hj},\,\theta_{hj})$$
+$$f_h(y_i;\,\psi_h) \;=\; \prod_{j=1}^p
+  P_{\mathrm{NB}}(y_{ij};\,\mu_{hj},\,\theta_{hj})$$
 </div>
 
 <p>
-Essa especificação é diretamente motivada pela literatura de utilização de serviços
-de saúde. Deb &amp; Trivedi (1997) demonstraram que a mistura NB captura heterogeneidade
-latente em demanda médica que modelos padrão não conseguem identificar, e Ng, Xiang
-&amp; Yau (2019, p. 77) reforçam que modelos de mistura de NBs são adequados para
-dados de contagem sobredispersos em estudos médicos e de saúde.
-Ahmad et al. (2025) confirmam, em comparação sistemática entre Poisson, NB, ZIP e
-ZINB, a superioridade dos modelos NB para dados com sobredispersão.
+As contagens brutas (sem transformação) são usadas diretamente como entrada,
+preservando o suporte discreto não negativo. O modelo seleciona \(g\) pelo BIC
+(\(g \in \{1,\ldots,6\}\)) e emprega 8 inícios com tolerância de convergência
+\(\varepsilon = 10^{-5}\). O custo computacional é da ordem de 1–2 horas por
+conjunto de variáveis.
 </p>
+
+<h3>M3 — K-means (baseline geométrico)</h3>
 
 <p>
-No passo M, \(\mu_{hj}\) é atualizado como a média ponderada das observações
-(pesos \(\hat{\tau}_{ih}\)), e \(\theta_{hj}\) é estimado por otimização numérica
-da log-verossimilhança NB ponderada. O algoritmo emprega múltiplos inícios com
-inicialização via K-means e reinícios aleatórios. O custo computacional é
-significativamente mais alto que M1 e M3 — da ordem de 1–2 horas por conjunto
-de variáveis, contra segundos para K-means.
+O método M3 aplica o algoritmo K-means padrão (Hartigan &amp; Wong, 1979) às
+variáveis pré-processadas com \(\log(1+x)\) e padronização (<code>scale()</code>).
+O número de grupos é selecionado independentemente por <strong>silhouette</strong>:
+para cada \(k \in \{2,\ldots,6\}\) calcula-se a largura de silhouette média e
+seleciona-se o \(k\) que a maximiza. O ajuste final usa 50 reinícios aleatórios.
+O custo computacional é de 1–3 segundos por conjunto.
 </p>
 
-<h3>M3 — K-means</h3>
-
-<p>
-O método M3 aplica o algoritmo K-means padrão (Hartigan &amp; Wong, 1979) às mesmas
-variáveis pré-processadas (\(\log(1+x)\) + <code>scale()</code>). O número de grupos
-\(g\) é fixado no valor selecionado pelo BIC do método M2 para o mesmo conjunto de
-variáveis, garantindo comparação em condições equivalentes.
-</p>
-
-<p>
-O K-means minimiza a variância intracluster (soma de distâncias euclidianas quadráticas
-ao centroide). Embora seja uma aproximação determinística sem fundamento probabilístico
-explícito para dados de contagem, serve como linha de base eficiente: é interpretável,
-robusto a falhas numéricas e computacionalmente trivial. Ng, Xiang &amp; Yau (2019, p. 19)
-recomendam sua saída como ponto de partida para inicializar o EM, o que também o
-coloca como referência comparativa natural.
-</p>
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Característica</th>
+      <th>M2 · Mistura NB</th>
+      <th>M3 · K-means</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Família distributiva</td>
+      <td>Binomial Negativa por componente e variável</td>
+      <td>Livre — distância euclidiana</td>
+    </tr>
+    <tr>
+      <td>Entrada</td>
+      <td>Contagens brutas</td>
+      <td>\(\log(1+x)\) + <code>scale()</code></td>
+    </tr>
+    <tr>
+      <td>Seleção de \(g\)</td>
+      <td>BIC</td>
+      <td>Silhouette</td>
+    </tr>
+    <tr>
+      <td>Pertença ao grupo</td>
+      <td>Probabilidade a posteriori \(\hat{\tau}_{ih}\)</td>
+      <td>Atribuição rígida (<em>hard</em>)</td>
+    </tr>
+    <tr>
+      <td>Tempo típico por conjunto</td>
+      <td>~1–2 h</td>
+      <td>~2 s</td>
+    </tr>
+  </tbody>
+</table>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="variaveis">4 · Conjuntos de variáveis</h2>
+<h2 id="variaveis">5 · Conjuntos de variáveis</h2>
 
 <p>
-Os conjuntos de variáveis foram construídos incrementalmente, adicionando uma variável
-de cada vez em ordem crescente de disponibilidade típica em dados administrativos de
-planos de saúde:
+Os conjuntos foram construídos incrementalmente em ordem crescente de
+disponibilidade típica em dados administrativos de planos de saúde:
 </p>
 
 <table class="param-table">
@@ -465,97 +552,71 @@ planos de saúde:
 </table>
 
 <p>
-As três primeiras variáveis (V1) representam o subconjunto mínimo frequentemente
-disponível em painéis administrativos. As adições subsequentes incorporam informações
-clinicamente relevantes (\(\texttt{internacoes}\), \(\texttt{terapias}\)) e padrões
-de acesso (\(\texttt{prestadores\_distintos}\), \(\texttt{meses\_utilizacao}\)).
+As variáveis V1–V3 são contagens de eventos clínicos com sobredispersão moderada a
+elevada, naturalmente acomodadas pela NB. \(\texttt{prestadores\_distintos}\) (V4)
+tem distribuição concentrada em valores baixos e sem excesso de zeros estruturais.
+\(\texttt{meses\_utilizacao}\) (V5) é discreta com suporte limitado \([1,12]\) e
+distribuição bimodal em U, gerada por Beta-Binomial na simulação — cuja estrutura
+a NB apenas aproxima.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="metricas">5 · Métricas de avaliação</h2>
+<h2 id="metricas">6 · Métricas de avaliação</h2>
 
 <p>
-Como os rótulos verdadeiros de grupo são conhecidos por construção da simulação,
-a recuperação da estrutura latente é avaliada por quatro métricas externas —
-todas invariantes à permutação dos rótulos de grupo.
+Todas as métricas são externas — comparam a partição estimada com o gabarito
+simulado — e invariantes à permutação dos rótulos de grupo.
 </p>
 
 <h3>Índice de Rand Ajustado (ARI)</h3>
 
 <p>
-O ARI compara a partição prevista com a verdadeira, contando pares de observações
-concordantes: pares que estão no mesmo cluster em ambas as partições, ou em clusters
-diferentes em ambas. A <em>correção pelo acaso</em> garante que uma classificação
-aleatória produza \(\text{ARI} = 0\) e a atribuição perfeita produza
-\(\text{ARI} = 1\) (Hubert &amp; Arabie, 1985):
+Corrige o Índice de Rand pelo acaso; uma partição aleatória produz
+\(\text{ARI} \approx 0\) e a perfeita produz \(\text{ARI} = 1\)
+(Hubert &amp; Arabie, 1985). É a métrica primária desta análise:
 </p>
 
 <div class="eq">
 $$\text{ARI} \;=\; \frac{\text{RI} - \mathbb{E}[\text{RI}]}{\max(\text{RI}) - \mathbb{E}[\text{RI}]}$$
 </div>
 
-<p>
-O ARI pode assumir valores levemente negativos quando o agrupamento é pior que o
-acaso. É a métrica primária desta análise por corrigir o viés de concordância aleatória
-que afeta o Índice de Rand não ajustado.
-</p>
-
 <h3>Informação Mútua Normalizada (NMI)</h3>
-
-<p>
-O NMI mede a quantidade de informação compartilhada entre a partição prevista \(U\)
-e a verdadeira \(V\), normalizada pelas entropias individuais (Strehl &amp; Ghosh, 2002):
-</p>
 
 <div class="eq">
 $$\text{NMI}(U,V) \;=\; \frac{2\,I(U;V)}{H(U)+H(V)}$$
 </div>
 
 <p>
-onde \(I(U;V) = H(U) - H(U|V)\) é a informação mútua e \(H(\cdot)\) é a entropia de
-Shannon. \(\text{NMI} = 1\) indica recuperação perfeita; \(\text{NMI} = 0\) indica
-independência. O NMI é sensível ao número de clusters: modelos com \(g > G_{\text{real}}\)
-podem obter NMI artificialmente elevado por fragmentação espúria de grupos.
+\(I(U;V)\) é a informação mútua e \(H(\cdot)\) a entropia de Shannon.
+Varia em \([0,1]\), mas é sensível à superescolha de \(g\): modelos com muitos
+clusters obtêm NMI artificialmente elevado (Strehl &amp; Ghosh, 2002).
 </p>
 
 <h3>Acurácia (correspondência húngara)</h3>
 
 <p>
-Os rótulos de grupo previstos são permutações arbitrárias dos verdadeiros.
-A acurácia é calculada após resolver o problema de atribuição ótima pelo algoritmo
-húngaro (Kuhn-Munkres), que encontra a bijeção entre grupos previstos e verdadeiros
-que maximiza a concordância:
+O algoritmo de Kuhn-Munkres encontra a bijeção entre rótulos previstos e
+verdadeiros que maximiza a concordância; acurácia é a proporção de acertos
+após esse pareamento ótimo.
 </p>
-
-<div class="eq">
-$$\text{acurácia} \;=\; \frac{\text{número de atribuições corretas após correspondência ótima}}{n}$$
-</div>
 
 <h3>Pureza</h3>
 
-<p>
-A pureza mede, para cada cluster previsto, a proporção de observações pertencentes
-à classe verdadeira majoritária:
-</p>
-
 <div class="eq">
-$$\text{pureza} \;=\; \frac{1}{n}\sum_{k=1}^K \max_j\,|C_k \cap T_j|$$
+$$\text{pureza} \;=\; \frac{1}{n}\sum_{k}\max_j\,|C_k \cap T_j|$$
 </div>
 
 <p>
-onde \(C_k\) é o \(k\)-ésimo cluster previsto e \(T_j\) é a \(j\)-ésima classe
-verdadeira. Ao contrário do ARI, a pureza cresce monotonicamente com \(g\):
-modelos que produzem muitos clusters pequenos podem obter pureza alta sem recuperar
-adequadamente a estrutura latente verdadeira.
+Cresce monotonicamente com \(g\); usada como métrica complementar,
+não como critério primário de comparação.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="resultados">6 · Resultados</h2>
+<h2 id="resultados">7 · Resultados</h2>
 
 <p>
-A tabela abaixo consolida os resultados de todas as 15 combinações método × conjunto
-de variáveis. O destaque em verde indica o melhor resultado global por ARI (★).
-O símbolo — em V5/Gaussiano reflete a falha numérica por SVD.
+A tabela consolida as 10 combinações método × conjunto de variáveis.
+O destaque em verde (★) indica o melhor resultado global por ARI.
 </p>
 
 <table class="res-table">
@@ -573,200 +634,456 @@ O símbolo — em V5/Gaussiano reflete a falha numérica por SVD.
   </thead>
   <tbody>
 
-    <!-- V1 ─────────────────────────────────────── -->
+    <!-- V1 -->
     <tr>
-      <td>V1 · Baseline</td><td>Gaussiana</td>
-      <td class="num">6</td><td class="num">0,189</td><td class="num">0,235</td>
-      <td class="num">0,447</td><td class="num">0,724</td><td class="num">10,2</td>
-    </tr>
-    <tr>
-      <td></td><td>Mistura NB</td>
+      <td>V1 · Baseline</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,630</td><td class="num">0,483</td>
-      <td class="num">0,820</td><td class="num">0,796</td><td class="num">4.067,5</td>
+      <td class="num">0,820</td><td class="num">0,796</td>
+      <td class="num">4.067,5</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">3</td><td class="num">0,570</td><td class="num">0,445</td>
-      <td class="num">0,797</td><td class="num">0,768</td><td class="num">2,6</td>
+      <td class="num">0,797</td><td class="num">0,768</td>
+      <td class="num">2,6</td>
     </tr>
 
-    <!-- V2 ─────────────────────────────────────── -->
+    <!-- V2 -->
     <tr class="sep">
-      <td>V2 · + internações</td><td>Gaussiana</td>
-      <td class="num">2</td><td class="num">0,277</td><td class="num">0,190</td>
-      <td class="num">0,605</td><td class="num">0,578</td><td class="num">13,7</td>
-    </tr>
-    <tr>
-      <td></td><td>Mistura NB</td>
+      <td>V2 · + internações</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,658</td><td class="num">0,513</td>
-      <td class="num">0,836</td><td class="num">0,814</td><td class="num">4.217,8</td>
+      <td class="num">0,836</td><td class="num">0,814</td>
+      <td class="num">4.217,8</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
-      <td class="num">0,777</td><td class="num">0,803</td><td class="num">1,6</td>
+      <td class="num">0,777</td><td class="num">0,803</td>
+      <td class="num">1,6</td>
     </tr>
 
-    <!-- V3 ─────────────────────────────────────── -->
-    <tr class="sep">
-      <td>V3 · + terapias</td><td>Gaussiana</td>
-      <td class="num">6</td><td class="num">0,438</td><td class="num">0,369</td>
-      <td class="num">0,678</td><td class="num">0,752</td><td class="num">17,1</td>
-    </tr>
-    <tr class="best">
-      <td></td><td>Mistura NB ★</td>
+    <!-- V3 — melhor global -->
+    <tr class="sep best">
+      <td>V3 · + terapias</td><td>Mistura NB ★</td>
       <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
-      <td class="num">0,877</td><td class="num">0,861</td><td class="num">4.400,2</td>
+      <td class="num">0,877</td><td class="num">0,861</td>
+      <td class="num">4.400,2</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
-      <td class="num">0,815</td><td class="num">0,843</td><td class="num">1,0</td>
+      <td class="num">0,815</td><td class="num">0,843</td>
+      <td class="num">1,0</td>
     </tr>
 
-    <!-- V4 ─────────────────────────────────────── -->
+    <!-- V4 -->
     <tr class="sep">
-      <td>V4 · + prestadores</td><td>Gaussiana</td>
-      <td class="num">2</td><td class="num">0,305</td><td class="num">0,212</td>
-      <td class="num">0,600</td><td class="num">0,589</td><td class="num">5,5</td>
-    </tr>
-    <tr>
-      <td></td><td>Mistura NB</td>
+      <td>V4 · + prestadores</td><td>Mistura NB</td>
       <td class="num">6</td><td class="num">0,442</td><td class="num">0,354</td>
-      <td class="num">0,621</td><td class="num">0,775</td><td class="num">5.788,4</td>
+      <td class="num">0,621</td><td class="num">0,775</td>
+      <td class="num">5.788,4</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,662</td><td class="num">0,525</td>
-      <td class="num">0,810</td><td class="num">0,836</td><td class="num">2,0</td>
+      <td class="num">0,810</td><td class="num">0,836</td>
+      <td class="num">2,0</td>
     </tr>
 
-    <!-- V5 ─────────────────────────────────────── -->
+    <!-- V5 -->
     <tr class="sep">
-      <td>V5 · + meses util.</td><td>Gaussiana</td>
-      <td class="na">—</td><td class="na">—</td><td class="na">—</td>
-      <td class="na">—</td><td class="na">—</td><td class="num">11,1</td>
-    </tr>
-    <tr>
-      <td></td><td>Mistura NB</td>
+      <td>V5 · + meses util.</td><td>Mistura NB</td>
       <td class="num">6</td><td class="num">0,348</td><td class="num">0,327</td>
-      <td class="num">0,519</td><td class="num">0,794</td><td class="num">7.703,7</td>
+      <td class="num">0,519</td><td class="num">0,794</td>
+      <td class="num">7.703,7</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">3</td><td class="num">0,475</td><td class="num">0,329</td>
-      <td class="num">0,736</td><td class="num">0,773</td><td class="num">1,9</td>
+      <td class="num">0,736</td><td class="num">0,773</td>
+      <td class="num">1,9</td>
     </tr>
 
   </tbody>
 </table>
 
 <div class="nota">
-  ★ melhor resultado global (ARI = 0,729) · — falha numérica por SVD:
-  \(\texttt{meses\_utilizacao} \in [1,12]\) produziu matriz de covariância
-  singular no método Gaussiano.
+  ★ melhor resultado global: V3 + Mistura NB (ARI = 0,729 · Acurácia = 0,877).
+  Em V3, o BIC selecionou corretamente \(g = 4\) — o número verdadeiro de grupos.
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="discussao">7 · Discussão</h2>
+<h2 id="discussao">8 · Discussão</h2>
 
-<h3>V3 com Mistura NB: melhor recuperação geral</h3>
+<h3>V3 com Mistura NB: melhor recuperação global</h3>
 
 <p>
-O melhor resultado global (ARI = 0,729; acurácia = 0,877) foi obtido pelo método M2
-(Mistura NB) no conjunto V3, que inclui consultas, exames, pronto-socorro, internações
-e terapias. Esse resultado confirma a hipótese central da análise: quando o modelo
-distributivo é adequado aos dados, a estrutura latente é recuperada com precisão
-substancialmente maior do que métodos baseados em normalidade ou distância euclidiana.
-Em V3, o BIC selecionou \(g = 4\) — exatamente o número verdadeiro de grupos —
-evidência de que BIC identifica corretamente a estrutura quando as variáveis são
-informativas e a família distributiva é adequada.
+O melhor resultado global (ARI = 0,729; acurácia = 0,877) foi obtido pela
+Mistura NB no conjunto V3. Em V3, o BIC selecionou exatamente \(g = 4\) —
+o número verdadeiro de grupos — evidência de que a penalidade do BIC identifica
+corretamente a estrutura quando a família distributiva é adequada e as variáveis
+são informativas.
 </p>
 
 <p>
 A transição V2 → V3, que adiciona \(\texttt{terapias}\), produziu o maior ganho
-isolado em todos os métodos: ARI aumentou de 0,658 para 0,729 em M2, de 0,580 para
-0,673 em M3, e de 0,277 para 0,438 em M1. Isso reflete o poder discriminativo de
-\(\texttt{terapias}\): na simulação, \(G_4\) (padrão atípico) tem probabilidade de
-zero estrutural \(\omega = 0{,}35\) — o menor valor entre todos os grupos —
-enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria cria um sinal de
-separação que a mistura NB captura diretamente por meio da estrutura ZINB
-de seu componente.
+isolado: ARI aumentou de 0,658 para 0,729 na Mistura NB (+0,071) e de 0,580
+para 0,673 no K-means (+0,093). Isso reflete o poder discriminativo de
+\(\texttt{terapias}\): na simulação, o grupo \(G_4\) (padrão atípico) tem
+probabilidade de zero estrutural \(\omega = 0{,}35\) — o menor valor entre
+todos os grupos —, enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria
+cria um sinal de separação que a Mistura NB captura diretamente por meio da
+estrutura ZINB do componente correspondente.
 </p>
 
-<h3>Degradação no V4: o papel de \(\texttt{prestadores\_distintos}\)</h3>
+<h3>Inversão em V4 e V5: K-means supera a Mistura NB</h3>
 
 <p>
-O acréscimo de \(\texttt{prestadores\_distintos}\) em V4 causou queda expressiva no
-método M2 (ARI: 0,729 → 0,442) e deterioração moderada em M1 (0,438 → 0,305).
-O K-means foi o mais robusto nesse ponto, mantendo ARI = 0,662 e tornando-se o
-método de melhor desempenho no conjunto V4.
-</p>
-
-<p>
-A degradação de M2 tem origem na seleção de \(g = 6\) pelo BIC — o dobro do número
-verdadeiro de grupos. \(\texttt{prestadores\_distintos}\) apresenta distribuição com
-concentração em valores baixos e cauda longa, cujo padrão difere das variáveis clínicas
-com excesso de zeros. A mistura NB, ao tentar acomodar essa nova variável, fragmentou
-subgrupos reais em componentes espúrios, inflando artificialmente \(g\). K-means,
-por operar no espaço \(\log(1+x)\) padronizado, neutralizou parcialmente essa distorção.
-</p>
-
-<h3>Falha no V5: instabilidade numérica no método Gaussiano</h3>
-
-<p>
-Em V5, \(\texttt{meses\_utilizacao} \in [1,12]\) foi incluída após transformação
-\(\log(1+x)\), restringindo seus valores ao intervalo
-\([\log 2,\, \log 13] \approx [0{,}69;\,2{,}56]\). Esse intervalo limitado, combinado
-com a escala das demais variáveis, gerou matriz de covariância amostral próxima de
-singular, e o método Gaussiano falhou ao calcular sua decomposição SVD. Esse
-comportamento é consistente com o alerta de McLachlan &amp; Peel (2000) sobre
-degenerescência da verossimilhança quando componentes colapsam em subespaços
-de dimensão reduzida.
+O acréscimo de \(\texttt{prestadores\_distintos}\) em V4 causou queda expressiva
+na Mistura NB (ARI: 0,729 → 0,442) com o BIC selecionando \(g = 6\) — o dobro
+do número verdadeiro. K-means manteve ARI = 0,662 e tornou-se o método de
+melhor desempenho nesse conjunto. O padrão se repete em V5: NB (ARI = 0,348)
+e K-means (ARI = 0,475).
 </p>
 
 <p>
-M2 e M3 não sofreram essa falha: M2 modela cada variável marginalmente (NB univariada
-por componente), evitando inversão de matriz conjunta; M3 usa apenas distâncias
-euclidianas. Em ambos, a adição de \(\texttt{meses\_utilizacao}\) reduziu o desempenho
-em relação a V4 (ARI: 0,442 → 0,348 em M2; 0,662 → 0,475 em M3), sugerindo que essa
-variável introduz ruído em relação à estrutura de 4 grupos — possivelmente porque seu
-padrão Beta-Binomial não se alinha à especificação NB de M2.
+Essa inversão ilustra precisamente o papel diagnóstico do K-means descrito
+na Seção 2: quando ele supera a Mistura NB, isso sinaliza sobreajuste do BIC.
+\(\texttt{prestadores\_distintos}\) tem distribuição concentrada em valores
+baixos e sem excesso de zeros estruturais — padrão distinto das demais variáveis
+clínicas. Ao tentar acomodar essa variável com a mesma família NB, o modelo
+fragmenta subgrupos reais em componentes espúrios, inflando \(g\). K-means, por
+operar no espaço \(\log(1+x)\) padronizado, neutraliza parcialmente essa
+distorção por não depender de suposições sobre a forma das distribuições.
 </p>
 
-<h3>K-means: eficiência a baixo custo computacional</h3>
+<h3>Seleção correta de \(g\) como condição de desempenho</h3>
 
 <p>
-K-means mostrou desempenho consistentemente próximo ao da Mistura NB em V1–V3,
-a uma fração ínfima do tempo de execução (1–3 segundos versus 1–2 horas).
-Em V4 superou ambos os modelos baseados em mistura. Isso sugere que, para
-aplicações em que velocidade é prioritária ou os dados apresentam variáveis de
-natureza mista, K-means em espaço transformado pode ser preferível ao EM completo,
-como ponto de partida operacional antes de análises mais custosas.
+O padrão de desempenho ao longo de V1–V5 revela que a seleção correta de
+\(g\) é condição necessária (mas não suficiente) para bom desempenho da Mistura NB.
+Em V1 e V2, onde o BIC seleciona \(g = 3\) (abaixo dos 4 grupos verdadeiros),
+a Mistura NB ainda supera o K-means porque as variáveis disponíveis permitem
+fundir apenas um par de grupos reais, mantendo discriminação adequada nos demais.
+Em V4 e V5, a seleção de \(g = 6\) fragmenta desnecessariamente os grupos,
+degradando todas as métricas.
 </p>
 
-<h3>Síntese</h3>
+<h3>Custo-benefício: quando usar cada método</h3>
 
 <p>
-Os resultados apontam para três conclusões práticas: (i) a adequação distributiva
-importa — Mistura NB supera consistentemente Gaussiana em dados de contagem;
-(ii) a seleção de variáveis é crítica — \(\texttt{terapias}\) foi a variável mais
-discriminativa, enquanto \(\texttt{prestadores\_distintos}\) degradou os modelos
-baseados em mistura; (iii) K-means oferece uma linha de base surpreendentemente
-competitiva para uma análise preliminar. A robustez empírica de V3+NB sustenta
-a hipótese de que a estrutura de 4 grupos latentes é recuperável a partir de dados
-administrativos de utilização com a especificação distributiva correta.
+K-means mostrou desempenho competitivo em todos os conjuntos (ARI entre 0,47
+e 0,67) a custo computacional negligenciável (~2 s). Para aplicações em que
+velocidade é prioritária, como análises exploratórias em painéis com muitas
+variáveis candidatas, K-means em espaço \(\log(1+x)\) padronizado é a
+escolha operacional imediata. A Mistura NB, por sua vez, é superior quando
+o conjunto de variáveis é clinicamente motivado (V3) e sua especificação
+distributiva alinha-se com a natureza dos dados — situação em que o ganho
+de ARI (~0,06 sobre K-means) e a interpretabilidade dos parâmetros
+\((\mu_{hj},\theta_{hj})\) justificam o custo computacional.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="referencias">8 · Referências</h2>
+<h2 id="codigo">9 · Código R</h2>
+
+<p>
+O script abaixo reproduz toda a análise: parâmetros, funções EM e de métricas,
+loop principal sobre V1–V5, tabela comparativa e exportação dos resultados.
+</p>
+
+<pre class="r-code"><span class="com"># =============================================================================</span>
+<span class="com"># comparar_variaveis.R</span>
+<span class="com"># Comparação sistemática: 5 conjuntos de variáveis × 2 métodos</span>
+<span class="com">#</span>
+<span class="com"># Métodos (dados de contagem → escolha motivada pela natureza discreta):</span>
+<span class="com">#   M2  Mistura NB  — EM do zero, distribuição NB por componente e variável</span>
+<span class="com">#   M3  K-means     — baseline geométrico livre de distribuição, log1p + scale</span>
+<span class="com">#</span>
+<span class="com"># Critério de seleção de g: BIC (M2) · Silhouette (M3)</span>
+<span class="com"># =============================================================================</span>
+
+
+<span class="com"># ── 1. Parâmetros ─────────────────────────────────────────────────────────────</span>
+
+CAMINHO_CSV &lt;- "../../dados/dados_simulados.csv"
+G_MAX       &lt;- 6L
+SEED        &lt;- 42L
+N_INIT_NB   &lt;- 8L
+MAX_ITER_NB &lt;- 200L
+TOL_NB      &lt;- 1e-5
+DIR_RDS     &lt;- "rds"
+
+CONJUNTOS &lt;- list(
+  V1 = c("consultas", "ps", "exames"),
+  V2 = c("consultas", "ps", "exames", "internacoes"),
+  V3 = c("consultas", "ps", "exames", "internacoes", "terapias"),
+  V4 = c("consultas", "ps", "exames", "internacoes", "terapias",
+          "prestadores_distintos"),
+  V5 = c("consultas", "ps", "exames", "internacoes", "terapias",
+          "prestadores_distintos", "meses_utilizacao")
+)
+
+LABELS_CONJUNTOS &lt;- c(
+  V1 = "Baseline (3 vars)",
+  V2 = "+ internacoes",
+  V3 = "+ terapias",
+  V4 = "+ prestadores",
+  V5 = "+ meses_utilizacao *"
+)
+
+
+<span class="com"># ── 2. Pacotes ────────────────────────────────────────────────────────────────</span>
+
+pkgs &lt;- c("dplyr", "cluster", "clue", "aricode")
+novos &lt;- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(novos) > 0) {
+  message("Instalando: ", paste(novos, collapse = ", "))
+  install.packages(novos, repos = "https://cloud.r-project.org", quiet = TRUE)
+}
+suppressPackageStartupMessages({
+  library(dplyr); library(cluster); library(clue); library(aricode)
+})
+
+
+<span class="com"># ── 3. Dados ──────────────────────────────────────────────────────────────────</span>
+
+df_raw &lt;- read.csv(CAMINHO_CSV, stringsAsFactors = FALSE, encoding = "UTF-8")
+
+candidatos &lt;- c("grupo_latente", "grupo", "grupo_real", "grupo_idx")
+col_grupo  &lt;- candidatos[candidatos %in% names(df_raw)][1]
+if (is.na(col_grupo)) stop("Coluna de grupo não encontrada.")
+
+df &lt;- df_raw
+names(df)[names(df) == col_grupo] &lt;- "grupo_real"
+df$grupo_real  &lt;- factor(df$grupo_real)
+grupo_real_int &lt;- as.integer(df$grupo_real)
+
+cat(sprintf("\nDados: %d obs · %d grupos reais\n", nrow(df), nlevels(df$grupo_real)))
+
+
+<span class="com"># ── 4. Funções ────────────────────────────────────────────────────────────────</span>
+
+<span class="com"># Atualização de theta (NB EM, log-espaço para garantir positividade)</span>
+.update_theta &lt;- function(y_j, tau_h, mu_hj) {
+  neg_ll &lt;- function(lt) {
+    th &lt;- exp(lt)
+    -sum(tau_h * dnbinom(y_j, size = th, mu = mu_hj, log = TRUE))
+  }
+  exp(tryCatch(optimize(neg_ll, interval = c(-4, 8))$minimum,
+               error = function(e) 0))
+}
+
+<span class="com"># EM para mistura NB (independência condicional por variável)</span>
+<span class="com"># Init 1 = K-means em log1p(Y); demais = aleatório</span>
+nb_mix_em &lt;- function(Y, g,
+                      max_iter = MAX_ITER_NB, tol = TOL_NB,
+                      n_init = N_INIT_NB, seed = SEED) {
+  n &lt;- nrow(Y); p &lt;- ncol(Y)
+  Y &lt;- as.matrix(Y)
+  best_loglik &lt;- -Inf; best_fit &lt;- NULL
+
+  for (init in seq_len(n_init)) {
+    if (init == 1) {
+      set.seed(seed)
+      km  &lt;- kmeans(log1p(Y), centers = g, nstart = 10, iter.max = 100)
+      tau &lt;- matrix(0.02 / max(g - 1, 1), n, g)
+      for (i in seq_len(n)) tau[i, km$cluster[i]] &lt;- 0.98
+    } else {
+      set.seed(seed + init)
+      tau &lt;- matrix(runif(n * g) + 0.01, n, g)
+    }
+    tau   &lt;- tau / rowSums(tau)
+    theta &lt;- matrix(2, g, p)
+    loglik_old &lt;- -Inf
+
+    for (iter in seq_len(max_iter)) {
+      pi_h &lt;- colMeans(tau); n_h &lt;- colSums(tau)
+      mu   &lt;- pmax(t(tau) %*% Y / n_h, 1e-6)
+      for (h in seq_len(g))
+        for (j in seq_len(p))
+          theta[h, j] &lt;- .update_theta(Y[, j], tau[, h], mu[h, j])
+      theta &lt;- pmax(theta, 0.05)
+
+      log_f &lt;- matrix(0, n, g)
+      for (h in seq_len(g)) {
+        log_f[, h] &lt;- log(pi_h[h]) +
+          rowSums(dnbinom(Y,
+                          size = matrix(theta[h, ], n, p, byrow = TRUE),
+                          mu   = matrix(mu[h, ],    n, p, byrow = TRUE),
+                          log  = TRUE))
+      }
+      log_max  &lt;- apply(log_f, 1, max)
+      log_norm &lt;- log(rowSums(exp(log_f - log_max))) + log_max
+      loglik   &lt;- sum(log_norm)
+      tau_new  &lt;- exp(log_f - log_norm)
+      tau_new  &lt;- tau_new / rowSums(tau_new)
+
+      if (iter > 1 &amp;&amp; abs(loglik - loglik_old) &lt; tol) break
+      loglik_old &lt;- loglik; tau &lt;- tau_new
+    }
+
+    if (loglik > best_loglik) {
+      best_loglik &lt;- loglik
+      k_params    &lt;- 2L * g * p + (g - 1L)
+      best_fit    &lt;- list(
+        g = g, pi = pi_h, mu = mu, theta = theta, tau = tau_new,
+        loglik = loglik, n_iter = iter,
+        classification = apply(tau_new, 1, which.max),
+        BIC = -2 * loglik + k_params * log(n),
+        AIC = -2 * loglik + 2 * k_params
+      )
+    }
+  }
+  best_fit
+}
+
+<span class="com"># Pareamento ótimo de rótulos (algoritmo húngaro)</span>
+parear_otimo &lt;- function(real, estimado) {
+  g &lt;- max(max(real), max(estimado))
+  custo &lt;- matrix(0, g, g)
+  for (i in seq_len(max(real)))
+    for (j in seq_len(max(estimado)))
+      custo[i, j] &lt;- -sum(real == i &amp; estimado == j)
+  sol &lt;- clue::solve_LSAP(custo + abs(min(custo)))
+  order(as.integer(sol))[estimado]
+}
+
+<span class="com"># Métricas externas de recuperação</span>
+calc_metricas &lt;- function(real_int, estimado_int) {
+  est_par &lt;- parear_otimo(real_int, estimado_int)
+  pur &lt;- mean(sapply(unique(estimado_int), function(k) {
+    idx &lt;- estimado_int == k
+    max(table(real_int[idx])) / sum(idx)
+  }))
+  list(
+    g        = length(unique(estimado_int)),
+    ari      = round(aricode::ARI(real_int, estimado_int),              3),
+    nmi      = round(aricode::NMI(real_int, estimado_int),              3),
+    acuracia = round(mean(est_par == real_int),                         3),
+    pureza   = round(pur,                                               3)
+  )
+}
+
+
+<span class="com"># ── 5. Loop principal ─────────────────────────────────────────────────────────</span>
+
+cat("Iniciando comparação: ", length(CONJUNTOS), "conjuntos × 2 métodos\n")
+cat(strrep("═", 60), "\n\n")
+
+resultados &lt;- list()
+fits_nb    &lt;- list()
+
+for (nome_v in names(CONJUNTOS)) {
+
+  vars  &lt;- CONJUNTOS[[nome_v]]
+  label &lt;- LABELS_CONJUNTOS[nome_v]
+
+  ausentes &lt;- vars[!vars %in% names(df)]
+  if (length(ausentes) > 0) {
+    cat(sprintf("  [%s] Variáveis ausentes: %s — ignorado\n",
+                nome_v, paste(ausentes, collapse = ", ")))
+    next
+  }
+
+  cat(sprintf("── %s · %s ──\n", nome_v, label))
+
+  Y_raw &lt;- as.matrix(df[, vars])
+  Y_std &lt;- scale(log1p(Y_raw))
+
+  <span class="com"># ── M2 · Mistura NB ───────────────────────────────────────────────────────</span>
+  cat("  M2 NB       ... ")
+  m2_fits &lt;- vector("list", G_MAX)
+  m2_bic  &lt;- numeric(G_MAX)
+  t0      &lt;- proc.time()
+
+  for (g in seq_len(G_MAX)) {
+    m2_fits[[g]] &lt;- nb_mix_em(Y_raw, g = g)
+    m2_bic[g]    &lt;- m2_fits[[g]]$BIC
+    cat(sprintf("[g=%d:%.0f]", g, m2_bic[g]))
+  }
+
+  M2_G   &lt;- which.min(m2_bic)
+  m2_opt &lt;- m2_fits[[M2_G]]
+  dt     &lt;- (proc.time() - t0)["elapsed"]
+  m2_met &lt;- calc_metricas(grupo_real_int, m2_opt$classification)
+
+  cat(sprintf("\n         g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
+              m2_met$g, m2_met$ari, m2_met$acuracia, dt))
+
+  fits_nb[[nome_v]] &lt;- m2_opt
+
+  resultados[[length(resultados) + 1]] &lt;- data.frame(
+    Conjunto = label, Método = "Mistura NB",
+    g = m2_met$g, ARI = m2_met$ari, NMI = m2_met$nmi,
+    Acuracia = m2_met$acuracia, Pureza = m2_met$pureza,
+    Tempo_s = round(dt, 1), stringsAsFactors = FALSE
+  )
+
+  <span class="com"># ── M3 · K-means ─────────────────────────────────────────────────────────</span>
+  <span class="com"># Seleção de g por silhouette (g = 2..G_MAX); 50 reinícios no ajuste final</span>
+  cat("  M3 K-means  ... ")
+  t0       &lt;- proc.time()
+  set.seed(SEED)
+  dist_std &lt;- dist(Y_std)
+  sil_vals &lt;- sapply(2:G_MAX, function(k) {
+    km &lt;- kmeans(Y_std, centers = k, nstart = 15, iter.max = 200)
+    mean(cluster::silhouette(km$cluster, dist_std)[, "sil_width"])
+  })
+  M3_K   &lt;- (2:G_MAX)[which.max(sil_vals)]
+  m3_km  &lt;- kmeans(Y_std, centers = M3_K, nstart = 50, iter.max = 300)
+  dt     &lt;- (proc.time() - t0)["elapsed"]
+  m3_met &lt;- calc_metricas(grupo_real_int, m3_km$cluster)
+
+  cat(sprintf("g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
+              m3_met$g, m3_met$ari, m3_met$acuracia, dt))
+
+  resultados[[length(resultados) + 1]] &lt;- data.frame(
+    Conjunto = label, Método = "K-means",
+    g = m3_met$g, ARI = m3_met$ari, NMI = m3_met$nmi,
+    Acuracia = m3_met$acuracia, Pureza = m3_met$pureza,
+    Tempo_s = round(dt, 1), stringsAsFactors = FALSE
+  )
+
+  cat("\n")
+}
+
+
+<span class="com"># ── 6. Tabela e resumo ────────────────────────────────────────────────────────</span>
+
+tab &lt;- do.call(rbind, resultados)
+rownames(tab) &lt;- NULL
+
+cat("\n", strrep("═", 60), "\n")
+cat("TABELA COMPARATIVA FINAL\n")
+cat(strrep("═", 60), "\n\n")
+print(tab, row.names = FALSE)
+
+cat("\n── Melhor resultado geral (ARI) ─────────────────────────\n")
+best_all &lt;- tab[which.max(tab$ARI), ]
+cat(sprintf("  %s + %s  →  ARI=%.3f · Acurácia=%.3f · g=%d\n\n",
+            best_all$Método, best_all$Conjunto,
+            best_all$ARI, best_all$Acuracia, best_all$g))
+
+cat("* V5 inclui meses_utilizacao (Beta-Binomial): NB aproxima com ressalva.\n")
+
+
+<span class="com"># ── 7. Salvar RDS ─────────────────────────────────────────────────────────────</span>
+
+if (!dir.exists(DIR_RDS)) dir.create(DIR_RDS, recursive = TRUE)
+saveRDS(tab,     file.path(DIR_RDS, "comparacao_variaveis.rds"))
+saveRDS(fits_nb, file.path(DIR_RDS, "nb_fits_por_conjunto.rds"))
+cat(sprintf("\nSalvo em '%s/' — comparacao_variaveis.rds · nb_fits_por_conjunto.rds\n",
+            DIR_RDS))</pre>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">10 · Referências</h2>
 
 <div class="ref-group">
 
   <div class="ref-entry">
     <cite>Ahmad, M., Amin, K., Ali, A., Ahmad, R. W., &amp; Khan, R. (2025).</cite>
-    A comparative evaluation of Poisson, negative binomial, and zero-inflated models
-    for count data.
+    A comparative evaluation of Poisson, negative binomial, and zero-inflated
+    models for count data.
     <em>Dialogue Social Science Review</em>, <em>3</em>(8), 188–200.
   </div>
 
@@ -774,13 +1091,6 @@ administrativos de utilização com a especificação distributiva correta.
     <cite>Deb, P., &amp; Trivedi, P. K. (1997).</cite>
     Demand for medical care by the elderly: A finite mixture approach.
     <em>Journal of Applied Econometrics</em>, <em>12</em>(3), 313–336.
-  </div>
-
-  <div class="ref-entry">
-    <cite>Deb, P., &amp; Holmes, A. M. (2000).</cite>
-    Estimates of use and costs of behavioural health care: A comparison of standard
-    and finite mixture models.
-    <em>Health Economics</em>, <em>9</em>(6), 475–489.
   </div>
 
   <div class="ref-entry">
@@ -808,16 +1118,17 @@ administrativos de utilização com a especificação distributiva correta.
   </div>
 
   <div class="ref-entry">
-    <cite>Scrucca, L., Fop, M., Murphy, T. B., &amp; Raftery, A. E. (2016).</cite>
-    mclust 5: Clustering, classification and density estimation using Gaussian finite
-    mixture models.
-    <em>The R Journal</em>, <em>8</em>(1), 289–317.
+    <cite>Strehl, A., &amp; Ghosh, J. (2002).</cite>
+    Cluster ensembles — a knowledge reuse framework for combining multiple
+    partitions.
+    <em>Journal of Machine Learning Research</em>, <em>3</em>, 583–617.
   </div>
 
   <div class="ref-entry">
-    <cite>Strehl, A., &amp; Ghosh, J. (2002).</cite>
-    Cluster ensembles — a knowledge reuse framework for combining multiple partitions.
-    <em>Journal of Machine Learning Research</em>, <em>3</em>, 583–617.
+    <cite>Wagner, T., Kowalski, J., Perkins, S. M., &amp; Schmid, I. (2015).</cite>
+    Regression models for count data with overdispersion: A practical guide for
+    investigators in health services research.
+    <em>Statistics in Medicine</em>, <em>34</em>(3), 486–499.
   </div>
 
 </div>

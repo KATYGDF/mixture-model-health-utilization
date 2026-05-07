@@ -1,20 +1,19 @@
 # =============================================================================
 # comparar_variaveis.R
-# Comparação sistemática: 5 conjuntos de variáveis × 3 métodos
+# Comparação sistemática: 5 conjuntos de variáveis × 2 métodos
 #
 # Conjuntos testados (adição progressiva):
 #   V1  consultas + ps + exames                          (baseline)
 #   V2  + internacoes                                    (discrimina G3)
-#   V3  + terapias                                       (discrimina G2)
+#   V3  + terapias                                       (discrimina G4)
 #   V4  + prestadores_distintos                          (sinal de fragmentação)
 #   V5  + meses_utilizacao                               (padrão agudo vs. crônico)
 #
-# Métodos:
-#   M1  Mistura Gaussiana   — mclust, dados log1p + padronizados
-#   M2  Mistura NB          — EM implementado do zero, contagens brutas
-#   M3  K-means             — baseline geométrico, dados log1p + padronizados
+# Métodos (dados de contagem → escolha motivada pela natureza discreta):
+#   M2  Mistura NB  — EM do zero, distribuição NB por componente e variável
+#   M3  K-means     — baseline geométrico livre de distribuição, log1p + scale
 #
-# Critério de seleção de g: BIC (M1 e M2) · Silhouette (M3)
+# Critério de seleção de g: BIC (M2) · Silhouette (M3)
 # Métricas: ARI · NMI · Acurácia (pareamento húngaro) · Pureza · g · tempo(s)
 #
 # Nota sobre meses_utilizacao (V5):
@@ -58,14 +57,14 @@ LABELS_CONJUNTOS <- c(
 
 # ── 2. Pacotes ────────────────────────────────────────────────────────────────
 
-pkgs <- c("dplyr", "mclust", "cluster", "clue", "aricode")
+pkgs <- c("dplyr", "cluster", "clue", "aricode")
 novos <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
 if (length(novos) > 0) {
   message("Instalando: ", paste(novos, collapse = ", "))
   install.packages(novos, repos = "https://cloud.r-project.org", quiet = TRUE)
 }
 suppressPackageStartupMessages({
-  library(dplyr); library(mclust); library(cluster); library(clue); library(aricode)
+  library(dplyr); library(cluster); library(clue); library(aricode)
 })
 
 
@@ -182,7 +181,7 @@ calc_metricas <- function(real_int, estimado_int) {
   }))
   list(
     g        = length(unique(estimado_int)),
-    ari      = round(mclust::adjustedRandIndex(real_int, estimado_int), 3),
+    ari      = round(aricode::ARI(real_int, estimado_int),              3),
     nmi      = round(aricode::NMI(real_int, estimado_int),              3),
     acuracia = round(mean(est_par == real_int),                         3),
     pureza   = round(pur,                                               3)
@@ -192,7 +191,7 @@ calc_metricas <- function(real_int, estimado_int) {
 
 # ── 5. Loop principal ─────────────────────────────────────────────────────────
 
-cat("Iniciando comparação: ", length(CONJUNTOS), "conjuntos × 3 métodos\n")
+cat("Iniciando comparação: ", length(CONJUNTOS), "conjuntos × 2 métodos\n")
 cat(strrep("═", 60), "\n\n")
 
 resultados <- list()   # acumula uma linha por (conjunto × método)
@@ -215,42 +214,6 @@ for (nome_v in names(CONJUNTOS)) {
 
   Y_raw <- as.matrix(df[, vars])
   Y_std <- scale(log1p(Y_raw))
-
-  # ── M1 · Mistura Gaussiana ────────────────────────────────────────────────
-  # tryCatch protege contra falha de SVD (ocorre em conjuntos com suporte
-  # limitado como meses_utilizacao, onde a covariância fica mal condicionada)
-  cat("  M1 Gaussiana ... ")
-  t0       <- proc.time()
-  m1_res   <- tryCatch({
-    bic <- suppressMessages(
-      mclust::mclustBIC(Y_std, G = 1:G_MAX, verbose = FALSE)
-    )
-    fit <- suppressMessages(
-      mclust::Mclust(Y_std, G = 1:G_MAX, x = bic, verbose = FALSE)
-    )
-    list(ok = TRUE, fit = fit)
-  }, error = function(e) list(ok = FALSE, msg = conditionMessage(e)))
-  dt <- (proc.time() - t0)["elapsed"]
-
-  if (!m1_res$ok) {
-    cat(sprintf("ERRO (SVD) — %s · %.1fs\n", m1_res$msg, dt))
-    resultados[[length(resultados) + 1]] <- data.frame(
-      Conjunto = label, Método = "Gaussiana",
-      g = NA_integer_, ARI = NA_real_, NMI = NA_real_,
-      Acuracia = NA_real_, Pureza = NA_real_,
-      Tempo_s = round(dt, 1), stringsAsFactors = FALSE
-    )
-  } else {
-    m1_met <- calc_metricas(grupo_real_int, m1_res$fit$classification)
-    cat(sprintf("g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
-                m1_met$g, m1_met$ari, m1_met$acuracia, dt))
-    resultados[[length(resultados) + 1]] <- data.frame(
-      Conjunto = label, Método = "Gaussiana",
-      g = m1_met$g, ARI = m1_met$ari, NMI = m1_met$nmi,
-      Acuracia = m1_met$acuracia, Pureza = m1_met$pureza,
-      Tempo_s = round(dt, 1), stringsAsFactors = FALSE
-    )
-  }
 
   # ── M2 · Mistura NB ───────────────────────────────────────────────────────
   cat("  M2 NB       ... ")

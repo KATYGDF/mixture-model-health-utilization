@@ -40,19 +40,20 @@ DIR_FIGS    <- "figs"
 CONJUNTOS <- list(
   V1 = c("consultas", "ps", "exames"),
   V2 = c("consultas", "ps", "exames", "internacoes"),
-  V3 = c("consultas", "ps", "exames", "internacoes", "terapias"),
-  V4 = c("consultas", "ps", "exames", "internacoes", "terapias",
-          "prestadores_distintos"),
-  V5 = c("consultas", "ps", "exames", "internacoes", "terapias",
-          "prestadores_distintos", "meses_utilizacao")
+  V3 = c("consultas", "ps", "exames", "internacoes", "terapias")
+  # V4 e V5 desativados: não melhoram o modelo (confirmado empiricamente)
+  # V4 = c("consultas", "ps", "exames", "internacoes", "terapias",
+  #         "prestadores_distintos"),
+  # V5 = c("consultas", "ps", "exames", "internacoes", "terapias",
+  #         "prestadores_distintos", "meses_utilizacao")
 )
 
 LABELS_CONJUNTOS <- c(
   V1 = "Baseline (3 vars)",
   V2 = "+ internacoes",
-  V3 = "+ terapias",
-  V4 = "+ prestadores",
-  V5 = "+ meses_utilizacao *"
+  V3 = "+ terapias"
+  # V4 = "+ prestadores",
+  # V5 = "+ meses_utilizacao *"
 )
 
 
@@ -753,9 +754,9 @@ p_evo <- ggplot(tab_long, aes(Conjunto, Valor,
   labs(
     x       = NULL,
     y       = "Valor",
-    title   = "Evolução das métricas conforme variáveis são adicionadas (V1 → V5)",
+    title   = "Evolução das métricas conforme variáveis são adicionadas (V1 → V3)",
     subtitle = "V1 = baseline 3 variáveis  ·  cada Vi adiciona uma variável ao conjunto anterior",
-    caption  = "* V5 inclui meses_utilizacao (gerada via Beta-Binomial): NB aproxima com ressalva"
+    caption  = "V4 e V5 desativados: não melhoram o modelo (confirmado empiricamente)"
   ) +
   TEMA +
   theme(axis.text.x = element_text(angle = 28, hjust = 1))

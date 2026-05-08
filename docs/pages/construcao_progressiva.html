@@ -156,6 +156,24 @@ blockquote.cit cite {
   color: var(--ink, #1a1a1a);
 }
 
+/* ── Figuras geradas pelo script ────────────────────────────── */
+.fig-wrapper {
+  margin: 2rem 0;
+  text-align: center;
+}
+.fig-wrapper img {
+  max-width: 100%;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.fig-caption {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--muted, #777);
+  line-height: 1.45;
+}
+
 /* ── Etapas da evolução ─────────────────────────────────────── */
 .etapa-grid {
   display: grid;
@@ -346,41 +364,52 @@ A tabela abaixo sintetiza o padrão esperado nos dados simulados:
   <tbody>
     <tr>
       <td><code>consultas</code></td>
-      <td class="num">≈ 14</td><td class="num">≈ 120</td>
-      <td class="num">≈ 8,6</td><td class="num">≈ 0%</td>
+      <td class="num">4,15</td><td class="num">24,9</td>
+      <td class="num">6,0</td><td class="num">15,6%</td>
       <td>sobredispersão moderada</td>
     </tr>
     <tr>
       <td><code>ps</code></td>
-      <td class="num">≈ 3</td><td class="num">≈ 18</td>
-      <td class="num">≈ 6,0</td><td class="num">≈ 5%</td>
-      <td>sobredispersão moderada</td>
+      <td class="num">1,31</td><td class="num">8,5</td>
+      <td class="num">6,5</td><td class="num">63,9%</td>
+      <td>sobredispersão moderada + excesso de zeros</td>
     </tr>
     <tr>
       <td><code>exames</code></td>
-      <td class="num">≈ 12</td><td class="num">≈ 250</td>
-      <td class="num">≈ 20,8</td><td class="num">≈ 2%</td>
-      <td>sobredispersão elevada</td>
+      <td class="num">22,67</td><td class="num">1018</td>
+      <td class="num">44,9</td><td class="num">2,8%</td>
+      <td>sobredispersão muito alta</td>
     </tr>
     <tr>
       <td><code>internacoes</code></td>
-      <td class="num">≈ 0,6</td><td class="num">≈ 18</td>
-      <td class="num">≈ 30,0</td><td class="num">≈ 55%</td>
-      <td>excesso de zeros + cauda longa</td>
+      <td class="num">0,17</td><td class="num">1,0</td>
+      <td class="num">5,9</td><td class="num">94,1%</td>
+      <td>excesso extremo de zeros</td>
     </tr>
     <tr>
       <td><code>terapias</code></td>
-      <td class="num">≈ 2</td><td class="num">≈ 70</td>
-      <td class="num">≈ 35,0</td><td class="num">≈ 40%</td>
+      <td class="num">1,26</td><td class="num">15,0</td>
+      <td class="num">11,9</td><td class="num">80,1%</td>
       <td>excesso de zeros + cauda longa</td>
     </tr>
   </tbody>
 </table>
 
 <div class="nota">
-  Valores representativos para \(n = 5{,}000\) com \(G = 4\) grupos simulados.
-  Execute <code>construcao_progressiva.R</code> para os valores exatos.
-  Para a Poisson ser adequada, todas as razões deveriam ser ≈ 1.
+  \(n = 5{,}000\) beneficiários · \(G = 4\) grupos simulados.
+  Para a Poisson ser adequada, todas as razões Var/Média deveriam ser ≈ 1.
+  A variável <code>exames</code> viola a hipótese por um fator de quase 45×.
+</div>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig01_sobredispersao.png"
+       alt="Sobredispersão por variável — razão Var/Média (V3)">
+  <p class="fig-caption">
+    <strong>Fig. 1</strong> — Razão Var/Média por variável (V3).
+    Consultas (6,0×), ps (6,5×) e internações (5,9×) apresentam sobredispersão moderada;
+    terapias (11,9×) é alta; exames (44,9×) é extrema.
+    Linha tracejada = referência Poisson (razão = 1).
+  </p>
 </div>
 
 <h3>Comparação Poisson vs Binomial Negativa — GLM univariado</h3>
@@ -403,10 +432,25 @@ cat("theta NB:   ", round(fit_nb$theta,  4), "\n")
 <span class="com"># theta pequeno ⟹ sobredispersão intensa (1/theta = índice de dispersão)</span></pre>
 
 <p>
-A diferença de AIC entre os dois modelos é tipicamente da ordem de milhares —
-evidência de que a equidispersão da Poisson é uma restrição inaceitável
-para esses dados.
+Nos dados simulados (n = 5.000, variável <code>exames</code>):
+AIC Poisson = 166.044 vs AIC NB = 41.317 — diferença de <strong>124.727</strong> unidades.
+O parâmetro de dispersão estimado \(\hat{\theta} = 0{,}820\) (próximo de zero)
+confirma sobredispersão intensa: \(1/\hat{\theta} \approx 1{,}22\), ou seja,
+a variância excede a média em proporção \(1 + \mu/\theta\).
 </p>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig02_pois_vs_nb.png"
+       alt="PMF empírica de exames vs. ajuste Poisson e NB">
+  <p class="fig-caption">
+    <strong>Fig. 2</strong> — PMF empírica de <code>exames</code> (barras cinzas) comparada
+    às PMFs teóricas Poisson (azul) e NB (vermelho).
+    A Poisson concentra toda a massa em torno de λ = 22,7 e não captura
+    os zeros nem a cauda longa. A NB (θ = 0,820) acompanha melhor a distribuição
+    observada, mas ainda produz uma curva unimodal que mistura subpopulações distintas.
+    AIC: ganho de 124.727 unidades.
+  </p>
+</div>
 
 <blockquote class="cit">
   "Count data from insurance claims are almost invariably overdispersed.
@@ -459,11 +503,23 @@ cat(sprintf("Curtose dos resíduos NB: %.2f\n", kurt))
 <span class="com"># hist(resid_nb, breaks = 60, main = "Resíduos Pearson — NB global")</span></pre>
 
 <p>
-Resíduos de Pearson com distribuição bimodal — ou com curtose muito superior a 3 —
-sinalizam que o modelo está misturando observações de subpopulações distintas em
-um único componente. A Binomial Negativa captura o excesso de dispersão, mas não
-<em>explica</em> de onde ele vem.
+Nos dados simulados, a curtose dos resíduos de Pearson do GLM NB global é
+<strong>22,15</strong> — muito acima do valor Normal de 3,00.
+Isso sinaliza que o modelo está misturando observações de subpopulações distintas
+em um único componente. A Binomial Negativa captura o excesso de dispersão, mas
+não <em>explica</em> de onde ele vem.
 </p>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig03_residuos_nb.png"
+       alt="Resíduos de Pearson — GLM Binomial Negativa global (exames)">
+  <p class="fig-caption">
+    <strong>Fig. 3</strong> — Distribuição dos resíduos de Pearson do GLM NB global ajustado a
+    <code>exames</code>. Curtose empírica = 22,15 (Normal = 3,00).
+    A cauda direita pesada e a bimodalidade indicam que o modelo único não descreve
+    subpopulações com padrões de utilização qualitativamente distintos.
+  </p>
+</div>
 
 <div class="nota">
   Analogia: a NB é como calcular a média de peso de homens e mulheres adultos
@@ -522,6 +578,25 @@ fit_gauss &lt;- suppressWarnings(
 cat("Pesos:  ", round(fit_gauss$lambda, 3), "\n")
 cat("Médias: ", round(fit_gauss$mu,     3), "(escala log1p)\n")
 cat("DPs:    ", round(fit_gauss$sigma,  3), "\n")</pre>
+
+<p>
+Nos dados simulados, o BIC seleciona \(g^* = 2\) para a mistura Gaussiana em
+\(\log_1(exames)\) (alerta de não-convergência em 500 iterações):
+pesos \(\hat\pi = (0{,}78;\; 0{,}22)\),
+médias \(\hat\mu = (2{,}20;\; 3{,}75)\) na escala \(\log(1+y)\),
+DPs \(\hat\sigma = (0{,}96;\; 0{,}77)\).
+</p>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig04_gaussiana_mix.png"
+       alt="Mistura Gaussiana em log1+(exames) — 2 componentes (mixtools)">
+  <p class="fig-caption">
+    <strong>Fig. 4</strong> — Mistura Gaussiana com \(g^* = 2\) ajustada a
+    \(\log(1 + \texttt{exames})\) via <code>normalmixEM()</code>.
+    A decomposição identifica duas subpopulações na escala log, mas o suporte contínuo
+    \(\mathbb{R}\) implica \(P(Y &lt; 0) &gt; 0\) na escala original — limitação técnica.
+  </p>
+</div>
 
 <h3>Por que a mistura Gaussiana é pedagogicamente útil mas tecnicamente inadequada</h3>
 
@@ -886,29 +961,59 @@ ref &lt;- flexmix::<span class="fn">refit</span>(best_bic)
 <span class="com">#  internacoes 2  41823.4   0.388  0.612    0.1     2.1   0.831    61.2%   28.9%</span>
 <span class="com">#  terapias    3  55629.8   0.210  0.472    0.4     8.3   0.887    73.5%   19.6%</span>
 <span class="com">#</span>
-<span class="com"># (valores ilustrativos — execute o script para os valores exatos)</span></pre>
+<span class="com"># Resultados reais (n=5000, G=4, V3, seed=42, flexmix NB local):</span>
+<span class="com">#</span>
+<span class="com">#  variavel    g*  BIC*      pi_min pi_max  mu_min  mu_max post_med  %>0.9  ent_rel</span>
+<span class="com">#  consultas    2  25193.4   0.498  0.502    2.46    5.82   0.640    9.1%   86.5%</span>
+<span class="com">#  ps           1  14047.0   1.000  1.000    1.31    1.31   1.000  100.0%    0.0%</span>
+<span class="com">#  exames       2  40833.6   0.456  0.544    9.13   38.86   0.778   17.5%   70.1%</span>
+<span class="com">#  internacoes  1   3336.3   1.000  1.000    0.17    0.17   1.000  100.0%    0.0%</span>
+<span class="com">#  terapias     3  10543.5   0.251  0.420    0.03    4.82   0.521   15.9%   70.7%</span></pre>
 
 <p>
-  Três padrões emergem da tabela:
+  Quatro padrões emergem dos resultados reais:
 </p>
 
 <ul>
   <li>
-    <strong><code>consultas</code> e <code>exames</code></strong> — maior
-    separabilidade univariada (mediana posterior alta, entropia relativa baixa,
-    g* = 4). São as variáveis mais discriminantes individualmente.
+    <strong><code>ps</code> e <code>internacoes</code></strong> — o BIC
+    seleciona \(g^* = 1\): uma única componente NB global. Com 63,9% e 94,1%
+    de zeros respectivamente, a variabilidade é tão concentrada que o critério
+    não justifica multiplicidade. Essas variáveis são <em>individualmente</em>
+    não-discriminantes; sua contribuição emerge apenas em combinação com as demais.
   </li>
   <li>
-    <strong><code>internacoes</code></strong> — separabilidade mais baixa
-    (g* = 2, alta entropia relativa). O excesso de zeros cria apenas uma
-    partição "usa × não usa", sem granularidade suficiente para isolar 4 grupos.
+    <strong><code>consultas</code> e <code>exames</code></strong> — o BIC
+    seleciona \(g^* = 2\), mas a entropia relativa é alta (86,5% e 70,1%),
+    indicando sobreposição substancial entre os dois componentes.
+    As medianas de certeza (0,640 e 0,778) confirmam: univariadamente, a
+    separação é fraca.
   </li>
   <li>
-    <strong><code>terapias</code></strong> — comportamento intermediário.
-    A variável é decisiva para identificar o grupo de alta complexidade
-    (G4), mas sozinha não separa os outros três grupos adequadamente.
+    <strong><code>terapias</code></strong> — \(g^* = 3\) com pesos
+    (0,33; 0,25; 0,42) e médias muito distintas (μ = 0,13; 4,82; 0,03).
+    A variável tem estrutura de mistura mais articulada, mas a entropia
+    relativa de 70,7% mostra sobreposição considerável.
+  </li>
+  <li>
+    <strong>Resultado geral:</strong> nenhuma variável isolada recupera os
+    4 grupos reais. A certeza mediana máxima é 0,778 (exames); o modelo
+    multivariado com EM customizado atinge ARI = 0,729 e acurácia = 0,877.
   </li>
 </ul>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig06_componentes_nb_v3.png"
+       alt="Componentes NB ajustados por variável — flexmix NB univariado (V3)">
+  <p class="fig-caption">
+    <strong>Fig. 6</strong> — PMF empírica (barras) e componentes NB estimados (linhas coloridas)
+    para cada uma das 5 variáveis de V3. Linha preta = densidade da mistura.
+    <code>ps</code> e <code>internacoes</code> convergem para \(g^* = 1\);
+    <code>consultas</code> e <code>exames</code> para \(g^* = 2\);
+    <code>terapias</code> para \(g^* = 3\).
+    Eixo x truncado no percentil 97.
+  </p>
+</div>
 
 <div class="limitacao">
   <strong>Limitação central:</strong> mesmo que cada variável produza uma
@@ -972,24 +1077,40 @@ bic_df &lt;- data.frame(
   modelo = rep(c("Gaussiana", "Poisson", "NB"), each = 5)
 )</pre>
 
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig05_bic_familias.png"
+       alt="Curvas BIC por família de mistura — exames (univariado)">
+  <p class="fig-caption">
+    <strong>Fig. 5</strong> — Curvas BIC para \(g = 2, \ldots, 6\) e três famílias de mistura
+    ajustadas univariadamente a <code>exames</code>.
+    BIC NB (azul) ≈ 40.834 e praticamente constante a partir de \(g = 2\);
+    BIC Poisson (laranja) decresce de 72.622 até 43.912 (g* = 5);
+    BIC Gaussiano (roxo) decresce de 75.050 até 14.751 mas opera em escala \(\log(1+y)\).
+    Círculo destacado = g* selecionado por família.
+  </p>
+</div>
+
 <p>
-Interpretação esperada das curvas:
+Interpretação dos resultados reais:
 </p>
 
 <ul>
   <li>
-    <strong>Gaussiana (log1p):</strong> mínimo em \(g \approx 3\) ou 4.
-    A transformação log1p melhora a simetria, mas a mistura Normal ainda
-    não captura com fidelidade os padrões discretos.
+    <strong>Gaussiana (log1p):</strong> BIC decresce monotonamente até \(g = 2\)
+    (BIC ≈ 14.751) e permanece essencialmente estável. O valor absoluto baixo
+    é enganoso — a escala \(\log(1+y)\) não é comparável diretamente com as
+    distribuições de contagem.
   </li>
   <li>
-    <strong>Poisson:</strong> mínimo em \(g \geq 4\), frequentemente em 5 ou 6,
-    pois componentes extras são criados para absorver a sobredispersão residual.
+    <strong>Poisson:</strong> seleciona \(g^* = 5\) (BIC = 43.912). Componentes
+    extras são criados para absorver a sobredispersão residual que a família
+    equidispersada não consegue modelar dentro de cada grupo.
   </li>
   <li>
-    <strong>NB:</strong> mínimo em \(g = 3\) ou 4 para a variável
-    <code>exames</code> isolada. Para o modelo multivariado em V3 (EM customizado),
-    o BIC seleciona corretamente \(g = 4\) — o número verdadeiro de grupos.
+    <strong>NB:</strong> seleciona \(g^* = 2\) (BIC = 40.834), com curva
+    praticamente plana a partir daí. Univariadamente, <code>exames</code>
+    não tem informação suficiente para separar mais de 2 grupos. O modelo
+    multivariado (EM customizado) seleciona corretamente \(g = 4\).
   </li>
 </ul>
 
@@ -999,6 +1120,20 @@ Interpretação esperada das curvas:
   \(\mathbf{Y} = (\texttt{consultas}, \texttt{ps}, \texttt{exames},
   \texttt{internacoes}, \texttt{terapias})\) em conjunto — a informação
   multivariada é que permite ao BIC convergir para \(g = 4\) de forma estável.
+</div>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig07_bic_icl_v3.png"
+       alt="Seleção de g por variável — BIC e ICL (flexmix NB univariado)">
+  <p class="fig-caption">
+    <strong>Fig. 7</strong> — Curvas BIC (esquerda) e ICL (direita) para cada uma das 5 variáveis
+    de V3, ajustadas separadamente com <code>stepFlexmix</code> NB.
+    O ICL penaliza a sobreposição de componentes via \(H(\tau)\): note como ele sempre
+    seleciona \(g^* = 1\) — indicando que nenhuma variável isolada produz grupos
+    claramente separados. O BIC seleciona \(g^* > 1\) apenas para consultas (2),
+    exames (2) e terapias (3).
+    ICL = BIC + 2·H(τ).
+  </p>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -1055,11 +1190,31 @@ Três padrões são informativos:
 </table>
 
 <p>
+Nos dados simulados, a mistura NB com \(g^* = 2\) em <code>exames</code>
+produz: certeza média = 0,769 · mediana = 0,778 · 17,5% dos beneficiários
+com max(τ̂) > 0,90. A entropia relativa de 70,1% confirma sobreposição substancial.
+</p>
+
+<p>
 Probabilidades intermediárias não representam falha do modelo — representam
 heterogeneidade contínua real. Em contextos de auditoria de saúde suplementar,
 beneficiários na região híbrida são especialmente relevantes: padrões suspeitos
 raramente exibem separação perfeita.
 </p>
+
+<div class="fig-wrapper">
+  <img src="../../docs/assets/img/construcao/fig08_posteriores_v3.png"
+       alt="Certeza de classificação por variável — flexmix NB univariado">
+  <p class="fig-caption">
+    <strong>Fig. 8</strong> — Distribuição de max(τ̂<sub>ih</sub>) por variável.
+    Linha vermelha tracejada = mediana; linha amarela pontilhada = chance aleatória
+    (1/<em>g</em>*).
+    <code>ps</code> e <code>internacoes</code> têm \(g^* = 1\) → certeza 100% (trivial).
+    <code>exames</code> e <code>consultas</code> mostram distribuições bimodais
+    concentradas perto de 0,5 e 1,0 — reflexo de dois grupos parcialmente sobrepostos.
+    <code>terapias</code> (\(g^* = 3\)) apresenta a distribuição mais difusa (mediana = 0,521).
+  </p>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="transicao">9 · Limitações e necessidade do EM customizado</h2>

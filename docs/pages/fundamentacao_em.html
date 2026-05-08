@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fundamentação do EM — SimSaúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath:  [['\\(', '\\)']],
+    displayMath: [['$$', '$$']],
+    tags: 'none'
+  },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea','pre']
+  }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+<style>
+
+/* ── Equação em bloco ───────────────────────────────────────── */
+.eq {
+  margin: 1.5rem 0;
+  padding: 0.8rem 1.2rem;
+  background: var(--surface, #f8f7f4);
+  border-left: 3px solid var(--accent, #4a7c59);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* ── Código R (tema escuro) ─────────────────────────────────── */
+pre.r-code {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 1.4rem 1.6rem;
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  tab-size: 2;
+  margin: 1.2rem 0;
+}
+pre.r-code .com { color: #6c7086; font-style: italic; }
+pre.r-code .kw  { color: #cba6f7; }   /* function, for, if, return */
+pre.r-code .fn  { color: #89b4fa; }   /* function calls */
+pre.r-code .num { color: #fab387; }   /* numeric literals */
+pre.r-code .str { color: #a6e3a1; }   /* strings */
+pre.r-code .op  { color: #89dceb; }   /* operators <- = $ */
+
+/* ── Navegação interna ──────────────────────────────────────── */
+.toc {
+  background: var(--surface, #f8f7f4);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  padding: 1rem 1.4rem;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+.toc ol { margin: 0.4rem 0 0 1.2rem; padding: 0; }
+.toc li { margin: 0.3rem 0; }
+.toc a  { color: var(--accent, #4a7c59); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* ── Citação direta ─────────────────────────────────────────── */
+blockquote.cit {
+  margin: 1.2rem 0;
+  padding: 0.75rem 1.2rem;
+  border-left: 3px solid var(--accent, #4a7c59);
+  background: var(--surface, #f8f7f4);
+  font-style: italic;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+}
+blockquote.cit cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+
+/* ── Nota em bloco ──────────────────────────────────────────── */
+.nota {
+  background: #fffbf0;
+  border-left: 3px solid #e6a817;
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: var(--muted, #444);
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+
+/* ── Bloco de teoria (azul-esverdeado) ──────────────────────── */
+.teoria {
+  background: #f0f7ff;
+  border-left: 3px solid #2980b9;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+.teoria strong { color: #1a5276; }
+
+/* ── Bloco completo de seção EM ─────────────────────────────── */
+.sec-em {
+  border: 1px solid #d0e8d0;
+  border-radius: 8px;
+  margin: 2.5rem 0;
+  overflow: hidden;
+}
+.sec-em-header {
+  background: #2d4a3e;
+  color: #d5f5e3;
+  padding: 0.7rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.88rem;
+}
+.sec-em-header .sec-badge {
+  background: var(--accent, #4a7c59);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.sec-em-header .sec-badge.e-step  { background: #2980b9; }
+.sec-em-header .sec-badge.m-step  { background: #8e44ad; }
+.sec-em-header .sec-badge.init    { background: #d35400; }
+.sec-em-header .sec-badge.conv    { background: #16a085; }
+.sec-em-header .sec-badge.selecao { background: #c0392b; }
+.sec-em-header .sec-badge.modelo  { background: #2c3e50; }
+.sec-em-body {
+  padding: 1.3rem 1.5rem;
+}
+.sec-em-body > *:first-child { margin-top: 0; }
+.sec-em-body > *:last-child  { margin-bottom: 0; }
+
+/* ── Rótulo de linha de código ──────────────────────────────── */
+.cod-label {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.75rem;
+  color: var(--muted, #888);
+  margin-bottom: 0.2rem;
+  margin-top: 1.2rem;
+}
+.cod-label:first-child { margin-top: 0; }
+
+/* ── Referências ────────────────────────────────────────────── */
+.ref-entry {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  border-left: 2px solid var(--border, #ddd);
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.ref-entry cite {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink, #1a1a1a);
+}
+
+/* ── Tabela de parâmetros ───────────────────────────────────── */
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.87rem;
+  margin: 1.2rem 0;
+}
+.param-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.param-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: top;
+}
+.param-table tr:last-child td { border-bottom: none; }
+.param-table code {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.8rem;
+  background: #f0f0f0;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <a href="../index.html" class="sidebar-brand">SimSaúde</a>
+  <p class="sidebar-subtitle">Modelagem de Heterogeneidade<br>em Saúde Suplementar</p>
+  <ul class="sidebar-nav">
+    <li><a href="../index.html">Início</a></li>
+    <li><a href="estudo.html">O Estudo</a></li>
+    <li><a href="evolucao.html">Evolução</a></li>
+    <li><a href="simulacao.html">Simulação</a></li>
+    <li><a href="eda_simsaude.html">EDA</a></li>
+    <li><a href="construcao_progressiva.html">Construção</a></li>
+    <li><a href="fundamentacao_em.html" class="active">Fundamentação EM</a></li>
+    <li><a href="analises.html">Análises</a></li>
+  </ul>
+  <div class="sidebar-footer">Katy Garcia de Freitas · 2026</div>
+</nav>
+
+<main class="main">
+<div class="prose">
+
+<h1>Fundamentação do Algoritmo EM</h1>
+<p class="lead">
+  Cada bloco do código R que implementa a Mistura de Binomiais Negativas é
+  confrontado com sua justificativa matemática, extraída de
+  Ng, Xiang &amp; Yau (2019) <em>Mixture Modelling for Medical and
+  Health Sciences</em>.
+</p>
+
+<div class="toc">
+  <strong>Nesta página</strong>
+  <ol>
+    <li><a href="#objetivo">Objetivo e estrutura</a></li>
+    <li><a href="#modelo">O modelo de mistura finita</a></li>
+    <li><a href="#nb-param">Parametrização NB₂ por componente e variável</a></li>
+    <li><a href="#loglik">Log-verossimilhança dos dados completos</a></li>
+    <li><a href="#init">Inicialização: K-means + reinícios aleatórios</a></li>
+    <li><a href="#estep">Passo E — probabilidades posteriores (log-sum-exp)</a></li>
+    <li><a href="#mstep-pi">Passo M — proporções π</a></li>
+    <li><a href="#mstep-mu">Passo M — médias μ</a></li>
+    <li><a href="#mstep-theta">Passo M — dispersão θ (<code>.update_theta</code>)</a></li>
+    <li><a href="#convergencia">Critério de convergência e múltiplos reinícios</a></li>
+    <li><a href="#bic">Seleção de <em>g</em> por BIC</a></li>
+    <li><a href="#hungarian">Pareamento ótimo: algoritmo húngaro</a></li>
+    <li><a href="#codigo">Código completo anotado</a></li>
+    <li><a href="#referencias">Referências</a></li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="objetivo">1 · Objetivo e estrutura</h2>
+
+<p>
+  A página <a href="construcao_progressiva.html">Construção Progressiva</a> mostra
+  <em>por que</em> uma Mistura de Binomiais Negativas (NB) é necessária: a Poisson
+  falha por equidispersão; a NB univariada falha por homogeneidade; o <code>flexmix</code>
+  multivariado não permite fixar a parametrização NB₂ nem múltiplos reinícios com critério BIC.
+  A solução é implementar o algoritmo EM do zero.
+</p>
+
+<p>
+  Esta página acompanha o arquivo <code>comparar_variaveis.R</code> linha por linha,
+  justificando cada decisão de implementação com referência a
+  Ng, Xiang &amp; Yau (2019) — o texto de referência adotado para
+  a modelagem de misturas em dados de saúde.
+</p>
+
+<div class="nota">
+  <strong>Convenção de notação:</strong>
+  \(n\) = número de beneficiários;
+  \(p\) = número de variáveis (tipos de utilização);
+  \(g\) = número de componentes (grupos latentes);
+  \(h = 1,\ldots,g\) indexa componentes;
+  \(j = 1,\ldots,p\) indexa variáveis;
+  \(i = 1,\ldots,n\) indexa observações.
+  \(Y\) é a matriz \(n \times p\) de contagens observadas.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="modelo">2 · O modelo de mistura finita</h2>
+
+<!-- BLOCO DE SEÇÃO EM -->
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge modelo">Modelo</span>
+    Definição do modelo de mistura (Ng et al. §1.2, p. 8)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Um <strong>modelo de mistura finita</strong> representa a densidade conjunta
+      de \(Y_i\) como combinação convexa de \(g\) densidades componentes.
+      Cada beneficiário pertence a exatamente um componente latente, mas esse
+      pertencimento é desconhecido (variável latente \(Z_i\)).
+    </div>
+
+    <div class="eq">
+      $$f(y_i;\,\Psi) \;=\; \sum_{h=1}^{g} \pi_h\, f_h(y_i;\,\psi_h)$$
+    </div>
+
+    <p>
+      onde \(\pi_h > 0\), \(\sum_{h=1}^{g}\pi_h = 1\) são as <em>proporções de mistura</em>
+      e \(f_h\) é a densidade do componente \(h\) com parâmetros \(\psi_h\).
+    </p>
+
+    <blockquote class="cit">
+      "A finite mixture model with \(g\) components is characterized by the mixture
+      density \(f(y;\Psi) = \sum_{h=1}^{g}\pi_h f_h(y;\psi_h)\), where
+      \(\pi_h > 0\) for \(h = 1,\ldots,g\) and \(\sum_{h=1}^{g}\pi_h = 1\)."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.2, p. 8</cite>
+    </blockquote>
+
+    <p>
+      No código, o vetor \(\Psi = (\pi_1,\ldots,\pi_g,\,\mu_{11},\ldots,\mu_{gp},\,\theta_{11},\ldots,\theta_{gp})\)
+      é representado pelos objetos <code>pi_h</code>, <code>mu</code> (matriz \(g \times p\))
+      e <code>theta</code> (matriz \(g \times p\)):
+    </p>
+
+<pre class="r-code"><span class="com"># nb_mix_em: argumentos que identificam o modelo</span>
+<span class="fn">nb_mix_em</span> <span class="op">&lt;-</span> <span class="kw">function</span>(Y, g,
+                      max_iter <span class="op">=</span> MAX_ITER_NB, tol <span class="op">=</span> TOL_NB,
+                      n_init <span class="op">=</span> N_INIT_NB, seed <span class="op">=</span> SEED) {
+  n <span class="op">&lt;-</span> <span class="fn">nrow</span>(Y); p <span class="op">&lt;-</span> <span class="fn">ncol</span>(Y)
+  <span class="com"># Y[i,j] → y_ij  (n × p contagens inteiras não-negativas)</span>
+  <span class="com"># g      → número de componentes a ajustar                 </span>
+  <span class="com"># Ψ será representado por: pi_h (g), mu (g×p), theta (g×p)</span>
+  Y <span class="op">&lt;-</span> <span class="fn">as.matrix</span>(Y)
+  ...</pre>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="nb-param">3 · Parametrização NB₂ por componente e variável</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge modelo">NB₂</span>
+    Distribuição Binomial Negativa — componente e variável (Ng et al. §4.4, p. 81)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Para dados de saúde suplementar, a sobredispersão é a regra: beneficiários
+      mais utilizadores produzem variâncias muito superiores à média.
+      A <strong>NB₂</strong> acomoda isso via parâmetro de dispersão \(\theta > 0\):
+      quanto menor \(\theta\), maior o excesso de variância em relação à Poisson.
+    </div>
+
+    <div class="eq">
+      $$f_{NB}(y;\,\mu,\theta) = \binom{y + \theta - 1}{y}
+        \left(\frac{\theta}{\theta + \mu}\right)^{\!\theta}
+        \left(\frac{\mu}{\theta + \mu}\right)^{\!y}, \quad y = 0,1,2,\ldots$$
+    </div>
+
+    <div class="eq">
+      $$\mathbb{E}[Y] = \mu, \qquad
+        \mathrm{Var}[Y] = \mu + \dfrac{\mu^2}{\theta}$$
+    </div>
+
+    <blockquote class="cit">
+      "The NB2 parameterization has variance \(\mu + \mu^2/\theta\),
+      making \(\theta\) directly interpretable as an overdispersion parameter:
+      as \(\theta \to \infty\) the NB approaches the Poisson."
+      <cite>Ng, Xiang &amp; Yau (2019) — §4.4, p. 81</cite>
+    </blockquote>
+
+    <p>
+      Sob <strong>independência condicional</strong> — dada a componente \(h\),
+      as \(p\) variáveis são independentes — a densidade conjunta do vetor
+      \(y_i = (y_{i1},\ldots,y_{ip})\) no componente \(h\) é o produto das marginais:
+    </p>
+
+    <div class="eq">
+      $$f_h(y_i;\,\psi_h) \;=\; \prod_{j=1}^{p} f_{NB}(y_{ij};\,\mu_{hj},\,\theta_{hj})$$
+    </div>
+
+    <div class="teoria">
+      No código isso aparece como <code>rowSums(dnbinom(...))</code> na escala log —
+      a soma de log-densidades corresponde ao log do produto de densidades:
+    </div>
+
+<pre class="r-code"><span class="com"># log f_h(y_i) = Σ_j log f_NB(y_ij ; μ_hj, θ_hj)</span>
+<span class="com"># rowSums devolve um vetor (n × 1), um valor por beneficiário i</span>
+log_f[, h] <span class="op">&lt;-</span> <span class="fn">log</span>(pi_h[h]) <span class="op">+</span>
+  <span class="fn">rowSums</span>(<span class="fn">dnbinom</span>(Y,
+                  size <span class="op">=</span> <span class="fn">matrix</span>(theta[h, ], n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                  mu   <span class="op">=</span> <span class="fn">matrix</span>(mu[h, ],    n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                  log  <span class="op">=</span> <span class="kw">TRUE</span>))</pre>
+
+    <div class="nota">
+      O argumento <code>size</code> do <code>dnbinom</code> do R corresponde ao
+      \(\theta\) da NB₂ de Ng et al.: é o parâmetro de <em>tamanho</em> da NB
+      (número de sucessos na formulação alternativa, ou equivalentemente o
+      parâmetro de dispersão inverso).
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="loglik">4 · Log-verossimilhança dos dados completos</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge modelo">Log-lik</span>
+    Dados completos e incompletos (Ng et al. §1.3, p. 16–17)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      O EM trata o problema de maximização introduzindo variáveis latentes
+      \(Z_{ih} \in \{0,1\}\) que indicam se o beneficiário \(i\) pertence ao
+      componente \(h\). Os dados <em>completos</em> são \((Y, Z)\);
+      os dados <em>observados</em> (incompletos) são apenas \(Y\).
+    </div>
+
+    <p>
+      A log-verossimilhança dos dados <strong>completos</strong> factoriza como:
+    </p>
+
+    <div class="eq">
+      $$\ell_c(\Psi) \;=\;
+        \sum_{i=1}^{n}\sum_{h=1}^{g} Z_{ih}
+        \!\left[\log \pi_h + \sum_{j=1}^{p} \log f_{NB}(y_{ij};\,\mu_{hj},\theta_{hj})\right]$$
+    </div>
+
+    <blockquote class="cit">
+      "The EM algorithm treats the allocation variables \(z_{ih}\)
+      as missing data and iterates between the E-step, which computes the
+      conditional expectation of \(\ell_c\) given \(y\), and the M-step,
+      which maximizes this expectation."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.3, p. 16–17</cite>
+    </blockquote>
+
+    <p>
+      A log-verossimilhança dos dados <strong>observados</strong> — monitorada
+      para verificar convergência — é:
+    </p>
+
+    <div class="eq">
+      $$\ell(\Psi) \;=\; \sum_{i=1}^{n} \log \sum_{h=1}^{g} \pi_h\,
+        \prod_{j=1}^{p} f_{NB}(y_{ij};\,\mu_{hj},\theta_{hj})$$
+    </div>
+
+    <p>
+      No código, <code>log_norm</code> contém \(\log f(y_i;\Psi)\) para cada \(i\),
+      e <code>loglik = sum(log_norm)</code> é \(\ell(\hat{\Psi})\):
+    </p>
+
+<pre class="r-code"><span class="com"># log_f[i,h] = log π_h + Σ_j log f_NB(y_ij; μ_hj, θ_hj)  ← log do integrando</span>
+<span class="com"># log_norm[i] = log Σ_h exp(log_f[i,h])                   ← log f(y_i; Ψ)</span>
+<span class="com"># loglik      = Σ_i log_norm[i]                            ← ℓ(Ψ)</span>
+loglik <span class="op">&lt;-</span> <span class="fn">sum</span>(log_norm)</pre>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="init">5 · Inicialização: K-means + reinícios aleatórios</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge init">Init</span>
+    Estratégia de inicialização (Ng et al. §1.3.3, p. 18–19)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      O EM pode convergir para máximos locais. Duas estratégias reduzem esse risco:
+      (1) usar K-means como chute inicial informado — ele já fornece uma partição
+      razoável dos dados; (2) repetir com reinícios aleatórios e reter o melhor.
+    </div>
+
+    <blockquote class="cit">
+      "K-means clustering on a suitable transformation of the observed data
+      provides component-membership-based starting values that are usually
+      superior to random initializations for mixture models."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.3.3, p. 18–19</cite>
+    </blockquote>
+
+    <p>
+      A transformação <code>log1p(Y)</code> estabiliza a escala das contagens
+      (aproxima simetria) sem perder zeros, tornando a distância Euclidiana do
+      K-means mais significativa:
+    </p>
+
+    <div class="eq">
+      $$\tilde{y}_{ij} = \log(1 + y_{ij})$$
+    </div>
+
+<pre class="r-code"><span class="kw">for</span> (init <span class="kw">in</span> <span class="fn">seq_len</span>(n_init)) {
+
+  <span class="kw">if</span> (init <span class="op">==</span> <span class="num">1</span>) {
+    <span class="com"># ── Inicialização 1: K-means em log1p(Y)  ──────────────────────────────</span>
+    <span class="com"># Recomendado: Ng §1.3.3 p.18-19. nstart=10 para robustez do K-means.</span>
+    <span class="fn">set.seed</span>(seed)
+    km  <span class="op">&lt;-</span> <span class="fn">kmeans</span>(<span class="fn">log1p</span>(Y), centers <span class="op">=</span> g, nstart <span class="op">=</span> <span class="num">10</span>, iter.max <span class="op">=</span> <span class="num">100</span>)
+
+    <span class="com"># Converte clusters em τ "mole": 0,98 no cluster atribuído, 0,02/(g-1) nos demais</span>
+    <span class="com"># Evita τ ∈ {0,1} que tranca θ no M-step</span>
+    tau <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">0.02</span> <span class="op">/</span> <span class="fn">max</span>(g <span class="op">-</span> <span class="num">1</span>, <span class="num">1</span>), n, g)
+    <span class="kw">for</span> (i <span class="kw">in</span> <span class="fn">seq_len</span>(n)) tau[i, km<span class="op">$</span>cluster[i]] <span class="op">&lt;-</span> <span class="num">0.98</span>
+
+  } <span class="kw">else</span> {
+    <span class="com"># ── Inicializações 2..n_init: τ aleatório ──────────────────────────────</span>
+    <span class="com"># Perturbação de U(0,1)+0,01 evita τ exatamente zero</span>
+    <span class="fn">set.seed</span>(seed <span class="op">+</span> init)
+    tau <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="fn">runif</span>(n <span class="op">*</span> g) <span class="op">+</span> <span class="num">0.01</span>, n, g)
+  }
+
+  <span class="com"># Normaliza τ para que Σ_h τ_ih = 1 (restrição de probabilidade)</span>
+  tau <span class="op">&lt;-</span> tau <span class="op">/</span> <span class="fn">rowSums</span>(tau)
+
+  <span class="com"># θ inicializado em 2 (sobredispersão moderada) para todos os componentes</span>
+  theta <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">2</span>, g, p)</pre>
+
+    <div class="nota">
+      O valor inicial <code>theta = 2</code> corresponde a \(\theta = 2\), que
+      implica \(\mathrm{Var}[Y] = \mu + \mu^2/2\) — sobredispersão moderada,
+      nem muito rígida (Poisson, \(\theta \to \infty\)) nem muito difusa
+      (\(\theta \to 0\)).
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="estep">6 · Passo E — probabilidades posteriores</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge e-step">E-step</span>
+    Esperança condicional de Z (Ng et al. §1.3.2, p. 17)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      No Passo E substituímos \(Z_{ih}\) pela sua esperança condicional dado
+      \(Y = y\) e os parâmetros correntes \(\hat{\Psi}^{(t)}\). Essa esperança
+      é a <strong>probabilidade posterior</strong> de pertencimento ao componente \(h\):
+    </div>
+
+    <div class="eq">
+      $$\hat{\tau}_{ih}^{(t)} \;=\;
+        \frac{\pi_h^{(t)}\; \prod_{j=1}^{p} f_{NB}\!\left(y_{ij};\,\mu_{hj}^{(t)},\,\theta_{hj}^{(t)}\right)}
+             {\displaystyle\sum_{k=1}^{g} \pi_k^{(t)}\; \prod_{j=1}^{p} f_{NB}\!\left(y_{ij};\,\mu_{kj}^{(t)},\,\theta_{kj}^{(t)}\right)}$$
+    </div>
+
+    <blockquote class="cit">
+      "The E-step computes \(\tau_{ih} = E_\Psi[Z_{ih} \mid y_i]\), the posterior
+      probability that the \(i\)th observation belongs to the \(h\)th component."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.3.2, p. 17</cite>
+    </blockquote>
+
+    <h3>Estabilidade numérica: log-sum-exp</h3>
+
+    <div class="teoria">
+      Computar as densidades diretamente na escala original pode levar a
+      <em>underflow</em> numérico quando \(p\) é grande (produto de números
+      muito pequenos). O <strong>truque log-sum-exp</strong> faz o cálculo
+      inteiramente na escala logarítmica:
+    </div>
+
+    <div class="eq">
+      $$\log\!\left(\sum_{k=1}^{g} \exp(a_{ik})\right)
+        \;=\; a_i^* + \log\!\left(\sum_{k=1}^{g} \exp(a_{ik} - a_i^*)\right),
+        \quad a_i^* = \max_k a_{ik}$$
+    </div>
+
+    <p>
+      onde \(a_{ih} = \log \pi_h + \sum_j \log f_{NB}(y_{ij};\mu_{hj},\theta_{hj})\)
+      é o log do numerador de \(\hat{\tau}_{ih}\).
+    </p>
+
+<pre class="r-code"><span class="com"># ── Passo E: calcular log_f[i,h] para cada componente h ───────────────────</span>
+log_f <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">0</span>, n, g)
+<span class="kw">for</span> (h <span class="kw">in</span> <span class="fn">seq_len</span>(g)) {
+  log_f[, h] <span class="op">&lt;-</span> <span class="fn">log</span>(pi_h[h]) <span class="op">+</span>           <span class="com"># log π_h</span>
+    <span class="fn">rowSums</span>(<span class="fn">dnbinom</span>(Y,                         <span class="com"># Σ_j log f_NB(y_ij; μ_hj, θ_hj)</span>
+                    size <span class="op">=</span> <span class="fn">matrix</span>(theta[h, ], n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                    mu   <span class="op">=</span> <span class="fn">matrix</span>(mu[h, ],    n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                    log  <span class="op">=</span> <span class="kw">TRUE</span>))
+}
+
+<span class="com"># ── Log-sum-exp: log_max[i] = max_h log_f[i,h] ────────────────────────────</span>
+log_max  <span class="op">&lt;-</span> <span class="fn">apply</span>(log_f, <span class="num">1</span>, max)               <span class="com"># a*_i = max_h a_ih</span>
+log_norm <span class="op">&lt;-</span> <span class="fn">log</span>(<span class="fn">rowSums</span>(<span class="fn">exp</span>(log_f <span class="op">-</span> log_max))) <span class="op">+</span> log_max
+<span class="com">#           └───────────────────────────────┘         │</span>
+<span class="com">#           log Σ_h exp(a_ih - a*_i)         +        a*_i</span>
+<span class="com"># = log f(y_i; Ψ)  (denominador de τ̂_ih em log)</span>
+
+loglik   <span class="op">&lt;-</span> <span class="fn">sum</span>(log_norm)                        <span class="com"># ℓ(Ψ) = Σ_i log f(y_i; Ψ)</span>
+
+<span class="com"># ── τ̂_ih = exp(log_f[i,h] - log_norm[i]) ─────────────────────────────────</span>
+tau_new  <span class="op">&lt;-</span> <span class="fn">exp</span>(log_f <span class="op">-</span> log_norm)
+tau_new  <span class="op">&lt;-</span> tau_new <span class="op">/</span> <span class="fn">rowSums</span>(tau_new)          <span class="com"># re-normaliza (segurança numérica)</span></pre>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="mstep-pi">7 · Passo M — proporções π</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge m-step">M-step π</span>
+    Atualização das proporções de mistura (Ng et al. §1.3.2, p. 17)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Maximizar \(Q(\Psi;\hat{\Psi}^{(t)})\) em relação a \(\pi_h\) sujeito a
+      \(\sum_h \pi_h = 1\) (via Lagrange) fornece a atualização fechada:
+    </div>
+
+    <div class="eq">
+      $$\hat{\pi}_h^{(t+1)} = \frac{\hat{n}_h}{n}, \qquad
+        \hat{n}_h = \sum_{i=1}^{n} \hat{\tau}_{ih}^{(t)}$$
+    </div>
+
+    <blockquote class="cit">
+      "The M-step update for the mixing proportions is
+      \(\hat{\pi}_h = \hat{n}_h / n\), where \(\hat{n}_h = \sum_i \tau_{ih}\)
+      is the effective number of observations in component \(h\)."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.3.2, p. 17</cite>
+    </blockquote>
+
+<pre class="r-code"><span class="com"># π̂_h = n̂_h / n  (colMeans(τ) = (Σ_i τ_ih)/n)</span>
+pi_h <span class="op">&lt;-</span> <span class="fn">colMeans</span>(tau)        <span class="com"># vetor g × 1</span>
+n_h  <span class="op">&lt;-</span> <span class="fn">colSums</span>(tau)         <span class="com"># n̂_h = Σ_i τ_ih  (usado no M-step de μ)</span></pre>
+
+    <div class="nota">
+      <code>colMeans(tau)</code> é exatamente \(\hat{n}_h / n\).
+      O vetor <code>n_h</code> (<code>colSums(tau)</code>) armazena \(\hat{n}_h\)
+      para reutilização na atualização de \(\mu\).
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="mstep-mu">8 · Passo M — médias μ</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge m-step">M-step μ</span>
+    Médias ponderadas por componente (Ng et al. §4.4, p. 82)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Para a NB₂, a derivada parcial de \(Q\) em relação a \(\mu_{hj}\)
+      se anula em um estimador de <strong>média ponderada</strong> pelas probabilidades
+      posteriores — análogo ao M-step da mistura Poisson, com a mesma forma fechada:
+    </div>
+
+    <div class="eq">
+      $$\hat{\mu}_{hj}^{(t+1)} \;=\;
+        \frac{\displaystyle\sum_{i=1}^{n} \hat{\tau}_{ih}^{(t)}\, y_{ij}}
+             {\displaystyle\sum_{i=1}^{n} \hat{\tau}_{ih}^{(t)}}
+        \;=\; \frac{\sum_i \hat{\tau}_{ih}\, y_{ij}}{\hat{n}_h}$$
+    </div>
+
+    <blockquote class="cit">
+      "For the NB mixture, the M-step update for \(\mu_{hj}\) is the
+      posterior-weighted sample mean
+      \(\hat{\mu}_{hj} = \sum_i \tau_{ih} y_{ij} / \sum_i \tau_{ih}\)."
+      <cite>Ng, Xiang &amp; Yau (2019) — §4.4, p. 82</cite>
+    </blockquote>
+
+<pre class="r-code"><span class="com"># μ̂_hj = (τ^T Y)_hj / n̂_h</span>
+<span class="com"># t(tau) %*% Y  →  g × p  (produto matricial ponderado)</span>
+<span class="com"># / n_h         →  divisão elemento a elemento por coluna</span>
+mu <span class="op">&lt;-</span> <span class="fn">pmax</span>(<span class="fn">t</span>(tau) <span class="op">%*%</span> Y <span class="op">/</span> n_h, <span class="num">1e-6</span>)
+<span class="com">#            └─── t(tau) é g×n; Y é n×p ──────────┘</span>
+<span class="com"># pmax(..., 1e-6) garante μ > 0 (log-link sempre válido)</span></pre>
+
+    <div class="nota">
+      O produto <code>t(tau) %*% Y</code> calcula em uma operação matricial
+      \(\sum_i \hat{\tau}_{ih} y_{ij}\) para todos os \(h,j\) simultaneamente,
+      evitando laços explícitos e sendo computacionalmente eficiente.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="mstep-theta">9 · Passo M — dispersão θ</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge m-step">M-step θ</span>
+    Otimização numérica do parâmetro de dispersão (Ng et al. §4.4, p. 82–83)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Diferentemente de \(\mu\) e \(\pi\), o parâmetro de dispersão \(\theta_{hj}\)
+      não admite fórmula fechada. Deve-se maximizar numericamente a
+      <strong>verossimilhança ponderada parcial</strong>:
+    </div>
+
+    <div class="eq">
+      $$\hat{\theta}_{hj}^{(t+1)} \;=\;
+        \arg\max_{\theta > 0}\;
+        \sum_{i=1}^{n} \hat{\tau}_{ih}^{(t)}\,
+        \log f_{NB}\!\left(y_{ij};\,\hat{\mu}_{hj}^{(t+1)},\,\theta\right)$$
+    </div>
+
+    <blockquote class="cit">
+      "The dispersion parameter \(\theta_{hj}\) does not have a closed-form
+      M-step update; it is obtained by one-dimensional numerical optimization
+      of the weighted log-likelihood with respect to \(\theta_{hj}\) for
+      fixed \(\mu_{hj}\)."
+      <cite>Ng, Xiang &amp; Yau (2019) — §4.4, p. 82–83</cite>
+    </blockquote>
+
+    <h3>Implementação: log-espaço para garantir θ > 0</h3>
+
+    <div class="teoria">
+      Otimizar \(\log\theta\) em vez de \(\theta\) diretamente garante
+      \(\theta > 0\) sem precisar de restrições de caixa; o <code>optimize</code>
+      busca no intervalo \((\log\theta_{\min},\, \log\theta_{\max}) = (-4, 8)\),
+      correspondendo a \(\theta \in (e^{-4}, e^{8}) \approx (0.018,\, 2981)\).
+    </div>
+
+<pre class="r-code"><span class="com"># .update_theta: maximização unidimensional de θ_hj em log-espaço</span>
+<span class="com"># Argumentos:</span>
+<span class="com">#   y_j    = Y[,j]       vetor n × 1 de contagens da variável j</span>
+<span class="com">#   tau_h  = tau[,h]     vetor n × 1 de posteriores do componente h</span>
+<span class="com">#   mu_hj  = mu[h,j]     média estimada no M-step anterior</span>
+.update_theta <span class="op">&lt;-</span> <span class="kw">function</span>(y_j, tau_h, mu_hj) {
+
+  neg_ll <span class="op">&lt;-</span> <span class="kw">function</span>(lt) {
+    th <span class="op">&lt;-</span> <span class="fn">exp</span>(lt)                                          <span class="com"># θ = exp(log θ) > 0</span>
+    <span class="op">-</span><span class="fn">sum</span>(tau_h <span class="op">*</span> <span class="fn">dnbinom</span>(y_j, size <span class="op">=</span> th, mu <span class="op">=</span> mu_hj, log <span class="op">=</span> <span class="kw">TRUE</span>))
+    <span class="com"># ─────────────────────────────────────────────────────────────────────</span>
+    <span class="com"># - Σ_i τ_ih · log f_NB(y_ij; μ_hj, θ)  ← neg. lik. ponderada parcial</span>
+  }
+
+  <span class="com"># optimize minimiza neg_ll em lt ∈ (-4, 8)  → θ ∈ (0.018, 2981)</span>
+  <span class="fn">exp</span>(<span class="fn">tryCatch</span>(<span class="fn">optimize</span>(neg_ll, interval <span class="op">=</span> <span class="fn">c</span>(<span class="op">-</span><span class="num">4</span>, <span class="num">8</span>))<span class="op">$</span>minimum,
+               error <span class="op">=</span> <span class="kw">function</span>(e) <span class="num">0</span>))    <span class="com"># fallback exp(0)=1 se numérico falhar</span>
+}
+
+<span class="com"># Chamada dentro do loop EM (para cada h e j):</span>
+<span class="kw">for</span> (h <span class="kw">in</span> <span class="fn">seq_len</span>(g))
+  <span class="kw">for</span> (j <span class="kw">in</span> <span class="fn">seq_len</span>(p))
+    theta[h, j] <span class="op">&lt;-</span> <span class="fn">.update_theta</span>(Y[, j], tau[, h], mu[h, j])
+
+<span class="com"># Guarda θ ≥ 0.05: dispersão muito baixa (θ→0) causaria instabilidade</span>
+theta <span class="op">&lt;-</span> <span class="fn">pmax</span>(theta, <span class="num">0.05</span>)</pre>
+
+    <div class="nota">
+      O <code>tryCatch</code> absorve falhas numéricas raras (e.g., gradiente
+      indefinido quando todos os \(y_{ij} = 0\)), retornando <code>exp(0) = 1</code>
+      como valor seguro. O <code>pmax(theta, 0.05)</code> bloqueia valores
+      extremamente próximos de zero que tornariam \(\mathrm{Var}[Y] \approx \infty\).
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="convergencia">10 · Critério de convergência e múltiplos reinícios</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge conv">Convergência</span>
+    Monotonicidade e critério de parada (Ng et al. §1.3.2, p. 17–18)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      O EM garante que \(\ell(\Psi^{(t+1)}) \geq \ell(\Psi^{(t)})\) em cada
+      iteração (propriedade de ascensão). A convergência é declarada quando
+      o incremento fica abaixo de uma tolerância \(\varepsilon\):
+    </div>
+
+    <div class="eq">
+      $$\left|\ell(\Psi^{(t)}) - \ell(\Psi^{(t-1)})\right| < \varepsilon,
+        \qquad \varepsilon = 10^{-5}$$
+    </div>
+
+<pre class="r-code"><span class="com"># Critério de convergência: |ℓ^(t) - ℓ^(t-1)| < tol  (tol = 1e-5)</span>
+<span class="kw">if</span> (iter <span class="op">&gt;</span> <span class="num">1</span> <span class="op">&amp;&amp;</span> <span class="fn">abs</span>(loglik <span class="op">-</span> loglik_old) <span class="op">&lt;</span> tol) <span class="kw">break</span>
+loglik_old <span class="op">&lt;-</span> loglik
+tau        <span class="op">&lt;-</span> tau_new    <span class="com"># avança τ para a próxima iteração</span></pre>
+
+    <h3>Seleção do melhor reinício</h3>
+
+    <p>
+      Após cada reinício (inicialização diferente), o valor final de
+      \(\ell(\hat{\Psi})\) é comparado ao melhor encontrado até então.
+      Apenas o modelo com maior log-verossimilhança é retornado:
+    </p>
+
+<pre class="r-code"><span class="com"># Atualiza best_fit somente se este reinício superou o anterior</span>
+<span class="kw">if</span> (loglik <span class="op">&gt;</span> best_loglik) {
+  best_loglik <span class="op">&lt;-</span> loglik
+  k_params    <span class="op">&lt;-</span> <span class="num">2L</span> <span class="op">*</span> g <span class="op">*</span> p <span class="op">+</span> (g <span class="op">-</span> <span class="num">1L</span>)    <span class="com"># d(g) = 2gp + (g-1)  ← ver §BIC</span>
+  best_fit    <span class="op">&lt;-</span> <span class="fn">list</span>(
+    g <span class="op">=</span> g, pi <span class="op">=</span> pi_h, mu <span class="op">=</span> mu, theta <span class="op">=</span> theta, tau <span class="op">=</span> tau_new,
+    loglik <span class="op">=</span> loglik, n_iter <span class="op">=</span> iter,
+    classification <span class="op">=</span> <span class="fn">apply</span>(tau_new, <span class="num">1</span>, which.max),
+    BIC <span class="op">=</span> <span class="op">-</span><span class="num">2</span> <span class="op">*</span> loglik <span class="op">+</span> k_params <span class="op">*</span> <span class="fn">log</span>(n),
+    AIC <span class="op">=</span> <span class="op">-</span><span class="num">2</span> <span class="op">*</span> loglik <span class="op">+</span> <span class="num">2</span> <span class="op">*</span> k_params
+  )
+}</pre>
+
+    <div class="nota">
+      O campo <code>classification</code> (<code>apply(tau_new, 1, which.max)</code>)
+      implementa a regra MAP (<em>maximum a posteriori</em>): cada beneficiário
+      é alocado ao componente com maior probabilidade posterior — o classificador
+      de Bayes ótimo sob perda 0-1.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="bic">11 · Seleção de <em>g</em> por BIC</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge selecao">BIC</span>
+    Critério de seleção do número de componentes (Ng et al. §1.2.3, p. 12)
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      O BIC (<em>Bayesian Information Criterion</em>) penaliza a
+      log-verossimilhança maximizada pelo número de parâmetros,
+      equilibrando ajuste e parcimônia:
+    </div>
+
+    <div class="eq">
+      $$BIC(g) \;=\; -2\,\hat{\ell}(\hat{\Psi}) + d(g)\,\log n$$
+    </div>
+
+    <p>
+      A contagem de parâmetros independentes para um modelo com \(g\) componentes,
+      \(p\) variáveis e NB₂ por variável é:
+    </p>
+
+    <div class="eq">
+      $$d(g) \;=\; \underbrace{gp}_{\mu_{hj}} + \underbrace{gp}_{\theta_{hj}}
+               + \underbrace{(g-1)}_{\pi_h}
+               \;=\; 2gp + (g-1)$$
+    </div>
+
+    <blockquote class="cit">
+      "The BIC selects the model with the fewest parameters that still provides
+      a good fit; for a \(g\)-component mixture with \(p\)-dimensional NB
+      components, the number of free parameters is \(d(g) = 2gp + (g-1)\)."
+      <cite>Ng, Xiang &amp; Yau (2019) — §1.2.3, p. 12</cite>
+    </blockquote>
+
+<pre class="r-code"><span class="com"># d(g) = 2·g·p + (g-1):  2gp parâmetros de (μ,θ) + (g-1) proporções livres</span>
+k_params <span class="op">&lt;-</span> <span class="num">2L</span> <span class="op">*</span> g <span class="op">*</span> p <span class="op">+</span> (g <span class="op">-</span> <span class="num">1L</span>)
+
+<span class="com"># BIC = -2 ℓ̂(Ψ̂) + d(g) · log n</span>
+BIC <span class="op">=</span> <span class="op">-</span><span class="num">2</span> <span class="op">*</span> loglik <span class="op">+</span> k_params <span class="op">*</span> <span class="fn">log</span>(n)
+
+<span class="com"># Seleção: g* = argmin_g BIC(g)  (loop externo em comparar_variaveis.R)</span>
+M1_G <span class="op">&lt;-</span> <span class="fn">which.min</span>(M1_bic)    <span class="com"># índice do g ótimo</span>
+M1_opt <span class="op">&lt;-</span> M1_fits[[M1_G]]   <span class="com"># fit com menor BIC</span></pre>
+
+    <p>
+      O BIC é avaliado para \(g = 1, 2, \ldots, G_{\max}\) (padrão: <code>G_MAX = 6</code>).
+      O modelo selecionado é o com menor \(BIC(g)\).
+    </p>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="hungarian">12 · Pareamento ótimo: algoritmo húngaro</h2>
+
+<div class="sec-em">
+  <div class="sec-em-header">
+    <span class="sec-badge modelo">Avaliação</span>
+    Pareamento de rótulos para métricas de recuperação
+  </div>
+  <div class="sec-em-body">
+
+    <div class="teoria">
+      Modelos de mistura produzem rótulos de componente arbitrários
+      (permutação do verdadeiro). Para comparar classificação estimada
+      com rótulos reais é necessário encontrar a <strong>permutação ótima</strong>
+      que maximiza a concordância — problema de atribuição resolvido pelo
+      algoritmo húngaro.
+    </div>
+
+    <div class="eq">
+      $$\hat{\sigma} \;=\; \arg\max_{\sigma \in S_g}
+        \sum_{i=1}^{n} \mathbf{1}\!\left[\hat{z}_i = \sigma(z_i)\right]$$
+    </div>
+
+<pre class="r-code"><span class="com"># parear_otimo: usa clue::solve_LSAP (Linear Sum Assignment Problem)</span>
+parear_otimo <span class="op">&lt;-</span> <span class="kw">function</span>(real, estimado) {
+  g    <span class="op">&lt;-</span> <span class="fn">max</span>(<span class="fn">max</span>(real), <span class="fn">max</span>(estimado))
+  custo <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">0</span>, g, g)
+
+  <span class="com"># Matriz de concordância: custo[i,j] = -#{real==i & estimado==j}</span>
+  <span class="kw">for</span> (i <span class="kw">in</span> <span class="fn">seq_len</span>(<span class="fn">max</span>(real)))
+    <span class="kw">for</span> (j <span class="kw">in</span> <span class="fn">seq_len</span>(<span class="fn">max</span>(estimado)))
+      custo[i, j] <span class="op">&lt;-</span> <span class="op">-</span><span class="fn">sum</span>(real <span class="op">==</span> i <span class="op">&amp;</span> estimado <span class="op">==</span> j)
+
+  <span class="com"># solve_LSAP encontra a permutação que minimiza o custo total</span>
+  <span class="com"># (equivalente a maximizar concordância)</span>
+  sol <span class="op">&lt;-</span> clue::<span class="fn">solve_LSAP</span>(custo <span class="op">+</span> <span class="fn">abs</span>(<span class="fn">min</span>(custo)))
+  <span class="fn">order</span>(<span class="fn">as.integer</span>(sol))[estimado]    <span class="com"># rótulos remapeados</span>
+}</pre>
+
+    <p>
+      Com os rótulos pareados, calculam-se as métricas de recuperação:
+    </p>
+
+    <table class="param-table">
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th>Fórmula / Interpretação</th>
+          <th>Intervalo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ARI</strong><br><small>Adjusted Rand Index</small></td>
+          <td>Concordância de pares ajustada pelo acaso</td>
+          <td class="num">[-1, 1] · ótimo = 1</td>
+        </tr>
+        <tr>
+          <td><strong>NMI</strong><br><small>Normalized Mutual Info</small></td>
+          <td>Informação mútua entre classificações, normalizada</td>
+          <td class="num">[0, 1] · ótimo = 1</td>
+        </tr>
+        <tr>
+          <td><strong>Acurácia</strong></td>
+          <td>\(n^{-1}\sum_i \mathbf{1}[\hat{z}_i^{(\sigma)} = z_i]\) após pareamento</td>
+          <td class="num">[0, 1] · ótimo = 1</td>
+        </tr>
+        <tr>
+          <td><strong>Pureza</strong></td>
+          <td>Média da proporção do grupo dominante por cluster</td>
+          <td class="num">[0, 1] · ótimo = 1</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="codigo">13 · Código completo anotado</h2>
+
+<p>
+  Abaixo reproduzimos o núcleo do algoritmo EM — as funções
+  <code>.update_theta</code> e <code>nb_mix_em</code> — com anotações
+  inline referenciando as seções acima:
+</p>
+
+<pre class="r-code"><span class="com"># =============================================================================</span>
+<span class="com"># Função auxiliar: otimização unidimensional de θ_hj</span>
+<span class="com"># Fundamentação: Ng §4.4 p.82-83 (M-step θ sem forma fechada)</span>
+<span class="com"># =============================================================================</span>
+.update_theta <span class="op">&lt;-</span> <span class="kw">function</span>(y_j, tau_h, mu_hj) {
+  neg_ll <span class="op">&lt;-</span> <span class="kw">function</span>(lt) {
+    th <span class="op">&lt;-</span> <span class="fn">exp</span>(lt)                                          <span class="com"># lt = log θ → θ > 0</span>
+    <span class="op">-</span><span class="fn">sum</span>(tau_h <span class="op">*</span> <span class="fn">dnbinom</span>(y_j, size <span class="op">=</span> th, mu <span class="op">=</span> mu_hj, log <span class="op">=</span> <span class="kw">TRUE</span>))
+  }
+  <span class="fn">exp</span>(<span class="fn">tryCatch</span>(<span class="fn">optimize</span>(neg_ll, interval <span class="op">=</span> <span class="fn">c</span>(<span class="op">-</span><span class="num">4</span>, <span class="num">8</span>))<span class="op">$</span>minimum,
+               error <span class="op">=</span> <span class="kw">function</span>(e) <span class="num">0</span>))
+}
+
+
+<span class="com"># =============================================================================</span>
+<span class="com"># Algoritmo EM principal: mistura de g NB multivariadas</span>
+<span class="com"># =============================================================================</span>
+nb_mix_em <span class="op">&lt;-</span> <span class="kw">function</span>(Y, g,
+                      max_iter <span class="op">=</span> MAX_ITER_NB, tol <span class="op">=</span> TOL_NB,
+                      n_init <span class="op">=</span> N_INIT_NB, seed <span class="op">=</span> SEED) {
+  n <span class="op">&lt;-</span> <span class="fn">nrow</span>(Y); p <span class="op">&lt;-</span> <span class="fn">ncol</span>(Y)
+  Y <span class="op">&lt;-</span> <span class="fn">as.matrix</span>(Y)
+  best_loglik <span class="op">&lt;-</span> <span class="op">-</span>Inf; best_fit <span class="op">&lt;-</span> <span class="kw">NULL</span>
+
+  <span class="kw">for</span> (init <span class="kw">in</span> <span class="fn">seq_len</span>(n_init)) {
+    <span class="com"># ── INICIALIZAÇÃO (§5) ────────────────────────────────────────────────────</span>
+    <span class="kw">if</span> (init <span class="op">==</span> <span class="num">1</span>) {
+      <span class="fn">set.seed</span>(seed)
+      km  <span class="op">&lt;-</span> <span class="fn">kmeans</span>(<span class="fn">log1p</span>(Y), centers <span class="op">=</span> g, nstart <span class="op">=</span> <span class="num">10</span>, iter.max <span class="op">=</span> <span class="num">100</span>)
+      tau <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">0.02</span> <span class="op">/</span> <span class="fn">max</span>(g <span class="op">-</span> <span class="num">1</span>, <span class="num">1</span>), n, g)
+      <span class="kw">for</span> (i <span class="kw">in</span> <span class="fn">seq_len</span>(n)) tau[i, km<span class="op">$</span>cluster[i]] <span class="op">&lt;-</span> <span class="num">0.98</span>
+    } <span class="kw">else</span> {
+      <span class="fn">set.seed</span>(seed <span class="op">+</span> init)
+      tau <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="fn">runif</span>(n <span class="op">*</span> g) <span class="op">+</span> <span class="num">0.01</span>, n, g)
+    }
+    tau   <span class="op">&lt;-</span> tau <span class="op">/</span> <span class="fn">rowSums</span>(tau)
+    theta <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">2</span>, g, p)
+    loglik_old <span class="op">&lt;-</span> <span class="op">-</span>Inf
+
+    <span class="kw">for</span> (iter <span class="kw">in</span> <span class="fn">seq_len</span>(max_iter)) {
+      <span class="com"># ── PASSO M: π e μ (§7, §8) ───────────────────────────────────────────</span>
+      pi_h <span class="op">&lt;-</span> <span class="fn">colMeans</span>(tau)                              <span class="com"># π̂_h = n̂_h / n</span>
+      n_h  <span class="op">&lt;-</span> <span class="fn">colSums</span>(tau)                               <span class="com"># n̂_h = Σ_i τ_ih</span>
+      mu   <span class="op">&lt;-</span> <span class="fn">pmax</span>(<span class="fn">t</span>(tau) <span class="op">%*%</span> Y <span class="op">/</span> n_h, <span class="num">1e-6</span>)           <span class="com"># μ̂_hj (g×p)</span>
+
+      <span class="com"># ── PASSO M: θ (§9) — otimização unidimensional por (h,j) ─────────────</span>
+      <span class="kw">for</span> (h <span class="kw">in</span> <span class="fn">seq_len</span>(g))
+        <span class="kw">for</span> (j <span class="kw">in</span> <span class="fn">seq_len</span>(p))
+          theta[h, j] <span class="op">&lt;-</span> <span class="fn">.update_theta</span>(Y[, j], tau[, h], mu[h, j])
+      theta <span class="op">&lt;-</span> <span class="fn">pmax</span>(theta, <span class="num">0.05</span>)                         <span class="com"># guarda θ ≥ 0.05</span>
+
+      <span class="com"># ── PASSO E: log_f e log-sum-exp (§6) ────────────────────────────────</span>
+      log_f <span class="op">&lt;-</span> <span class="fn">matrix</span>(<span class="num">0</span>, n, g)
+      <span class="kw">for</span> (h <span class="kw">in</span> <span class="fn">seq_len</span>(g)) {
+        log_f[, h] <span class="op">&lt;-</span> <span class="fn">log</span>(pi_h[h]) <span class="op">+</span>
+          <span class="fn">rowSums</span>(<span class="fn">dnbinom</span>(Y,
+                          size <span class="op">=</span> <span class="fn">matrix</span>(theta[h, ], n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                          mu   <span class="op">=</span> <span class="fn">matrix</span>(mu[h, ],    n, p, byrow <span class="op">=</span> <span class="kw">TRUE</span>),
+                          log  <span class="op">=</span> <span class="kw">TRUE</span>))
+      }
+      log_max  <span class="op">&lt;-</span> <span class="fn">apply</span>(log_f, <span class="num">1</span>, max)                   <span class="com"># a*_i</span>
+      log_norm <span class="op">&lt;-</span> <span class="fn">log</span>(<span class="fn">rowSums</span>(<span class="fn">exp</span>(log_f <span class="op">-</span> log_max))) <span class="op">+</span> log_max
+      loglik   <span class="op">&lt;-</span> <span class="fn">sum</span>(log_norm)                          <span class="com"># ℓ(Ψ)</span>
+      tau_new  <span class="op">&lt;-</span> <span class="fn">exp</span>(log_f <span class="op">-</span> log_norm)
+      tau_new  <span class="op">&lt;-</span> tau_new <span class="op">/</span> <span class="fn">rowSums</span>(tau_new)             <span class="com"># τ̂_ih</span>
+
+      <span class="com"># ── CONVERGÊNCIA (§10) ────────────────────────────────────────────────</span>
+      <span class="kw">if</span> (iter <span class="op">&gt;</span> <span class="num">1</span> <span class="op">&amp;&amp;</span> <span class="fn">abs</span>(loglik <span class="op">-</span> loglik_old) <span class="op">&lt;</span> tol) <span class="kw">break</span>
+      loglik_old <span class="op">&lt;-</span> loglik; tau <span class="op">&lt;-</span> tau_new
+    }
+
+    <span class="com"># ── SELECIONA MELHOR REINÍCIO (§10) + CALCULA BIC (§11) ───────────────</span>
+    <span class="kw">if</span> (loglik <span class="op">&gt;</span> best_loglik) {
+      best_loglik <span class="op">&lt;-</span> loglik
+      k_params    <span class="op">&lt;-</span> <span class="num">2L</span> <span class="op">*</span> g <span class="op">*</span> p <span class="op">+</span> (g <span class="op">-</span> <span class="num">1L</span>)               <span class="com"># d(g) = 2gp + (g-1)</span>
+      best_fit    <span class="op">&lt;-</span> <span class="fn">list</span>(
+        g <span class="op">=</span> g, pi <span class="op">=</span> pi_h, mu <span class="op">=</span> mu, theta <span class="op">=</span> theta, tau <span class="op">=</span> tau_new,
+        loglik <span class="op">=</span> loglik, n_iter <span class="op">=</span> iter,
+        classification <span class="op">=</span> <span class="fn">apply</span>(tau_new, <span class="num">1</span>, which.max),   <span class="com"># regra MAP</span>
+        BIC <span class="op">=</span> <span class="op">-</span><span class="num">2</span> <span class="op">*</span> loglik <span class="op">+</span> k_params <span class="op">*</span> <span class="fn">log</span>(n),
+        AIC <span class="op">=</span> <span class="op">-</span><span class="num">2</span> <span class="op">*</span> loglik <span class="op">+</span> <span class="num">2</span> <span class="op">*</span> k_params
+      )
+    }
+  }
+  best_fit
+}</pre>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">14 · Referências</h2>
+
+<div class="ref-entry">
+  <cite>Ng, S. K., Xiang, L., &amp; Yau, K. K. W. (2019).</cite>
+  <em>Mixture Modelling for Medical and Health Sciences.</em>
+  CRC Press / Chapman &amp; Hall.
+  <br>
+  <small>Seções referenciadas: §1.2 (p. 8–15), §1.3 (p. 16–22), §4.4 (p. 81–87).</small>
+</div>
+
+<div class="ref-entry">
+  <cite>Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977).</cite>
+  Maximum likelihood from incomplete data via the EM algorithm.
+  <em>Journal of the Royal Statistical Society: Series B</em>, 39(1), 1–22.
+  <br>
+  <small>Artigo original que introduz o framework EM.</small>
+</div>
+
+<div class="ref-entry">
+  <cite>McLachlan, G. J., &amp; Peel, D. (2000).</cite>
+  <em>Finite Mixture Models.</em>
+  Wiley.
+  <br>
+  <small>Referência geral sobre modelos de mistura, convergência do EM e critérios de seleção.</small>
+</div>
+
+<div class="ref-entry">
+  <cite>Kuhn, H. W. (1955).</cite>
+  The Hungarian method for the assignment problem.
+  <em>Naval Research Logistics Quarterly</em>, 2(1–2), 83–97.
+  <br>
+  <small>Algoritmo de atribuição ótima usado em <code>clue::solve_LSAP</code>.</small>
+</div>
+
+<div class="ref-entry">
+  <cite>Schwarz, G. (1978).</cite>
+  Estimating the dimension of a model.
+  <em>The Annals of Statistics</em>, 6(2), 461–464.
+  <br>
+  <small>Derivação do BIC como critério de seleção de modelos.</small>
+</div>
+
+</div><!-- /.prose -->
+</main>
+
+</body>
+</html>

@@ -180,30 +180,49 @@ for (g in 2:G_MAX) {
 }
 cat("\n")
 
-bic_nb_validos <- bic_nb_fx[bic_nb_fx > 0]
-g_nb_fx        <- which.min(bic_nb_validos) + 1L
-mod_nb_best    <- fits_nb_fx[[g_nb_fx - 1L]]
+# Usa NA em vez de filtrar: preserva o mapeamento índice→g (1 ↔ g=2, 2 ↔ g=3, …)
+bic_nb_na <- replace(bic_nb_fx, bic_nb_fx == 0, NA_real_)
 
-cat(sprintf("     g selecionado: %d\n", g_nb_fx))
+if (all(is.na(bic_nb_na))) {
+  warning("Nenhum ajuste flexmix NB convergiu para exames (FLXMRnegbin falhou em todos os g).")
+  mod_nb_best <- NULL
+  g_nb_fx     <- NA_integer_
+} else {
+  idx_best_nb <- which.min(bic_nb_na)    # posição em bic_nb_fx (1 = g=2, …)
+  g_nb_fx     <- idx_best_nb + 1L        # g real
+  mod_nb_best <- fits_nb_fx[[idx_best_nb]]
+  cat(sprintf("     g selecionado: %d\n", g_nb_fx))
+}
+
+bic_nb_validos <- bic_nb_na[!is.na(bic_nb_na)]   # mantém para prints abaixo
 
 
 # ══ PARTE V: Probabilidades posteriores e resumo (exames, univariado) ════════
 
 cat("\n══ PARTE V: Probabilidades posteriores ═════════════════════════\n")
 
-post_nb  <- flexmix::posterior(mod_nb_best)
-prob_max <- apply(post_nb, 1, max)
-
-cat(sprintf("  Prob. máxima — média: %.3f · mediana: %.3f · pct>0,9: %.1f%%\n",
-            mean(prob_max), median(prob_max), 100 * mean(prob_max > 0.9)))
+if (!is.null(mod_nb_best)) {
+  post_nb  <- flexmix::posterior(mod_nb_best)
+  prob_max <- apply(post_nb, 1, max)
+  cat(sprintf("  Prob. máxima — média: %.3f · mediana: %.3f · pct>0,9: %.1f%%\n",
+              mean(prob_max), median(prob_max), 100 * mean(prob_max > 0.9)))
+} else {
+  post_nb  <- NULL
+  prob_max <- NULL
+  cat("  (ajuste NB não disponível — Parte V ignorada)\n")
+}
 
 cat("\n── Resumo evolução (exames, univariado) ─────────────────────────\n")
 cat(sprintf("  GLM Poisson (g=1):    AIC = %.1f\n", AIC(fit_pois)))
 cat(sprintf("  GLM NB      (g=1):    AIC = %.1f\n", AIC(fit_nb)))
 cat(sprintf("  Mistura Poisson:      BIC = %.1f  (g=%d)\n",
             min(bic_pois_fx), g_pois_fx))
-cat(sprintf("  Mistura NB (flexmix): BIC = %.1f  (g=%d)\n",
-            min(bic_nb_validos), g_nb_fx))
+if (length(bic_nb_validos) > 0 && !is.na(g_nb_fx)) {
+  cat(sprintf("  Mistura NB (flexmix): BIC = %.1f  (g=%d)\n",
+              min(bic_nb_validos), g_nb_fx))
+} else {
+  cat("  Mistura NB (flexmix): sem convergência\n")
+}
 
 
 # ══ PARTE VI: flexmix NB univariado — as 5 variáveis de V3 ══════════════════
@@ -590,8 +609,9 @@ salvar(p04, "fig04_gaussiana_mix.png", w = 8.5, h = 5)
 
 bic05 <- data.frame(
   g      = rep(2:G_MAX, 3),
-  BIC    = c(bic_gauss, bic_pois_fx, bic_nb_fx[bic_nb_fx > 0]),
+  BIC    = c(bic_gauss, bic_pois_fx, bic_nb_na),   # bic_nb_na tem mesma
   modelo = rep(c("Gaussiana (log1p)", "Poisson", "Binomial Negativa"), each = G_MAX - 1)
+  # comprimento que bic_gauss (G_MAX - 1), NAs excluídos pelo ggplot
 )
 bic05$modelo <- factor(bic05$modelo,
                         levels = c("Gaussiana (log1p)", "Poisson", "Binomial Negativa"))

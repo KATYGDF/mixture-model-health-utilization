@@ -167,7 +167,7 @@ for (g in 2:G_MAX) {
   mod <- tryCatch(
     flexmix::flexmix(
       y_exames ~ 1, k = g,
-      model   = flexmix::FLXMRnegbin(),
+      model   = flexmix:::FLXMRnegbin(),
       control = list(iter.max = 300, minprior = 0.02)
     ),
     error = function(e) NULL
@@ -270,7 +270,7 @@ for (var in VARS_V3) {
       data    = df,
       k       = 1:G_MAX,
       nrep    = N_REP_FLEX,
-      model   = flexmix::FLXMRnegbin(),
+      model   = flexmix:::FLXMRnegbin(),
       control = list(iter.max = 300, minprior = 0.02)
     )
   )

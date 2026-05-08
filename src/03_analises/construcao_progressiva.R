@@ -48,6 +48,51 @@ suppressPackageStartupMessages({
 })
 
 
+# ── 2b. FLXMRnegbin (compatibilidade) ────────────────────────────────────────
+# FLXMRnegbin foi adicionado ao flexmix a partir da versão 2.3-14.
+# Se a versão instalada não a contém, definimos uma versão local com API idêntica:
+#   parameters(model) → matriz 2×g: linha 1 = log(µ_h), linha 2 = θ_h
+
+if (!tryCatch({ flexmix::FLXMRnegbin; TRUE }, error = function(e) FALSE)) {
+  FLXMRnegbin <- function(formula = . ~ .) {
+    z <- methods::new("FLXMR", formula = formula, name = "FLXMRnegbin",
+                      weighted = TRUE)
+
+    z@defineComponent <- function(para) {
+      mu_log <- para$mu_log
+      theta  <- para$theta
+      methods::new("FLXcomponent",
+        # lista de comprimento 1 → drop extrai vetor nomeado → cbind → matriz 2×g
+        parameters = list(coef = c("(Intercept)" = mu_log, "theta" = theta)),
+        predict    = function(x, ...) matrix(exp(mu_log), nrow(x), 1L),
+        logLik     = function(x, y)
+          dnbinom(as.integer(y), mu = exp(mu_log), size = theta, log = TRUE),
+        df = 2L
+      )
+    }
+
+    z@fit <- function(x, y, w, ...) {
+      y_int <- as.integer(y)
+      w_n   <- w / sum(w)                          # pesos normalizados
+      mu0   <- pmax(sum(w_n * y_int), 1e-4)        # MLE fechado para µ
+      opt   <- tryCatch(
+        optimize(
+          function(lt) -sum(w_n * dnbinom(y_int, mu = mu0,
+                                          size = exp(lt), log = TRUE)),
+          interval = c(-6, 8)
+        ),
+        error = function(e) NULL
+      )
+      theta <- if (!is.null(opt) && is.finite(opt$minimum)) exp(opt$minimum) else 1.0
+      z@defineComponent(list(mu_log = log(mu0), theta = theta))
+    }
+
+    z
+  }
+  message("FLXMRnegbin definido localmente (flexmix < 2.3-14).")
+}
+
+
 # ── 3. Dados ──────────────────────────────────────────────────────────────────
 
 df_raw <- read.csv(CAMINHO_CSV, stringsAsFactors = FALSE, encoding = "UTF-8")
@@ -167,7 +212,7 @@ for (g in 2:G_MAX) {
   mod <- tryCatch(
     flexmix::flexmix(
       y_exames ~ 1, k = g,
-      model   = flexmix:::FLXMRnegbin(),
+      model   = FLXMRnegbin(),
       control = list(iter.max = 300, minprior = 0.02)
     ),
     error = function(e) NULL
@@ -270,7 +315,7 @@ for (var in VARS_V3) {
       data    = df,
       k       = 1:G_MAX,
       nrep    = N_REP_FLEX,
-      model   = flexmix:::FLXMRnegbin(),
+      model   = FLXMRnegbin(),
       control = list(iter.max = 300, minprior = 0.02)
     )
   )

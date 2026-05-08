@@ -25,17 +25,18 @@
 
 # ── 1. Parâmetros ─────────────────────────────────────────────────────────────
 
-CAMINHO_CSV <- "../../dados/dados_simulados.csv"
-SEED        <- 42L
-G_MAX       <- 6L
-VARS_V3     <- c("consultas", "ps", "exames", "internacoes", "terapias")
-DIR_RDS     <- "rds"
-N_REP_FLEX  <- 5L   # reinícios por g no stepFlexmix
+CAMINHO_CSV  <- "../../dados/dados_simulados.csv"
+SEED         <- 42L
+G_MAX        <- 6L
+VARS_V3      <- c("consultas", "ps", "exames", "internacoes", "terapias")
+DIR_RDS      <- "rds"
+N_REP_FLEX   <- 5L    # reinícios por g no stepFlexmix
+DIR_FIGS_HTML <- "../../docs/assets/img/construcao"   # figuras para a página web
 
 
 # ── 2. Pacotes ────────────────────────────────────────────────────────────────
 
-pkgs  <- c("MASS", "mixtools", "flexmix")
+pkgs  <- c("MASS", "mixtools", "flexmix", "ggplot2", "patchwork", "scales")
 novos <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
 if (length(novos) > 0) {
   message("Instalando: ", paste(novos, collapse = ", "))
@@ -43,6 +44,7 @@ if (length(novos) > 0) {
 }
 suppressPackageStartupMessages({
   library(MASS); library(mixtools); library(flexmix)
+  library(ggplot2); library(patchwork); library(scales)
 })
 
 
@@ -413,6 +415,399 @@ cat("  ent_rel_pct  = entropia média como % da entropia máxima (menor = melhor
 
 cat("\nNota: avaliação UNIVARIADA — cada variável independentemente.\n")
 cat("O EM customizado (comparar_variaveis.R) opera sobre Y multivariado (V3: 5 vars).\n")
+
+
+# ══ PARTE VII: Visualizações ═════════════════════════════════════════════════
+
+cat("\n══ PARTE VII: Gerando figuras ══════════════════════════════════\n")
+
+for (d in c(DIR_RDS, DIR_FIGS_HTML))
+  if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+
+# Paleta e tema consistentes com comparar_variaveis.R
+COR_COMP <- setNames(
+  c("#4a7c59","#2980b9","#e6a817","#c0392b","#8e44ad","#16a085"),
+  as.character(1:6)
+)
+TEMA <- theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor  = element_blank(),
+    strip.text        = element_text(face = "bold", size = 9),
+    strip.background  = element_rect(fill = "#f0f0f0", colour = NA),
+    legend.position   = "bottom",
+    plot.title        = element_text(face = "bold", size = 12),
+    plot.subtitle     = element_text(colour = "grey40", size = 9),
+    plot.caption      = element_text(colour = "grey55", size = 8, hjust = 0)
+  )
+
+salvar <- function(p, nome, w = 9, h = 5) {
+  caminho <- file.path(DIR_FIGS_HTML, nome)
+  ggsave(caminho, p, width = w, height = h, dpi = 150, bg = "white")
+  cat(sprintf("  %s\n", nome))
+}
+
+
+# ── FIG 01 · Sobredispersão: razão Var/Média por variável ────────────────────
+
+df_sd <- stats_mv
+df_sd$cor <- ifelse(df_sd$razao_v_m > 10, "alta",
+             ifelse(df_sd$razao_v_m > 5,  "moderada", "baixa"))
+df_sd$variavel <- factor(df_sd$variavel, levels = rev(VARS_V3))
+
+p01 <- ggplot(df_sd, aes(razao_v_m, variavel, fill = cor)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = sprintf("%.1f×", razao_v_m)),
+            hjust = -0.15, size = 3.5) +
+  geom_vline(xintercept = 1, colour = "grey30", linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = 1.3, y = 0.55, label = "Poisson\n(razão = 1)",
+           hjust = 0, size = 3, colour = "grey30") +
+  scale_fill_manual(
+    values = c(alta = "#c0392b", moderada = "#e6a817", baixa = "#4a7c59"),
+    name = "Sobredispersão", guide = guide_legend(reverse = TRUE)
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
+  labs(
+    x = "Razão Variância / Média",
+    y = NULL,
+    title = "Sobredispersão por variável — V3",
+    subtitle = "Razão > 1 viola a hipótese de equidispersão da Poisson",
+    caption = sprintf("n = %d beneficiários  ·  grupos simulados = %d",
+                      nrow(df), nlevels(df$grupo_real))
+  ) +
+  TEMA + theme(legend.position = "right")
+
+salvar(p01, "fig01_sobredispersao.png", w = 8, h = 4.5)
+
+
+# ── FIG 02 · Poisson vs NB: PMF empírica × ajustada (exames) ─────────────────
+
+x_max02 <- as.integer(quantile(y_exames, 0.97))
+x_seq02 <- 0:x_max02
+mu_pois  <- mean(y_exames)
+mu_nb    <- exp(coef(fit_nb)[1])
+th_nb    <- fit_nb$theta
+
+emp02 <- data.frame(
+  y    = as.integer(names(table(y_exames[y_exames <= x_max02]))),
+  prop = as.numeric(table(y_exames[y_exames <= x_max02])) / length(y_exames)
+)
+mod02 <- rbind(
+  data.frame(y = x_seq02, prob = dpois(x_seq02, lambda = mu_pois),
+             modelo = sprintf("Poisson (λ=%.1f)", mu_pois)),
+  data.frame(y = x_seq02, prob = dnbinom(x_seq02, mu = mu_nb, size = th_nb),
+             modelo = sprintf("NB (μ=%.1f, θ=%.2f)", mu_nb, th_nb))
+)
+
+p02 <- ggplot() +
+  geom_col(data = emp02, aes(y, prop),
+           fill = "grey82", colour = "grey70", width = 0.9) +
+  geom_line(data = mod02, aes(y, prob, colour = modelo), linewidth = 1.1) +
+  geom_point(data = mod02, aes(y, prob, colour = modelo), size = 1.5) +
+  scale_colour_manual(
+    values = c("#c0392b", "#2980b9"), name = NULL,
+    guide = guide_legend(override.aes = list(linewidth = 1.5))
+  ) +
+  scale_x_continuous(breaks = seq(0, x_max02, by = 5)) +
+  labs(
+    x = "exames (contagem)",
+    y = "Proporção / Probabilidade",
+    title = "PMF empírica de exames vs. ajuste Poisson e NB",
+    subtitle = "Barras = frequência observada  ·  Linhas = PMF teórica",
+    caption = sprintf(
+      "AIC Poisson = %.0f  ·  AIC NB = %.0f  ·  ganho = %.0f  ·  θ̂ = %.3f",
+      AIC(fit_pois), AIC(fit_nb), AIC(fit_pois) - AIC(fit_nb), th_nb
+    )
+  ) +
+  TEMA + theme(legend.position = c(0.72, 0.78),
+               legend.background = element_rect(fill = "white", colour = NA))
+
+salvar(p02, "fig02_pois_vs_nb.png", w = 9, h = 5)
+
+
+# ── FIG 03 · Resíduos de Pearson do GLM NB global ───────────────────────────
+
+df_res <- data.frame(resid = resid_nb)
+p03 <- ggplot(df_res, aes(resid)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 60, fill = "#2980b9", colour = "white", alpha = 0.7) +
+  geom_density(colour = "#1a5276", linewidth = 0.9) +
+  stat_function(fun = dnorm, colour = "#c0392b", linewidth = 0.9, linetype = "dashed",
+                args = list(mean = mean(resid_nb), sd = sd(resid_nb))) +
+  annotate("text", x = max(resid_nb) * 0.6, y = Inf,
+           label = sprintf("Curtose = %.2f\n(Normal = 3.00)", kurt_nb),
+           vjust = 1.4, hjust = 0.5, size = 3.3, colour = "#c0392b") +
+  labs(
+    x = "Resíduo de Pearson",
+    y = "Densidade",
+    title = "Resíduos de Pearson — GLM Binomial Negativa global (exames)",
+    subtitle = "Azul = densidade empírica  ·  Vermelho tracejado = Normal com mesma média e DP",
+    caption = "Curtose >> 3 e bimodalidade nos resíduos indicam mistura de subpopulações"
+  ) +
+  TEMA
+
+salvar(p03, "fig03_residuos_nb.png", w = 8.5, h = 5)
+
+
+# ── FIG 04 · Mistura Gaussiana em log1p(exames) — mixtools ───────────────────
+
+x_grid04 <- seq(min(y_log) - 0.2, max(y_log) + 0.2, length.out = 400)
+
+comp04 <- do.call(rbind, lapply(seq_len(g_gauss), function(h) {
+  data.frame(
+    x    = x_grid04,
+    dens = fit_gauss$lambda[h] * dnorm(x_grid04,
+                                       mean = fit_gauss$mu[h],
+                                       sd   = fit_gauss$sigma[h]),
+    comp = paste0("G", h)
+  )
+}))
+mix04 <- data.frame(
+  x    = x_grid04,
+  dens = rowSums(sapply(seq_len(g_gauss), function(h)
+    fit_gauss$lambda[h] * dnorm(x_grid04, fit_gauss$mu[h], fit_gauss$sigma[h])))
+)
+
+p04 <- ggplot() +
+  geom_histogram(data = data.frame(x = y_log),
+                 aes(x, y = after_stat(density)),
+                 bins = 40, fill = "grey85", colour = "white") +
+  geom_line(data = comp04, aes(x, dens, colour = comp), linewidth = 1, linetype = "dashed") +
+  geom_line(data = mix04,  aes(x, dens), colour = "black", linewidth = 1.2) +
+  scale_colour_manual(values = unname(COR_COMP[1:g_gauss]), name = "Componente") +
+  labs(
+    x = "log(1 + exames)",
+    y = "Densidade",
+    title = sprintf("Mistura Gaussiana em log₁₊(exames) — %d componentes (mixtools)", g_gauss),
+    subtitle = "Linhas coloridas = componentes ponderados  ·  Linha preta = densidade da mistura",
+    caption = "Limitação: suporte ℝ da Normal inclui valores negativos impossíveis para contagens"
+  ) +
+  TEMA
+
+salvar(p04, "fig04_gaussiana_mix.png", w = 8.5, h = 5)
+
+
+# ── FIG 05 · Curvas BIC: Gaussiana / Poisson / NB — exames, g = 2..6 ────────
+
+bic05 <- data.frame(
+  g      = rep(2:G_MAX, 3),
+  BIC    = c(bic_gauss, bic_pois_fx, bic_nb_fx[bic_nb_fx > 0]),
+  modelo = rep(c("Gaussiana (log1p)", "Poisson", "Binomial Negativa"), each = G_MAX - 1)
+)
+bic05$modelo <- factor(bic05$modelo,
+                        levels = c("Gaussiana (log1p)", "Poisson", "Binomial Negativa"))
+
+# marcar mínimo por modelo
+bic05_min <- do.call(rbind, lapply(levels(bic05$modelo), function(m) {
+  sub <- bic05[bic05$modelo == m, ]
+  sub[which.min(sub$BIC), ]
+}))
+
+p05 <- ggplot(bic05, aes(g, BIC, colour = modelo, group = modelo)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  geom_point(data = bic05_min, shape = 21, size = 5.5,
+             stroke = 1.8, fill = NA, colour = "grey20") +
+  scale_colour_manual(
+    values = c("Gaussiana (log1p)" = "#8e44ad",
+               "Poisson"           = "#e6a817",
+               "Binomial Negativa" = "#2980b9"),
+    name = NULL
+  ) +
+  scale_x_continuous(breaks = 2:G_MAX) +
+  labs(
+    x = "Número de componentes (g)",
+    y = "BIC",
+    title = "Curvas BIC por família de mistura — exames (univariado)",
+    subtitle = "Círculo destacado = g* selecionado (mínimo BIC por família)",
+    caption = "Nota: BIC NB < BIC Poisson < BIC Gaussiana — confirma que NB é a família correta para dados de contagem sobredispersos"
+  ) +
+  TEMA
+
+salvar(p05, "fig05_bic_familias.png", w = 9, h = 5)
+
+
+# ── FIG 06 · Histograma + componentes NB ajustados — as 5 variáveis ──────────
+# Um painel por variável; barras = PMF empírica; linhas = componentes + mistura
+
+plots_comp <- lapply(VARS_V3, function(var) {
+  y_v    <- df[[var]]
+  res_v  <- resultados_univ[[var]]
+  pars_v <- flexmix::parameters(res_v$best)
+  mu_v   <- exp(pars_v[1, ])
+  th_v   <- pars_v[2, ]
+  pi_v   <- flexmix::prior(res_v$best)
+  g_v    <- res_v$g_best
+
+  x_max_v <- as.integer(quantile(y_v, 0.97))
+  x_seq_v <- 0:x_max_v
+
+  # PMF empírica (truncada no p97)
+  emp_v <- data.frame(
+    y    = x_seq_v,
+    prop = sapply(x_seq_v, function(yk) mean(y_v == yk))
+  )
+
+  # PMF da mistura
+  mix_v <- data.frame(
+    y   = x_seq_v,
+    pmf = sapply(x_seq_v, function(yk)
+      sum(pi_v * dnbinom(yk, mu = mu_v, size = th_v)))
+  )
+
+  # PMF por componente (contribuição ponderada)
+  comp_v <- do.call(rbind, lapply(seq_len(g_v), function(h) {
+    data.frame(
+      y    = x_seq_v,
+      pmf  = pi_v[h] * dnbinom(x_seq_v, mu = mu_v[h], size = th_v[h]),
+      comp = paste0("G", h)
+    )
+  }))
+
+  pesos_lbl <- paste(sprintf("G%d: μ=%.1f π=%.2f", seq_len(g_v), mu_v, pi_v),
+                     collapse = "\n")
+
+  ggplot() +
+    geom_col(data = emp_v, aes(y, prop),
+             fill = "grey83", colour = "grey70", width = 0.85) +
+    geom_line(data = comp_v, aes(y, pmf, colour = comp),
+              linewidth = 0.85, linetype = "dashed") +
+    geom_line(data = mix_v,  aes(y, pmf),
+              colour = "black", linewidth = 1.1) +
+    scale_colour_manual(values = unname(COR_COMP[1:g_v]), name = NULL,
+                        guide = guide_legend(nrow = 1)) +
+    annotate("text", x = x_max_v * 0.55, y = Inf,
+             label = pesos_lbl, vjust = 1.3, hjust = 0,
+             size = 2.4, colour = "grey20", lineheight = 1.3) +
+    labs(x = var, y = "Probabilidade",
+         title = sprintf("%s  (g*=%d)", var, g_v),
+         subtitle = sprintf("BIC* = %.0f  ·  mediana max(τ̂) = %.3f",
+                            min(res_v$crit_tab$BIC, na.rm = TRUE),
+                            median(res_v$max_post))) +
+    TEMA +
+    theme(legend.position  = "none",
+          plot.title       = element_text(size = 10),
+          plot.subtitle    = element_text(size = 8),
+          axis.title.x     = element_text(face = "bold"))
+})
+
+fig06 <- wrap_plots(plots_comp, ncol = 3) +
+  plot_annotation(
+    title    = "Componentes NB ajustados por variável — flexmix NB univariado (V3)",
+    subtitle = "Barras = PMF empírica  ·  Linhas coloridas = componentes ponderados  ·  Linha preta = mistura",
+    caption  = "g* selecionado pelo BIC  ·  x truncado no percentil 97",
+    theme    = TEMA
+  )
+
+salvar(fig06, "fig06_componentes_nb_v3.png", w = 15, h = 9)
+
+
+# ── FIG 07 · Curvas BIC e ICL — as 5 variáveis, g = 1..6 ────────────────────
+
+crit_long <- do.call(rbind, lapply(VARS_V3, function(var) {
+  ct <- resultados_univ[[var]]$crit_tab
+  rbind(
+    data.frame(variavel = var, g = ct$g, valor = ct$BIC, criterio = "BIC"),
+    data.frame(variavel = var, g = ct$g, valor = ct$ICL, criterio = "ICL")
+  )
+}))
+crit_long$variavel <- factor(crit_long$variavel, levels = VARS_V3)
+crit_long$criterio <- factor(crit_long$criterio, levels = c("BIC", "ICL"))
+
+# marcar g* por variável e critério
+g_star_df <- do.call(rbind, lapply(VARS_V3, function(var) {
+  ct <- resultados_univ[[var]]$crit_tab
+  rbind(
+    data.frame(variavel = var, g = ct$g[which.min(ct$BIC)],
+               valor = min(ct$BIC, na.rm=TRUE), criterio = "BIC"),
+    data.frame(variavel = var, g = ct$g[which.min(ct$ICL)],
+               valor = min(ct$ICL, na.rm=TRUE), criterio = "ICL")
+  )
+}))
+g_star_df$variavel <- factor(g_star_df$variavel, levels = VARS_V3)
+g_star_df$criterio <- factor(g_star_df$criterio, levels = c("BIC", "ICL"))
+
+p07 <- ggplot(crit_long[!is.na(crit_long$valor), ],
+              aes(g, valor, colour = variavel, group = variavel)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 2) +
+  geom_point(data = g_star_df,
+             shape = 21, size = 5, stroke = 1.6, fill = NA, colour = "grey20") +
+  facet_wrap(~ criterio, scales = "free_y") +
+  scale_x_continuous(breaks = 1:G_MAX) +
+  scale_colour_manual(values = unname(COR_COMP[1:5]), name = "Variável") +
+  labs(
+    x = "Número de componentes (g)",
+    y = "Valor do critério",
+    title = "Seleção de g por variável — BIC e ICL (flexmix NB univariado)",
+    subtitle = "Círculo destacado = g* selecionado  ·  ICL penaliza sobreposição de componentes",
+    caption = "ICL = BIC + 2·H(τ)  onde H(τ) = entropia das probabilidades posteriores"
+  ) +
+  TEMA
+
+salvar(p07, "fig07_bic_icl_v3.png", w = 12, h = 5.5)
+
+
+# ── FIG 08 · Distribuição de max(τ̂_ih) — certeza de classificação ──────────
+
+post_long <- do.call(rbind, lapply(VARS_V3, function(var) {
+  res_v <- resultados_univ[[var]]
+  data.frame(
+    variavel = factor(var, levels = VARS_V3),
+    max_tau  = res_v$max_post,
+    limiar   = 1 / res_v$g_best,
+    g        = res_v$g_best
+  )
+}))
+
+# mediana e % > 0.9 por variável
+post_sum <- do.call(rbind, lapply(VARS_V3, function(var) {
+  sub <- post_long[post_long$variavel == var, ]
+  data.frame(
+    variavel = factor(var, levels = VARS_V3),
+    mediana  = median(sub$max_tau),
+    pct90    = mean(sub$max_tau > 0.9) * 100,
+    limiar   = unique(sub$limiar)
+  )
+}))
+post_sum$label <- sprintf("med=%.2f\n%.0f%%>0.9", post_sum$mediana, post_sum$pct90)
+
+p08 <- ggplot(post_long, aes(max_tau)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 30, fill = "#2980b9", colour = "white", alpha = 0.65) +
+  geom_density(colour = "#1a5276", linewidth = 0.9) +
+  geom_vline(data = post_sum, aes(xintercept = mediana),
+             colour = "#c0392b", linetype = "dashed", linewidth = 0.8) +
+  geom_vline(data = post_sum, aes(xintercept = limiar),
+             colour = "#e6a817", linetype = "dotted", linewidth = 0.8) +
+  geom_text(data = post_sum,
+            aes(x = 0.04, y = Inf, label = label),
+            hjust = 0, vjust = 1.4, size = 2.9, colour = "grey25",
+            lineheight = 1.2) +
+  facet_wrap(~ variavel, ncol = 3, scales = "free_y") +
+  scale_x_continuous(labels = percent_format(accuracy = 1),
+                     limits = c(0, 1),
+                     breaks = c(0, 0.5, 1)) +
+  labs(
+    x       = "max τ̂_ih  (certeza de pertencimento ao melhor componente)",
+    y       = "Densidade",
+    title   = "Certeza de classificação por variável — flexmix NB univariado",
+    subtitle = "Vermelho tracejado = mediana  ·  Amarelo pontilhado = chance aleatória (1/g*)",
+    caption  = "Valores próximos de 1 = beneficiário bem alocado  ·  próximos de 1/g = sobreposição entre grupos"
+  ) +
+  TEMA
+
+salvar(p08, "fig08_posteriores_v3.png", w = 13, h = 7)
+
+
+cat("\nFiguras salvas em:", DIR_FIGS_HTML, "\n")
+cat("  fig01_sobredispersao.png\n")
+cat("  fig02_pois_vs_nb.png\n")
+cat("  fig03_residuos_nb.png\n")
+cat("  fig04_gaussiana_mix.png\n")
+cat("  fig05_bic_familias.png\n")
+cat("  fig06_componentes_nb_v3.png\n")
+cat("  fig07_bic_icl_v3.png\n")
+cat("  fig08_posteriores_v3.png\n")
 
 
 # ── 7. Salvar resultados ──────────────────────────────────────────────────────

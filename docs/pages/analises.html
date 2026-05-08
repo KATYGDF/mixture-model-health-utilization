@@ -309,8 +309,8 @@ Três características dos dados de utilização violam diretamente essa suposi�
   <li><strong>Suporte discreto e não negativo.</strong> Contagens pertencem a
       \(\{0,1,2,\ldots\}\); a Gaussiana distribui probabilidade em
       \((-\infty,0)\), o que é probabilisticamente inconsistente.</li>
-  <li><strong>Massa em zero.</strong> Variáveis como \(\texttt{terapias}\)
-      (~80&nbsp;% de zeros) e \(\texttt{internacoes}\) (~94&nbsp;% de zeros)
+  <li><strong>Massa em zero.</strong> Variáveis como <code>terapias</code>
+      (~80&nbsp;% de zeros) e <code>internacoes</code> (~94&nbsp;% de zeros)
       produzem, após \(\log(1+x)\), uma massa pontual em \(0\) incompatível com
       a densidade gaussiana contínua.</li>
   <li><strong>Assimetria residual.</strong> Mesmo após transformação logarítmica,
@@ -531,32 +531,32 @@ disponibilidade típica em dados administrativos de planos de saúde:
   <tbody>
     <tr>
       <td><strong>V1</strong></td><td>Baseline</td>
-      <td>\(\texttt{consultas}\), \(\texttt{exames}\), \(\texttt{pronto\_socorro}\)</td>
+      <td><code>consultas</code>, <code>exames</code>, <code>pronto_socorro</code></td>
     </tr>
     <tr>
       <td><strong>V2</strong></td><td>+ internações</td>
-      <td>V1 + \(\texttt{internacoes}\)</td>
+      <td>V1 + <code>internacoes</code></td>
     </tr>
     <tr>
       <td><strong>V3</strong></td><td>+ terapias</td>
-      <td>V2 + \(\texttt{terapias}\)</td>
+      <td>V2 + <code>terapias</code></td>
     </tr>
     <tr>
       <td><strong>V4</strong></td><td>+ prestadores</td>
-      <td>V3 + \(\texttt{prestadores\_distintos}\)</td>
+      <td>V3 + <code>prestadores_distintos</code></td>
     </tr>
     <tr>
       <td><strong>V5</strong></td><td>+ meses de utilização</td>
-      <td>V4 + \(\texttt{meses\_utilizacao}\)</td>
+      <td>V4 + <code>meses_utilizacao</code></td>
     </tr>
   </tbody>
 </table>
 
 <p>
 As variáveis V1–V3 são contagens de eventos clínicos com sobredispersão moderada a
-elevada, naturalmente acomodadas pela NB. \(\texttt{prestadores\_distintos}\) (V4)
+elevada, naturalmente acomodadas pela NB. <code>prestadores_distintos</code> (V4)
 tem distribuição concentrada em valores baixos e sem excesso de zeros estruturais.
-\(\texttt{meses\_utilizacao}\) (V5) é discreta com suporte limitado \([1,12]\) e
+<code>meses_utilizacao</code> (V5) é discreta com suporte limitado \([1,12]\) e
 distribuição bimodal em U, gerada por Beta-Binomial na simulação — cuja estrutura
 a NB apenas aproxima.
 </p>
@@ -727,10 +727,10 @@ são informativas.
 </p>
 
 <p>
-A transição V2 → V3, que adiciona \(\texttt{terapias}\), produziu o maior ganho
+A transição V2 → V3, que adiciona <code>terapias</code>, produziu o maior ganho
 isolado: ARI aumentou de 0,658 para 0,729 na Mistura NB (+0,071) e de 0,580
 para 0,673 no K-means (+0,093). Isso reflete o poder discriminativo de
-\(\texttt{terapias}\): na simulação, o grupo \(G_4\) (padrão atípico) tem
+<code>terapias</code>: na simulação, o grupo \(G_4\) (padrão atípico) tem
 probabilidade de zero estrutural \(\omega = 0{,}35\) — o menor valor entre
 todos os grupos —, enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria
 cria um sinal de separação que a Mistura NB captura diretamente por meio da
@@ -740,7 +740,7 @@ estrutura ZINB do componente correspondente.
 <h3>Inversão em V4 e V5: K-means supera a Mistura NB</h3>
 
 <p>
-O acréscimo de \(\texttt{prestadores\_distintos}\) em V4 causou queda expressiva
+O acréscimo de <code>prestadores_distintos</code> em V4 causou queda expressiva
 na Mistura NB (ARI: 0,729 → 0,442) com o BIC selecionando \(g = 6\) — o dobro
 do número verdadeiro. K-means manteve ARI = 0,662 e tornou-se o método de
 melhor desempenho nesse conjunto. O padrão se repete em V5: NB (ARI = 0,348)
@@ -750,7 +750,7 @@ e K-means (ARI = 0,475).
 <p>
 Essa inversão ilustra precisamente o papel diagnóstico do K-means descrito
 na Seção 2: quando ele supera a Mistura NB, isso sinaliza sobreajuste do BIC.
-\(\texttt{prestadores\_distintos}\) tem distribuição concentrada em valores
+<code>prestadores_distintos</code> tem distribuição concentrada em valores
 baixos e sem excesso de zeros estruturais — padrão distinto das demais variáveis
 clínicas. Ao tentar acomodar essa variável com a mesma família NB, o modelo
 fragmenta subgrupos reais em componentes espúrios, inflando \(g\). K-means, por

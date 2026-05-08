@@ -171,6 +171,27 @@ blockquote.cit cite {
 .res-table tr.best td   { background: #f0f7f2; }
 .res-table tr.best .num { font-weight: 600; }
 .res-table tr.sep td    { border-top: 2px solid var(--border, #ccc); }
+.res-table tr.desat td  { color: #aaa; }
+.res-table tr.desat .num { color: #bbb; }
+
+/* ── Figuras ────────────────────────────────────────────────── */
+.fig-wrapper {
+  margin: 2rem 0;
+  text-align: center;
+}
+.fig-wrapper img {
+  max-width: 100%;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.fig-caption {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--muted, #777);
+  line-height: 1.5;
+}
+.fig-caption strong { color: var(--ink, #333); }
 
 </style>
 </head>
@@ -196,7 +217,7 @@ blockquote.cit cite {
 <div class="prose">
 
 <h1>Análises Iniciais</h1>
-<p class="lead">Recuperação de grupos latentes por Mistura de Binomiais Negativas e K-means em cinco conjuntos de variáveis de contagem</p>
+<p class="lead">Recuperação de grupos latentes por Mistura de Binomiais Negativas e K-means em três conjuntos de variáveis de contagem — melhor resultado: ARI = 0,729 · Acurácia = 0,877 (V3, Mistura NB, <em>g</em> = 4)</p>
 
 <div class="toc">
   <strong>Nesta página</strong>
@@ -641,13 +662,13 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V1 · Baseline</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,630</td><td class="num">0,483</td>
       <td class="num">0,820</td><td class="num">0,796</td>
-      <td class="num">4.067,5</td>
+      <td class="num">2.875,2</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">3</td><td class="num">0,570</td><td class="num">0,445</td>
       <td class="num">0,797</td><td class="num">0,768</td>
-      <td class="num">2,6</td>
+      <td class="num">1,9</td>
     </tr>
 
     <!-- V2 -->
@@ -655,13 +676,13 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V2 · + internações</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,658</td><td class="num">0,513</td>
       <td class="num">0,836</td><td class="num">0,814</td>
-      <td class="num">4.217,8</td>
+      <td class="num">1.735,2</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
       <td class="num">0,777</td><td class="num">0,803</td>
-      <td class="num">1,6</td>
+      <td class="num">0,8</td>
     </tr>
 
     <!-- V3 — melhor global -->
@@ -669,41 +690,41 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V3 · + terapias</td><td>Mistura NB ★</td>
       <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
       <td class="num">0,877</td><td class="num">0,861</td>
-      <td class="num">4.400,2</td>
+      <td class="num">3.826,2</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
       <td class="num">0,815</td><td class="num">0,843</td>
-      <td class="num">1,0</td>
+      <td class="num">1,5</td>
     </tr>
 
-    <!-- V4 -->
-    <tr class="sep">
-      <td>V4 · + prestadores</td><td>Mistura NB</td>
+    <!-- V4 — desativado -->
+    <tr class="sep desat">
+      <td>V4 · + prestadores <em>(desativado†)</em></td><td>Mistura NB</td>
       <td class="num">6</td><td class="num">0,442</td><td class="num">0,354</td>
       <td class="num">0,621</td><td class="num">0,775</td>
-      <td class="num">5.788,4</td>
+      <td class="num">—</td>
     </tr>
-    <tr>
+    <tr class="desat">
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,662</td><td class="num">0,525</td>
       <td class="num">0,810</td><td class="num">0,836</td>
-      <td class="num">2,0</td>
+      <td class="num">—</td>
     </tr>
 
-    <!-- V5 -->
-    <tr class="sep">
-      <td>V5 · + meses util.</td><td>Mistura NB</td>
+    <!-- V5 — desativado -->
+    <tr class="sep desat">
+      <td>V5 · + meses util. <em>(desativado†)</em></td><td>Mistura NB</td>
       <td class="num">6</td><td class="num">0,348</td><td class="num">0,327</td>
       <td class="num">0,519</td><td class="num">0,794</td>
-      <td class="num">7.703,7</td>
+      <td class="num">—</td>
     </tr>
-    <tr>
+    <tr class="desat">
       <td></td><td>K-means</td>
       <td class="num">3</td><td class="num">0,475</td><td class="num">0,329</td>
       <td class="num">0,736</td><td class="num">0,773</td>
-      <td class="num">1,9</td>
+      <td class="num">—</td>
     </tr>
 
   </tbody>
@@ -711,8 +732,99 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
 
 <div class="nota">
   ★ melhor resultado global: V3 + Mistura NB (ARI = 0,729 · Acurácia = 0,877).
-  Em V3, o BIC selecionou corretamente \(g = 4\) — o número verdadeiro de grupos.
+  Em V3, o BIC selecionou corretamente \(g = 4\) — o número verdadeiro de grupos.<br>
+  <span style="font-size:0.85em">† V4 e V5 desativados: confirmado empiricamente que não melhoram o modelo.
+  Métricas registradas de execução anterior para referência.</span>
 </div>
+
+
+<!-- ── Visualização 1: Matrizes de confusão ── -->
+<h3 style="margin-top:2rem">Matrizes de confusão — V1, V2 e V3</h3>
+<p>
+As matrizes abaixo mostram a correspondência entre grupos reais e estimados após
+pareamento ótimo de rótulos via algoritmo húngaro. Cada célula exibe a contagem
+absoluta e a proporção em relação ao total (\(n = 5\,000\)). A diagonal principal
+acumula as classificações corretas; as células fora da diagonal revelam quais
+pares de grupos são mais frequentemente confundidos.
+</p>
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/01_matrizes_confusao.png"
+       alt="Matrizes de confusão — V1, V2 e V3 × Mistura NB e K-means"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 1.</strong> Matrizes de confusão para os três conjuntos ativos (V1–V3), lado a lado para
+    Mistura NB (esquerda) e K-means (direita). A diagonal principal corresponde às
+    classificações corretas. Rótulos pareados via algoritmo de Kuhn-Munkres.
+    \(n = 5\,000\) · 4 grupos reais.
+  </p>
+</div>
+
+<p>
+O padrão consistente é a excelente recuperação do grupo 4 (baixo uso, diagonal
+inferior-direita) em todos os conjuntos: a Mistura NB o identifica com
+acurácia de 46,1% (V1) a 47,6% (V3) do total, enquanto em V3 o grupo 3 — antes
+praticamente absorvido pelos demais — passa a ser discriminado com 118 acertos
+(2,4% do total, 8 vezes mais que em V1).
+</p>
+
+
+<!-- ── Visualização 2: PCA ── -->
+<h3>Projeção PCA — melhor modelo (V3)</h3>
+<p>
+A análise de componentes principais aplicada ao espaço \(\log(1+x)\) padronizado
+das 5 variáveis de V3 captura <strong>32,7 %</strong> da variância no PC1 e
+<strong>25,4 %</strong> no PC2 (total: 58,1 %). Os três painéis abaixo comparam
+a projeção 2D colorida pelo grupo verdadeiro, pela Mistura NB e pelo K-means.
+</p>
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/02_pca_classificacao.png"
+       alt="Projeção PCA V3: grupo verdadeiro | Mistura NB | K-means"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 2.</strong> Projeção PCA das 5 variáveis de V3 (\(\log(1+x)\) padronizado).
+    Painel esquerdo: grupo verdadeiro (referência). Centro: Mistura NB (ARI = 0,729 · Acurácia = 0,877).
+    Direita: K-means (ARI = 0,673 · Acurácia = 0,815).
+    O grupo 4 (vermelho, baixo uso) ocupa a região compacta à esquerda;
+    o grupo 1 (verde, exames intensivos) dispersa-se ao longo do PC1 positivo.
+  </p>
+</div>
+
+
+<!-- ── Visualização 3: Curvas de seleção ── -->
+<h3>Critérios de seleção do número de grupos</h3>
+<p>
+O BIC para a Mistura NB e a largura de silhouette para o K-means são avaliados
+para \(g \in \{1,\ldots,6\}\) e \(k \in \{2,\ldots,6\}\), respectivamente.
+O círculo destacado em cada curva indica o valor selecionado.
+</p>
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/03_curvas_selecao.png"
+       alt="Curvas BIC (Mistura NB) e Silhouette (K-means) por conjunto de variáveis"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 3.</strong> Esquerda: curvas BIC da Mistura NB para V1 (\(g^* = 3\), BIC = 78.614),
+    V2 (\(g^* = 3\), BIC = 81.570) e V3 (\(g^* = 4\), BIC = 91.086).
+    A adição de terapias (V3) desloca o mínimo de \(g = 3\) para \(g = 4\) — o número verdadeiro.
+    Direita: silhouette médio para K-means; V1 seleciona \(k = 3\), V2 e V3 selecionam \(k = 4\).
+    \(d(g) = 2gp + (g-1)\) · BIC penaliza complexidade de forma proporcional a \(\log n\).
+  </p>
+</div>
+
+
+<!-- ── Visualização 4: Evolução das métricas ── -->
+<h3>Evolução das métricas V1 → V3</h3>
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/06_evolucao_metricas.png"
+       alt="Evolução de ARI, Acurácia, NMI e Pureza de V1 a V3"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 4.</strong> Evolução das quatro métricas ao longo dos três conjuntos ativos.
+    A Mistura NB (verde) supera o K-means (vermelho) em todos os conjuntos e métricas.
+    O maior salto ocorre em V3, especialmente no ARI (+0,071 para NB, +0,093 para K-means)
+    e na Acurácia (+0,041 para NB). Valores no extremo direito indicam o valor final em V3.
+  </p>
+</div>
+
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="discussao">8 · Discussão</h2>
@@ -737,6 +849,38 @@ todos os grupos —, enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria
 cria um sinal de separação que a Mistura NB captura diretamente por meio da
 estrutura ZINB do componente correspondente.
 </p>
+
+<!-- ── Visualização 5: Perfis dos componentes ── -->
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/04_perfis_componentes.png"
+       alt="Perfis dos componentes estimados — μ̂, z-scores e θ̂ (V3, g=4)"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 5.</strong> Perfis dos 4 componentes estimados para V3 pelo EM customizado.
+    <em>Esquerda:</em> médias \(\hat{\mu}_{hj}\) absolutas — G4 domina em exames (56,1 consultas),
+    G1 em terapias (10,7). <em>Centro:</em> z-scores por variável — G2 se distingue em internações
+    (z = 1,49), G4 em consultas (z = 1,44) e exames (z = 1,40).
+    <em>Direita:</em> dispersão estimada \(\hat{\theta}_{hj}\) em escala log; valores pequenos
+    (cor intensa) indicam alta sobredispersão.
+    \(\mathrm{Var}[Y] = \mu + \mu^2/\theta\) · \(n = 5\,000\) beneficiários.
+  </p>
+</div>
+
+<!-- ── Visualização 6: Incerteza de classificação ── -->
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/05_incerteza_classificacao.png"
+       alt="Distribuição de max(τ̂_ih) por conjunto de variáveis"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 6.</strong> Distribuição da certeza de classificação \(\max_h \hat{\tau}_{ih}\)
+    por conjunto. Vermelho tracejado = mediana; amarelo pontilhado = chance aleatória \(1/g\).
+    A certeza cresce sistematicamente com a adição de variáveis:
+    V1 (mediana = 0,92 · 56% com \(\tau > 0{,}9\)) →
+    V2 (0,94 · 63%) →
+    V3 (0,96 · 68%). A massa concentrada próxima de 1 confirma que a maioria
+    dos beneficiários está bem alocada no modelo final.
+  </p>
+</div>
 
 <h3>Inversão em V4 e V5: K-means supera a Mistura NB</h3>
 
@@ -774,16 +918,31 @@ degradando todas as métricas.
 <h3>Custo-benefício: quando usar cada método</h3>
 
 <p>
-K-means mostrou desempenho competitivo em todos os conjuntos (ARI entre 0,47
-e 0,67) a custo computacional negligenciável (~2 s). Para aplicações em que
+K-means mostrou desempenho competitivo em todos os conjuntos ativos (ARI entre 0,57
+e 0,67) a custo computacional negligenciável (≤ 2 s). Para aplicações em que
 velocidade é prioritária, como análises exploratórias em painéis com muitas
 variáveis candidatas, K-means em espaço \(\log(1+x)\) padronizado é a
 escolha operacional imediata. A Mistura NB, por sua vez, é superior quando
 o conjunto de variáveis é clinicamente motivado (V3) e sua especificação
 distributiva alinha-se com a natureza dos dados — situação em que o ganho
 de ARI (~0,06 sobre K-means) e a interpretabilidade dos parâmetros
-\((\mu_{hj},\theta_{hj})\) justificam o custo computacional.
+\((\mu_{hj},\theta_{hj})\) justificam o custo computacional (~1–2 h por conjunto).
 </p>
+
+<!-- ── Visualização 7: Painel resumo ── -->
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/07_painel_resumo.png"
+       alt="Painel resumo — melhor conjunto V3: PCA, matrizes de confusão e certeza posterior"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 7.</strong> Painel de síntese para o melhor conjunto (V3 · + terapias).
+    <em>Linha superior:</em> projeção PCA — grupo verdadeiro, Mistura NB (g = 4) e K-means (k = 4).
+    <em>Linha inferior esquerda/centro:</em> matrizes de confusão com pareamento húngaro —
+    Mistura NB (ARI = 0,729 · Acurácia = 0,877) vs. K-means (ARI = 0,673 · Acurácia = 0,815).
+    <em>Linha inferior direita:</em> densidade de \(\max \hat{\tau}_{ih}\) por componente estimado;
+    todos os 4 componentes concentram-se próximos de 1, indicando separação bem definida.
+  </p>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="codigo">9 · Código R</h2>

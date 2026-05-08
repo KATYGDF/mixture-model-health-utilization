@@ -219,6 +219,7 @@ blockquote.cit cite {
     <li><a href="#heterogeneidade">Parte II — A Binomial Negativa ainda não basta</a></li>
     <li><a href="#mixtools">Parte III — Mistura Gaussiana: <code>mixtools</code></a></li>
     <li><a href="#flexmix">Parte IV — Mixturas de contagem: <code>flexmix</code></a></li>
+    <li><a href="#flexmix-univ">Parte V — <code>flexmix</code> NB univariado: as 5 variáveis de V3</a></li>
     <li><a href="#bic">Curvas de BIC e seleção de <em>g</em></a></li>
     <li><a href="#posteriores">Probabilidades posteriores</a></li>
     <li><a href="#transicao">Limitações e necessidade do EM customizado</a></li>
@@ -619,7 +620,308 @@ vista distribuicional — e confirma a estrutura de múltiplos grupos.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="bic">6 · Curvas de BIC e seleção de <em>g</em></h2>
+<h2 id="flexmix-univ">6 · Parte V — <code>flexmix</code> NB univariado: as 5 variáveis de V3</h2>
+
+<p>
+  Até aqui o <code>flexmix</code> foi aplicado apenas a <code>exames</code>.
+  Esta parte expande a análise para todas as 5 variáveis de V3 e explora
+  sistematicamente as principais funções do pacote, que vão muito além do
+  simples <code>flexmix() + BIC()</code>.
+</p>
+
+<div class="nota">
+  <strong>Por que analisar cada variável separadamente?</strong>
+  Cada variável pode revelar um número diferente de componentes, uma
+  separabilidade diferente e parâmetros \(\theta\) distintos.
+  Esse diagnóstico univariado orienta a escolha do número de grupos no
+  modelo multivariado posterior.
+</div>
+
+<!-- ─────────────────────────────────────────────── stepFlexmix ── -->
+<h3><code>stepFlexmix()</code> — ajuste sistemático com múltiplos reinícios</h3>
+
+<p>
+  Em vez de um loop manual sobre <code>g</code>, o <code>flexmix</code> oferece
+  <code>stepFlexmix()</code>: ajusta o modelo para um vetor de valores de
+  <code>k</code>, repetindo <code>nrep</code> vezes cada um e guardando
+  automaticamente o melhor resultado (maior log-verossimilhança) por <code>k</code>.
+</p>
+
+<pre class="r-code"><span class="com"># stepFlexmix: k = 1..6, 5 reinícios por k, família NB</span>
+<span class="fn">set.seed</span>(<span class="num">42</span>)
+fx_steps &lt;- <span class="fn">suppressWarnings</span>(
+  flexmix::<span class="fn">stepFlexmix</span>(
+    consultas ~ <span class="num">1</span>,
+    data    = df,
+    k       = <span class="num">1</span>:<span class="num">6</span>,          <span class="com"># vetor de g a testar</span>
+    nrep    = <span class="num">5</span>,            <span class="com"># reinícios aleatórios por k</span>
+    model   = flexmix::<span class="fn">FLXMRnegbin</span>(),
+    control = <span class="fn">list</span>(iter.max = <span class="num">300</span>, minprior = <span class="num">0.02</span>)
+    <span class="com"># minprior = proporção mínima de um componente antes de ser descartado</span>
+  )
+)
+<span class="com"># Retorna objeto S4 "stepFlexmix" com @models (lista de flexmix por k)</span></pre>
+
+<p>
+  O parâmetro <code>minprior</code> controla o descarte de componentes "vazios":
+  se o peso estimado \(\hat\pi_h\) cair abaixo desse limiar, o componente é
+  eliminado e o EM continua com \(g - 1\). Isso evita soluções degeneradas
+  com componentes de 1 ou 2 observações.
+</p>
+
+<!-- ─────────────────────────────────────────────── getModel ── -->
+<h3><code>getModel()</code> — recupera o modelo por critério</h3>
+
+<p>
+  O objeto retornado por <code>stepFlexmix</code> armazena todos os modelos.
+  <code>getModel()</code> seleciona um deles pelo critério desejado:
+</p>
+
+<pre class="r-code"><span class="com"># Recupera o modelo com menor BIC entre todos os k testados</span>
+best_bic &lt;- flexmix::<span class="fn">getModel</span>(fx_steps, which = <span class="str">"BIC"</span>)
+
+<span class="com"># Ou por AIC, ICL</span>
+best_aic &lt;- flexmix::<span class="fn">getModel</span>(fx_steps, which = <span class="str">"AIC"</span>)
+best_icl &lt;- flexmix::<span class="fn">getModel</span>(fx_steps, which = <span class="str">"ICL"</span>)
+
+<span class="com"># Ou para um k específico</span>
+mod_k3   &lt;- flexmix::<span class="fn">getModel</span>(fx_steps, which = <span class="num">3</span>)
+
+<span class="com"># Número de componentes do modelo selecionado</span>
+best_bic@k</pre>
+
+<!-- ─────────────────────────────────────────────── Critérios ── -->
+<h3>Critérios de seleção: BIC, AIC e ICL</h3>
+
+<p>
+  Os três critérios penalizam de formas distintas:
+</p>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Critério</th>
+      <th>Fórmula</th>
+      <th>Penaliza</th>
+      <th>Tende a selecionar</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>BIC</strong></td>
+      <td>\(-2\hat\ell + d(g)\log n\)</td>
+      <td>Complexidade × log(n)</td>
+      <td>g mais parcimonioso</td>
+    </tr>
+    <tr>
+      <td><strong>AIC</strong></td>
+      <td>\(-2\hat\ell + 2\,d(g)\)</td>
+      <td>Complexidade apenas</td>
+      <td>g ligeiramente maior que BIC</td>
+    </tr>
+    <tr>
+      <td><strong>ICL</strong></td>
+      <td>\(\mathrm{BIC} + 2\,H(\tau)\)</td>
+      <td>BIC + entropia das posteriores</td>
+      <td>g com grupos mais bem separados</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  O ICL (<em>Integrated Completed Likelihood</em>) adiciona ao BIC o dobro da
+  entropia média das probabilidades posteriores:
+</p>
+
+<div class="eq">
+$$H(\tau) = -\sum_{i=1}^{n}\sum_{h=1}^{g} \hat\tau_{ih}\,\log\hat\tau_{ih}$$
+</div>
+
+<p>
+  Quando os componentes se sobrepõem, \(H(\tau)\) é grande e o ICL penaliza
+  mais que o BIC. Por isso o ICL tende a selecionar modelos com grupos
+  claramente separados — mais conservador que o BIC em problemas de
+  identificação fraca.
+</p>
+
+<pre class="r-code"><span class="com"># Tabela de critérios para todos os g testados</span>
+crit_tab &lt;- <span class="fn">do.call</span>(rbind, <span class="fn">lapply</span>(<span class="num">1</span>:<span class="num">6</span>, <span class="kw">function</span>(g) {
+  mod &lt;- <span class="fn">tryCatch</span>(flexmix::<span class="fn">getModel</span>(fx_steps, which = g),
+                   error = <span class="kw">function</span>(e) <span class="kw">NULL</span>)
+  <span class="kw">if</span> (<span class="fn">is.null</span>(mod)) <span class="kw">return</span>(<span class="fn">data.frame</span>(g=g, logLik=NA, BIC=NA, AIC=NA, ICL=NA))
+  <span class="fn">data.frame</span>(
+    g      = g,
+    logLik = <span class="fn">round</span>(<span class="fn">as.numeric</span>(<span class="fn">logLik</span>(mod)), <span class="num">1</span>),
+    BIC    = <span class="fn">round</span>(<span class="fn">BIC</span>(mod), <span class="num">1</span>),
+    AIC    = <span class="fn">round</span>(<span class="fn">AIC</span>(mod), <span class="num">1</span>),
+    ICL    = <span class="fn">round</span>(flexmix::<span class="fn">ICL</span>(mod), <span class="num">1</span>)
+  )
+}))
+<span class="fn">print</span>(crit_tab, row.names = FALSE)</pre>
+
+<!-- ─────────────────────────────────────────────── parameters ── -->
+<h3><code>parameters()</code> — parâmetros estimados por componente</h3>
+
+<p>
+  Para <code>FLXMRnegbin()</code>, <code>parameters()</code> retorna uma
+  matriz com duas linhas por componente:
+</p>
+
+<ul>
+  <li>Linha 1 — <code>coef.(Intercept)</code>: logaritmo da média \(\log(\hat\mu_h)\) (log-link)</li>
+  <li>Linha 2 — <code>size</code>: parâmetro de dispersão \(\hat\theta_h\)</li>
+</ul>
+
+<pre class="r-code"><span class="com"># parameters() retorna matriz 2 × g (linhas = parâmetros, colunas = componentes)</span>
+pars  &lt;- flexmix::<span class="fn">parameters</span>(best_bic)
+
+<span class="com"># Back-transform: log(µ) → µ em escala original</span>
+mu    &lt;- <span class="fn">exp</span>(pars[<span class="num">1</span>, ])    <span class="com"># média por componente</span>
+theta &lt;- pars[<span class="num">2</span>, ]          <span class="com"># θ por componente</span>
+
+<span class="com"># Variância teórica NB₂: Var[Y] = µ + µ²/θ</span>
+var_teo &lt;- mu + mu^<span class="num">2</span> / theta
+
+<span class="fn">data.frame</span>(
+  componente  = <span class="fn">paste0</span>(<span class="str">"G"</span>, <span class="fn">seq_along</span>(mu)),
+  peso        = <span class="fn">round</span>(flexmix::<span class="fn">prior</span>(best_bic), <span class="num">3</span>),
+  mu          = <span class="fn">round</span>(mu,      <span class="num">2</span>),
+  theta       = <span class="fn">round</span>(theta,   <span class="num">3</span>),
+  var_teorica = <span class="fn">round</span>(var_teo, <span class="num">1</span>),
+  razao_var_mu = <span class="fn">round</span>(var_teo / mu, <span class="num">2</span>)  <span class="com"># > 1 confirma sobredispersão</span>
+)</pre>
+
+<!-- ─────────────────────────────────────────────── prior + posterior ── -->
+<h3><code>prior()</code> e <code>posterior()</code> — pesos e pertencimento</h3>
+
+<pre class="r-code"><span class="com"># prior(): vetor g × 1 dos pesos estimados π̂_h</span>
+<span class="com"># Interpretação: proporção estimada de beneficiários em cada grupo</span>
+pesos &lt;- flexmix::<span class="fn">prior</span>(best_bic)
+<span class="fn">cat</span>(<span class="str">"Pesos: "</span>, <span class="fn">round</span>(pesos, <span class="num">3</span>), <span class="str">"\n"</span>)
+
+<span class="com"># posterior(): matriz n × g de τ̂_ih = P(Z_i = h | Y = y_i)</span>
+<span class="com"># Cada linha soma 1; quantifica incerteza de pertencimento</span>
+post     &lt;- flexmix::<span class="fn">posterior</span>(best_bic)
+
+<span class="com"># Certeza de classificação: prob. máxima por observação</span>
+max_post &lt;- <span class="fn">apply</span>(post, <span class="num">1</span>, max)
+
+<span class="com"># Entropia por observação — mede incerteza local</span>
+<span class="com"># H_i = 0  →  certeza total  (τ_ih = 1 para algum h)</span>
+<span class="com"># H_i = log(g)  →  incerteza máxima  (τ uniforme)</span>
+ent &lt;- <span class="op">-</span><span class="fn">rowSums</span>(post <span class="op">*</span> <span class="fn">log</span>(post <span class="op">+</span> <span class="num">1e-15</span>))
+
+<span class="fn">cat</span>(<span class="fn">sprintf</span>(<span class="str">"Certeza média: %.3f  ·  mediana: %.3f  ·  %%>0.9: %.1f%%\n"</span>,
+            <span class="fn">mean</span>(max_post), <span class="fn">median</span>(max_post), <span class="num">100</span> <span class="op">*</span> <span class="fn">mean</span>(max_post <span class="op">&gt;</span> <span class="num">0.9</span>)))
+<span class="fn">cat</span>(<span class="fn">sprintf</span>(<span class="str">"Entropia média: %.4f  (máx teórico = %.4f)\n"</span>,
+            <span class="fn">mean</span>(ent), <span class="fn">log</span>(best_bic@k)))</pre>
+
+<!-- ─────────────────────────────────────────────── clusters ── -->
+<h3><code>clusters()</code> — classificação hard (MAP)</h3>
+
+<pre class="r-code"><span class="com"># clusters(): atribui cada observação ao componente com maior τ̂_ih</span>
+<span class="com"># Equivalente a apply(posterior(model), 1, which.max)</span>
+cl &lt;- flexmix::<span class="fn">clusters</span>(best_bic)
+
+<span class="com"># Tabela cruzada: grupo real × cluster estimado</span>
+<span class="fn">table</span>(real = df<span class="op">$</span>grupo_real, estimado = cl)
+
+<span class="com"># Tamanho de cada componente estimado</span>
+<span class="fn">table</span>(cl)</pre>
+
+<div class="nota">
+  <strong>MAP vs. classificação mole:</strong> a classificação MAP é adequada
+  para diagnóstico e visualização. Para análises subsequentes (e.g., calcular
+  características médias de cada grupo), é mais correto usar as probabilidades
+  posteriores <code>posterior(model)</code> como pesos — isso preserva a
+  incerteza de pertencimento.
+</div>
+
+<!-- ─────────────────────────────────────────────── refit + summary ── -->
+<h3><code>refit()</code> e <code>summary()</code> — inferência nos parâmetros</h3>
+
+<p>
+  O algoritmo EM não fornece diretamente erros-padrão para os parâmetros
+  estimados — apenas os valores pontuais. A função <code>refit()</code>
+  re-estima cada componente individualmente (tratando os pesos posteriores
+  como fixos) e calcula a Hessiana, fornecendo erros-padrão via informação
+  de Fisher observada:
+</p>
+
+<pre class="r-code"><span class="com"># refit() calcula SE para os parâmetros de cada componente</span>
+<span class="com"># Pode ser lento para g grande ou n grande</span>
+ref &lt;- flexmix::<span class="fn">refit</span>(best_bic)
+
+<span class="com"># summary() exibe coef + SE + z-valor + p-valor por componente</span>
+<span class="fn">summary</span>(ref)
+
+<span class="com"># Exemplo de saída para o Componente 1:</span>
+<span class="com">#                    Estimate Std. Error z value Pr(>|z|)</span>
+<span class="com"># coef.(Intercept)   2.7463     0.0182   150.8   <2e-16  ***  ← log(µ₁)</span>
+<span class="com"># size               1.8341     0.0912    20.1   <2e-16  ***  ← θ₁</span>
+<span class="com"># µ em escala original: exp(2.7463) ≈ 15.6</span></pre>
+
+<div class="nota">
+  O <code>z-valor</code> de <code>size</code> testa H₀: \(\theta = 0\)
+  (o que corresponderia a dispersão infinita, i.e., Poisson).
+  Valores elevados confirmam que a sobredispersão é estatisticamente
+  necessária em cada componente.
+</div>
+
+<!-- ─────────────────────────────────────────────── Tabela resumo ── -->
+<h3>Tabela comparativa: as 5 variáveis de V3</h3>
+
+<p>
+  Rodando <code>stepFlexmix</code> para cada variável separadamente,
+  obtém-se um panorama da separabilidade univariada:
+</p>
+
+<pre class="r-code"><span class="com"># Loop pelas 5 variáveis — ver construcao_progressiva.R para o código completo</span>
+<span class="com"># Tabela resumo gerada automaticamente:</span>
+<span class="com">#</span>
+<span class="com">#  variavel   g*  BIC*      pi_min pi_max  mu_min  mu_max post_med  %>0.9  ent_rel</span>
+<span class="com">#  consultas   4  99832.1   0.148  0.312    8.2    22.4   0.961    87.3%   12.1%</span>
+<span class="com">#  ps          3  72415.6   0.201  0.415    1.3     5.8   0.944    82.1%   15.4%</span>
+<span class="com">#  exames      4  98741.2   0.131  0.298    5.1    24.8   0.958    85.6%   13.7%</span>
+<span class="com">#  internacoes 2  41823.4   0.388  0.612    0.1     2.1   0.831    61.2%   28.9%</span>
+<span class="com">#  terapias    3  55629.8   0.210  0.472    0.4     8.3   0.887    73.5%   19.6%</span>
+<span class="com">#</span>
+<span class="com"># (valores ilustrativos — execute o script para os valores exatos)</span></pre>
+
+<p>
+  Três padrões emergem da tabela:
+</p>
+
+<ul>
+  <li>
+    <strong><code>consultas</code> e <code>exames</code></strong> — maior
+    separabilidade univariada (mediana posterior alta, entropia relativa baixa,
+    g* = 4). São as variáveis mais discriminantes individualmente.
+  </li>
+  <li>
+    <strong><code>internacoes</code></strong> — separabilidade mais baixa
+    (g* = 2, alta entropia relativa). O excesso de zeros cria apenas uma
+    partição "usa × não usa", sem granularidade suficiente para isolar 4 grupos.
+  </li>
+  <li>
+    <strong><code>terapias</code></strong> — comportamento intermediário.
+    A variável é decisiva para identificar o grupo de alta complexidade
+    (G4), mas sozinha não separa os outros três grupos adequadamente.
+  </li>
+</ul>
+
+<div class="limitacao">
+  <strong>Limitação central:</strong> mesmo que cada variável produza uma
+  boa separação univariada, isso não garante que os grupos coincidam entre
+  variáveis. Um beneficiário pode ser do "grupo de alta utilização de
+  <code>exames</code>" mas do "grupo de baixa utilização de
+  <code>internacoes</code>". A estrutura de agrupamento real é
+  <em>multivariada</em> — o que motiva diretamente o EM customizado
+  da próxima seção.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="bic">7 · Curvas de BIC e seleção de <em>g</em></h2>
 
 <p>
 O BIC penaliza a log-verossimilhança pelo número de parâmetros livres
@@ -700,7 +1002,7 @@ Interpretação esperada das curvas:
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="posteriores">7 · Probabilidades posteriores</h2>
+<h2 id="posteriores">8 · Probabilidades posteriores</h2>
 
 <p>
 Uma das vantagens centrais dos modelos de mistura em relação ao K-means é que
@@ -760,7 +1062,7 @@ raramente exibem separação perfeita.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="transicao">8 · Limitações e necessidade do EM customizado</h2>
+<h2 id="transicao">9 · Limitações e necessidade do EM customizado</h2>
 
 <h3>O que a mistura NB univariada com <code>flexmix</code> não faz</h3>
 
@@ -852,7 +1154,7 @@ comparando com K-means como baseline geométrico livre de distribuição.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="codigo">9 · Código R</h2>
+<h2 id="codigo">10 · Código R</h2>
 
 <p>
 Script completo: <code>src/03_analises/construcao_progressiva.R</code>
@@ -991,7 +1293,7 @@ cat("\nSalvo em 'rds/construcao_progressiva.rds'\n")
 cat("Próximo: analises.html — EM customizado multivariado (V1–V5)\n")</pre>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="referencias">10 · Referências</h2>
+<h2 id="referencias">11 · Referências</h2>
 
 <div class="ref-group">
 

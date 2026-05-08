@@ -10,19 +10,19 @@
 #   V5  + meses_utilizacao                               (padrão agudo vs. crônico)
 #
 # Métodos (dados de contagem → escolha motivada pela natureza discreta):
-#   M2  Mistura NB  — EM do zero, distribuição NB por componente e variável
-#   M3  K-means     — baseline geométrico livre de distribuição, log1p + scale
+#   M1  Mistura NB  — EM do zero, distribuição NB por componente e variável
+#   M2  K-means     — baseline geométrico livre de distribuição, log1p + scale
 #
-# Critério de seleção de g: BIC (M2) · Silhouette (M3)
+# Critério de seleção de g: BIC (M1) · Silhouette (M2)
 # Métricas: ARI · NMI · Acurácia (pareamento húngaro) · Pureza · g · tempo(s)
 #
 # Nota sobre meses_utilizacao (V5):
 #   Gerada via Beta-Binomial (limite 1–12), distribuição bimodal em U.
 #   O NB aproxima de forma imperfeita — resultado deve ser interpretado
-#   com cautela para M2 nesse conjunto.
+#   com cautela para M1 nesse conjunto.
 #
 # USO: Source (Ctrl+Shift+S) no RStudio
-#      Resultados salvos em rds/comparacao_variaveis.rds
+#      Resultados salvos em rds/  ·  Figuras salvas em figs/
 # =============================================================================
 
 
@@ -35,6 +35,7 @@ N_INIT_NB   <- 8L
 MAX_ITER_NB <- 200L
 TOL_NB      <- 1e-5
 DIR_RDS     <- "rds"
+DIR_FIGS    <- "figs"
 
 CONJUNTOS <- list(
   V1 = c("consultas", "ps", "exames"),
@@ -57,7 +58,8 @@ LABELS_CONJUNTOS <- c(
 
 # ── 2. Pacotes ────────────────────────────────────────────────────────────────
 
-pkgs <- c("dplyr", "cluster", "clue", "aricode")
+pkgs <- c("dplyr", "cluster", "clue", "aricode",
+          "ggplot2", "patchwork", "scales", "tidyr")
 novos <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
 if (length(novos) > 0) {
   message("Instalando: ", paste(novos, collapse = ", "))
@@ -65,6 +67,7 @@ if (length(novos) > 0) {
 }
 suppressPackageStartupMessages({
   library(dplyr); library(cluster); library(clue); library(aricode)
+  library(ggplot2); library(patchwork); library(scales); library(tidyr)
 })
 
 
@@ -195,11 +198,14 @@ cat("Iniciando comparação: ", length(CONJUNTOS), "conjuntos × 2 métodos\n")
 cat(strrep("═", 60), "\n\n")
 
 resultados <- list()   # acumula uma linha por (conjunto × método)
-fits_nb    <- list()   # guarda os fits NB selecionados para reuso
+fits_nb    <- list()   # fits NB selecionados (melhor g por conjunto)
+km_results <- list()   # fits K-means selecionados (melhor k por conjunto)
+bic_curves <- list()   # BIC(g=1..G_MAX) por conjunto
+sil_curves <- list()   # silhouette(k=2..G_MAX) por conjunto
 
 for (nome_v in names(CONJUNTOS)) {
 
-  vars <- CONJUNTOS[[nome_v]]
+  vars  <- CONJUNTOS[[nome_v]]
   label <- LABELS_CONJUNTOS[nome_v]
 
   # Verifica disponibilidade
@@ -215,38 +221,38 @@ for (nome_v in names(CONJUNTOS)) {
   Y_raw <- as.matrix(df[, vars])
   Y_std <- scale(log1p(Y_raw))
 
-  # ── M2 · Mistura NB ───────────────────────────────────────────────────────
-  cat("  M2 NB       ... ")
-  m2_fits  <- vector("list", G_MAX)
-  m2_bic   <- numeric(G_MAX)
+  # ── M1 · Mistura NB ───────────────────────────────────────────────────────
+  cat("  M1 NB       ... ")
+  M1_fits  <- vector("list", G_MAX)
+  M1_bic   <- numeric(G_MAX)
   t0       <- proc.time()
 
   for (g in seq_len(G_MAX)) {
-    m2_fits[[g]] <- nb_mix_em(Y_raw, g = g)
-    m2_bic[g]    <- m2_fits[[g]]$BIC
-    cat(sprintf("[g=%d:%.0f]", g, m2_bic[g]))
+    M1_fits[[g]] <- nb_mix_em(Y_raw, g = g)
+    M1_bic[g]    <- M1_fits[[g]]$BIC
+    cat(sprintf("[g=%d:%.0f]", g, M1_bic[g]))
   }
 
-  M2_G    <- which.min(m2_bic)
-  m2_opt  <- m2_fits[[M2_G]]
+  M1_G    <- which.min(M1_bic)
+  M1_opt  <- M1_fits[[M1_G]]
   dt      <- (proc.time() - t0)["elapsed"]
-  m2_met  <- calc_metricas(grupo_real_int, m2_opt$classification)
+  M1_met  <- calc_metricas(grupo_real_int, M1_opt$classification)
 
   cat(sprintf("\n         g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
-              m2_met$g, m2_met$ari, m2_met$acuracia, dt))
+              M1_met$g, M1_met$ari, M1_met$acuracia, dt))
 
-  fits_nb[[nome_v]] <- m2_opt   # guarda para RDS
+  fits_nb[[nome_v]]    <- M1_opt
+  bic_curves[[nome_v]] <- M1_bic
 
   resultados[[length(resultados) + 1]] <- data.frame(
-    Conjunto = label, Método = "Mistura NB",
-    g = m2_met$g, ARI = m2_met$ari, NMI = m2_met$nmi,
-    Acuracia = m2_met$acuracia, Pureza = m2_met$pureza,
+    ConjID = nome_v, Conjunto = label, Método = "Mistura NB",
+    g = M1_met$g, ARI = M1_met$ari, NMI = M1_met$nmi,
+    Acuracia = M1_met$acuracia, Pureza = M1_met$pureza,
     Tempo_s = round(dt, 1), stringsAsFactors = FALSE
   )
 
-  # ── M3 · K-means ─────────────────────────────────────────────────────────
-  # Seleção por silhouette (g=2..G_MAX); ajuste final com g selecionado
-  cat("  M3 K-means  ... ")
+  # ── M2 · K-means ─────────────────────────────────────────────────────────
+  cat("  M2 K-means  ... ")
   t0      <- proc.time()
   set.seed(SEED)
   dist_std <- dist(Y_std)
@@ -254,18 +260,27 @@ for (nome_v in names(CONJUNTOS)) {
     km  <- kmeans(Y_std, centers = k, nstart = 15, iter.max = 200)
     mean(cluster::silhouette(km$cluster, dist_std)[, "sil_width"])
   })
-  M3_K    <- (2:G_MAX)[which.max(sil_vals)]
-  m3_km   <- kmeans(Y_std, centers = M3_K, nstart = 50, iter.max = 300)
+  M2_K    <- (2:G_MAX)[which.max(sil_vals)]
+  M2_km   <- kmeans(Y_std, centers = M2_K, nstart = 50, iter.max = 300)
   dt      <- (proc.time() - t0)["elapsed"]
-  m3_met  <- calc_metricas(grupo_real_int, m3_km$cluster)
+  M2_met  <- calc_metricas(grupo_real_int, M2_km$cluster)
 
   cat(sprintf("g=%d · ARI=%.3f · Acurácia=%.3f · %.1fs\n",
-              m3_met$g, m3_met$ari, m3_met$acuracia, dt))
+              M2_met$g, M2_met$ari, M2_met$acuracia, dt))
+
+  sil_curves[[nome_v]] <- sil_vals
+  km_results[[nome_v]] <- list(
+    cluster = M2_km$cluster,
+    k       = M2_K,
+    Y_raw   = Y_raw,
+    Y_std   = Y_std,
+    vars    = vars
+  )
 
   resultados[[length(resultados) + 1]] <- data.frame(
-    Conjunto = label, Método = "K-means",
-    g = m3_met$g, ARI = m3_met$ari, NMI = m3_met$nmi,
-    Acuracia = m3_met$acuracia, Pureza = m3_met$pureza,
+    ConjID = nome_v, Conjunto = label, Método = "K-means",
+    g = M2_met$g, ARI = M2_met$ari, NMI = M2_met$nmi,
+    Acuracia = M2_met$acuracia, Pureza = M2_met$pureza,
     Tempo_s = round(dt, 1), stringsAsFactors = FALSE
   )
 
@@ -281,13 +296,13 @@ rownames(tab) <- NULL
 cat("\n", strrep("═", 60), "\n")
 cat("TABELA COMPARATIVA FINAL\n")
 cat(strrep("═", 60), "\n\n")
-print(tab, row.names = FALSE)
+print(tab[, -1], row.names = FALSE)   # exclui ConjID da impressão
 
 # Melhor por método (ARI)
 cat("\n── Melhor conjunto por método (maior ARI) ───────────────\n")
 for (met in unique(tab$Método)) {
-  sub   <- tab[tab$Método == met, ]
-  best  <- sub[which.max(sub$ARI), ]
+  sub  <- tab[tab$Método == met, ]
+  best <- sub[which.max(sub$ARI), ]
   cat(sprintf("  %-14s → %s  (ARI=%.3f · Acurácia=%.3f · g=%d)\n",
               met, best$Conjunto, best$ARI, best$Acuracia, best$g))
 }
@@ -304,12 +319,517 @@ cat("* V5 inclui meses_utilizacao (Beta-Binomial): NB aproxima com ressalva.\n")
 
 # ── 7. Salvar RDS ─────────────────────────────────────────────────────────────
 
-if (!dir.exists(DIR_RDS)) dir.create(DIR_RDS, recursive = TRUE)
+for (d in c(DIR_RDS, DIR_FIGS)) if (!dir.exists(d)) dir.create(d, recursive = TRUE)
 
-saveRDS(tab,     file.path(DIR_RDS, "comparacao_variaveis.rds"))
-saveRDS(fits_nb, file.path(DIR_RDS, "nb_fits_por_conjunto.rds"))
+saveRDS(tab,        file.path(DIR_RDS, "comparacao_variaveis.rds"))
+saveRDS(fits_nb,    file.path(DIR_RDS, "nb_fits_por_conjunto.rds"))
+saveRDS(km_results, file.path(DIR_RDS, "km_results_por_conjunto.rds"))
+saveRDS(bic_curves, file.path(DIR_RDS, "bic_curves.rds"))
+saveRDS(sil_curves, file.path(DIR_RDS, "sil_curves.rds"))
 
 cat(sprintf("\nSalvo em '%s/':\n", DIR_RDS))
-cat("  comparacao_variaveis.rds  — tabela completa\n")
-cat("  nb_fits_por_conjunto.rds  — fits NB de cada conjunto\n")
-cat("\nPróximo passo: usar comparacao_variaveis.rds no analises.Rmd\n")
+cat("  comparacao_variaveis.rds  · nb_fits_por_conjunto.rds\n")
+cat("  km_results_por_conjunto.rds · bic_curves.rds · sil_curves.rds\n")
+
+
+# =============================================================================
+# ── 8. Paleta, tema e helpers de visualização ─────────────────────────────────
+# =============================================================================
+
+# Paleta de até 6 grupos (verde · azul · amarelo · vermelho · roxo · teal)
+COR <- setNames(
+  c("#4a7c59", "#2980b9", "#e6a817", "#c0392b", "#8e44ad", "#16a085"),
+  as.character(1:6)
+)
+
+TEMA <- theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.minor = element_blank(),
+    strip.text       = element_text(face = "bold", size = 9),
+    strip.background = element_rect(fill = "#f0f0f0", colour = NA),
+    legend.position  = "bottom",
+    plot.title       = element_text(face = "bold", size = 12),
+    plot.subtitle    = element_text(colour = "grey40", size = 9),
+    plot.caption     = element_text(colour = "grey55", size = 8, hjust = 0)
+  )
+
+# Helper: data frame de matriz de confusão com percentuais
+conf_df <- function(real, estimado) {
+  est_par  <- parear_otimo(real, estimado)
+  g_levels <- as.character(sort(unique(c(real, estimado))))
+  ct <- as.data.frame(table(
+    Real     = factor(as.character(real),     levels = g_levels),
+    Estimado = factor(as.character(est_par),  levels = g_levels)
+  ))
+  ct$pct      <- ct$Freq / sum(ct$Freq) * 100
+  ct$Real_rev <- factor(ct$Real, levels = rev(g_levels))
+  ct
+}
+
+# Helper: plot de uma matriz de confusão
+plot_conf <- function(ct, titulo = NULL, subtitulo = NULL) {
+  ggplot(ct, aes(Estimado, Real_rev)) +
+    geom_tile(aes(fill = Freq), colour = "white", linewidth = 0.7) +
+    geom_text(
+      aes(label = ifelse(Freq > 0, paste0(Freq, "\n(", round(pct, 1), "%)"), "")),
+      size = 2.7, lineheight = 1.05, colour = "grey10"
+    ) +
+    scale_fill_gradient(low = "#f0f7ff", high = "#2980b9", name = "n") +
+    scale_x_discrete(position = "top") +
+    labs(x = "Grupo estimado", y = "Grupo real",
+         title = titulo, subtitle = subtitulo) +
+    TEMA +
+    theme(panel.grid = element_blank(),
+          legend.position = "none",
+          axis.text = element_text(size = 9))
+}
+
+# Identifica o melhor conjunto NB (maior ARI) para uso nos plots PCA e perfis
+tab_nb   <- tab[tab$Método == "Mistura NB", ]
+label_best <- tab_nb$Conjunto[which.max(tab_nb$ARI)]
+BEST_V   <- names(LABELS_CONJUNTOS)[LABELS_CONJUNTOS == label_best]
+cat(sprintf("\nMelhor conjunto (NB · ARI): %s — %s\n\n", BEST_V, label_best))
+
+
+# =============================================================================
+# ── 9. VIS 1 · Matrizes de confusão — todos os conjuntos × métodos ────────────
+# =============================================================================
+
+cat("Gerando figuras...\n")
+
+conf_plots <- list()
+for (nome_v in names(CONJUNTOS)) {
+  if (!nome_v %in% names(fits_nb) || !nome_v %in% names(km_results)) next
+
+  ct_nb <- conf_df(grupo_real_int, fits_nb[[nome_v]]$classification)
+  ct_km <- conf_df(grupo_real_int, km_results[[nome_v]]$cluster)
+  met_nb <- calc_metricas(grupo_real_int, fits_nb[[nome_v]]$classification)
+  met_km <- calc_metricas(grupo_real_int, km_results[[nome_v]]$cluster)
+
+  conf_plots[[nome_v]] <- list(
+    nb = plot_conf(
+      ct_nb,
+      titulo    = paste0(nome_v, " · Mistura NB (g=", fits_nb[[nome_v]]$g, ")"),
+      subtitulo = sprintf("ARI=%.3f  ·  Acurácia=%.3f", met_nb$ari, met_nb$acuracia)
+    ),
+    km = plot_conf(
+      ct_km,
+      titulo    = paste0(nome_v, " · K-means (k=", km_results[[nome_v]]$k, ")"),
+      subtitulo = sprintf("ARI=%.3f  ·  Acurácia=%.3f", met_km$ari, met_km$acuracia)
+    )
+  )
+}
+
+# Grade 5 linhas × 2 colunas: [V1_NB, V1_KM] / [V2_NB, V2_KM] / ...
+plots_conf_list <- unlist(
+  lapply(names(conf_plots), function(v) list(conf_plots[[v]]$nb, conf_plots[[v]]$km)),
+  recursive = FALSE
+)
+
+fig_conf <- wrap_plots(plots_conf_list, ncol = 2) +
+  plot_annotation(
+    title    = "Matrizes de Confusão — Mistura NB vs. K-means",
+    subtitle = sprintf(
+      "Rótulos pareados via algoritmo húngaro  ·  n = %d beneficiários  ·  %d grupos reais",
+      nrow(df), G_REAL
+    ),
+    caption  = "Diagonal = classificações corretas  ·  Off-diagonal = trocas de grupo",
+    theme    = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "01_matrizes_confusao.png"),
+       fig_conf, width = 11, height = 4.2 * length(conf_plots), dpi = 150, bg = "white")
+cat("  01_matrizes_confusao.png\n")
+
+
+# =============================================================================
+# ── 10. VIS 2 · PCA — verdadeiro | EM | K-means lado a lado ──────────────────
+# =============================================================================
+
+vars_best <- CONJUNTOS[[BEST_V]]
+Y_best    <- as.matrix(df[, vars_best])
+
+pca_res <- prcomp(log1p(Y_best), scale. = TRUE)
+var_exp <- round(summary(pca_res)$importance[2, 1:2] * 100, 1)
+lab_pc  <- c(paste0("PC1 (", var_exp[1], "% var.)"),
+             paste0("PC2 (", var_exp[2], "% var.)"))
+
+pca_df <- data.frame(
+  PC1        = pca_res$x[, 1],
+  PC2        = pca_res$x[, 2],
+  Verdadeiro = as.character(grupo_real_int),
+  EM         = as.character(parear_otimo(grupo_real_int, fits_nb[[BEST_V]]$classification)),
+  KMeans     = as.character(parear_otimo(grupo_real_int, km_results[[BEST_V]]$cluster))
+)
+
+make_pca <- function(col_grupo, titulo, subtitulo = NULL) {
+  ggplot(pca_df, aes(.data[["PC1"]], .data[["PC2"]],
+                     colour = .data[[col_grupo]])) +
+    geom_point(alpha = 0.50, size = 1.3) +
+    scale_colour_manual(values = COR, name = "Grupo") +
+    labs(x = lab_pc[1], y = lab_pc[2], title = titulo, subtitle = subtitulo) +
+    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+    TEMA + theme(legend.position = "right")
+}
+
+met_nb_best <- calc_metricas(grupo_real_int, fits_nb[[BEST_V]]$classification)
+met_km_best <- calc_metricas(grupo_real_int, km_results[[BEST_V]]$cluster)
+
+fig_pca <- (
+  make_pca("Verdadeiro", "Grupo verdadeiro", "referência") |
+  make_pca("EM",
+           paste0("Mistura NB  (g=", fits_nb[[BEST_V]]$g, ")"),
+           sprintf("ARI=%.3f  ·  Acurácia=%.3f", met_nb_best$ari, met_nb_best$acuracia)) |
+  make_pca("KMeans",
+           paste0("K-means  (k=", km_results[[BEST_V]]$k, ")"),
+           sprintf("ARI=%.3f  ·  Acurácia=%.3f", met_km_best$ari, met_km_best$acuracia))
+) +
+  plot_annotation(
+    title    = paste0("Projeção PCA — ", BEST_V, ": ", LABELS_CONJUNTOS[BEST_V]),
+    subtitle = "Espaço log1p padronizado  ·  Rótulos pareados via algoritmo húngaro",
+    theme    = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "02_pca_classificacao.png"),
+       fig_pca, width = 15, height = 5, dpi = 150, bg = "white")
+cat("  02_pca_classificacao.png\n")
+
+
+# =============================================================================
+# ── 11. VIS 3 · Curvas de seleção: BIC (EM) e Silhouette (K-means) ────────────
+# =============================================================================
+
+# BIC —————————————————————————————————————————————————————————————————————————
+bic_long <- do.call(rbind, lapply(names(bic_curves), function(v) {
+  bic_v <- bic_curves[[v]]
+  data.frame(
+    ConjID      = v,
+    Conjunto    = LABELS_CONJUNTOS[v],
+    g           = seq_len(G_MAX),
+    BIC         = bic_v,
+    selecionado = seq_len(G_MAX) == which.min(bic_v)
+  )
+}))
+bic_long$Conjunto <- factor(bic_long$Conjunto, levels = as.character(LABELS_CONJUNTOS))
+
+p_bic <- ggplot(bic_long, aes(g, BIC, colour = Conjunto, group = Conjunto)) +
+  geom_line(linewidth = 0.85) +
+  geom_point(size = 2.2) +
+  geom_point(data = bic_long[bic_long$selecionado, ],
+             shape = 21, size = 5, stroke = 1.6,
+             colour = "grey20", fill = NA) +
+  scale_x_continuous(breaks = seq_len(G_MAX)) +
+  scale_colour_brewer(palette = "Set1", name = "") +
+  labs(x = "Número de componentes (g)", y = "BIC",
+       title = "Curvas BIC — Mistura NB",
+       subtitle = "Círculo destacado = g* selecionado (mínimo BIC)") +
+  TEMA
+
+# Silhouette ——————————————————————————————————————————————————————————————————
+sil_long <- do.call(rbind, lapply(names(sil_curves), function(v) {
+  sil_v <- sil_curves[[v]]
+  k_seq <- 2:G_MAX
+  data.frame(
+    ConjID      = v,
+    Conjunto    = LABELS_CONJUNTOS[v],
+    k           = k_seq,
+    Sil         = sil_v,
+    selecionado = k_seq == k_seq[which.max(sil_v)]
+  )
+}))
+sil_long$Conjunto <- factor(sil_long$Conjunto, levels = as.character(LABELS_CONJUNTOS))
+
+p_sil <- ggplot(sil_long, aes(k, Sil, colour = Conjunto, group = Conjunto)) +
+  geom_line(linewidth = 0.85) +
+  geom_point(size = 2.2) +
+  geom_point(data = sil_long[sil_long$selecionado, ],
+             shape = 21, size = 5, stroke = 1.6,
+             colour = "grey20", fill = NA) +
+  scale_x_continuous(breaks = 2:G_MAX) +
+  scale_colour_brewer(palette = "Set1", name = "") +
+  labs(x = "Número de clusters (k)", y = "Silhouette médio",
+       title = "Curvas Silhouette — K-means",
+       subtitle = "Círculo destacado = k* selecionado (máximo silhouette)") +
+  TEMA
+
+fig_sel <- (p_bic | p_sil) +
+  plot_annotation(
+    title   = "Critérios de seleção do número de grupos",
+    caption = "BIC penaliza complexidade via d(g)=2gp+(g−1)  ·  Silhouette mede coesão/separação intra-cluster",
+    theme   = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "03_curvas_selecao.png"),
+       fig_sel, width = 13, height = 5, dpi = 150, bg = "white")
+cat("  03_curvas_selecao.png\n")
+
+
+# =============================================================================
+# ── 12. VIS 4 · Perfis dos componentes (μ̂_hj e θ̂_hj) — melhor modelo EM ─────
+# =============================================================================
+
+mu_mat    <- fits_nb[[BEST_V]]$mu      # g × p
+theta_mat <- fits_nb[[BEST_V]]$theta   # g × p
+g_best    <- fits_nb[[BEST_V]]$g
+vars_best_lbl <- CONJUNTOS[[BEST_V]]
+
+comp_labels <- paste0("G", seq_len(g_best))
+rownames(mu_mat)    <- comp_labels
+rownames(theta_mat) <- comp_labels
+colnames(mu_mat)    <- vars_best_lbl
+colnames(theta_mat) <- vars_best_lbl
+
+# Reshape μ → long
+mu_long <- data.frame(
+  Componente = rep(comp_labels, each = length(vars_best_lbl)),
+  Variavel   = rep(vars_best_lbl, times = g_best),
+  mu         = as.vector(t(mu_mat))
+)
+mu_long$Variavel   <- factor(mu_long$Variavel,   levels = vars_best_lbl)
+mu_long$Componente <- factor(mu_long$Componente, levels = rev(comp_labels))
+
+# z-score por variável (permite comparar magnitude relativa entre variáveis)
+mu_long$mu_z <- ave(mu_long$mu, mu_long$Variavel,
+                    FUN = function(x) (x - mean(x)) / (sd(x) + 1e-9))
+
+p_mu_abs <- ggplot(mu_long, aes(Variavel, Componente)) +
+  geom_tile(aes(fill = mu), colour = "white", linewidth = 0.7) +
+  geom_text(aes(label = round(mu, 1)), size = 2.9, colour = "grey10") +
+  scale_fill_gradient(low = "#f0f7ff", high = "#1a5276", name = "μ̂") +
+  labs(title = "Médias estimadas μ̂_hj",
+       subtitle = "Valores absolutos por componente × variável",
+       x = NULL, y = NULL) +
+  TEMA +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, size = 8))
+
+p_mu_z <- ggplot(mu_long, aes(Variavel, Componente)) +
+  geom_tile(aes(fill = mu_z), colour = "white", linewidth = 0.7) +
+  geom_text(aes(label = round(mu_z, 2)), size = 2.9, colour = "grey10") +
+  scale_fill_gradient2(low = "#c0392b", mid = "white", high = "#2980b9",
+                       midpoint = 0, name = "z") +
+  labs(title = "Médias padronizadas (z-score por variável)",
+       subtitle = "Destaca quais variáveis mais distinguem cada componente",
+       x = NULL, y = NULL) +
+  TEMA +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, size = 8))
+
+# Reshape θ → long
+theta_long <- data.frame(
+  Componente = rep(comp_labels, each = length(vars_best_lbl)),
+  Variavel   = rep(vars_best_lbl, times = g_best),
+  theta      = as.vector(t(theta_mat))
+)
+theta_long$Variavel   <- factor(theta_long$Variavel,   levels = vars_best_lbl)
+theta_long$Componente <- factor(theta_long$Componente, levels = rev(comp_labels))
+# Variância = μ + μ²/θ; θ pequeno = alta sobredispersão
+theta_long$sobredisp <- ifelse(theta_long$theta < 1, "alta",
+                        ifelse(theta_long$theta < 5, "moderada", "baixa"))
+
+p_theta <- ggplot(theta_long, aes(Variavel, Componente)) +
+  geom_tile(aes(fill = log10(theta)), colour = "white", linewidth = 0.7) +
+  geom_text(aes(label = round(theta, 1)), size = 2.9, colour = "grey10") +
+  scale_fill_gradient(low = "#fdf2e9", high = "#b7410e",
+                      name = "log₁₀(θ̂)",
+                      labels = function(x) round(10^x, 1)) +
+  labs(title = "Dispersão estimada θ̂_hj",
+       subtitle = "Cor na escala log  ·  θ→0 = alta sobredispersão  ·  θ→∞ ≈ Poisson",
+       x = NULL, y = NULL) +
+  TEMA +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, size = 8))
+
+fig_prof <- (p_mu_abs | p_mu_z | p_theta) +
+  plot_annotation(
+    title    = paste0("Perfis dos componentes — ", BEST_V, ": ", LABELS_CONJUNTOS[BEST_V]),
+    subtitle = paste0("Mistura NB  ·  g=", g_best, " componentes"),
+    caption  = paste0("Var[Y] = μ + μ²/θ  ·  Estimativas obtidas pelo algoritmo EM  ·  n=",
+                      nrow(df), " beneficiários"),
+    theme    = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "04_perfis_componentes.png"),
+       fig_prof, width = 15, height = 3 + g_best * 0.6, dpi = 150, bg = "white")
+cat("  04_perfis_componentes.png\n")
+
+
+# =============================================================================
+# ── 13. VIS 5 · Incerteza de classificação — distribuição de max(τ̂_ih) ────────
+# =============================================================================
+
+tau_df <- do.call(rbind, lapply(names(fits_nb), function(v) {
+  tau_v   <- fits_nb[[v]]$tau
+  g_v     <- fits_nb[[v]]$g
+  max_tau <- apply(tau_v, 1, max)
+  data.frame(
+    ConjID   = v,
+    Conjunto = factor(LABELS_CONJUNTOS[v], levels = as.character(LABELS_CONJUNTOS)),
+    max_tau  = max_tau,
+    limiar   = 1 / g_v,        # chance uniforme (incerteza máxima)
+    g        = g_v
+  )
+}))
+
+# Mediana por conjunto
+med_tau <- aggregate(max_tau ~ Conjunto, tau_df, median)
+# Proporção com alta certeza (max_tau > 0.9)
+cert_tau <- aggregate(max_tau ~ Conjunto, tau_df,
+                      FUN = function(x) round(100 * mean(x > 0.9), 1))
+names(cert_tau)[2] <- "pct_cert"
+tau_info <- merge(med_tau, cert_tau, by = "Conjunto")
+tau_info$label <- sprintf("med=%.2f · %.0f%% c/ τ>0.9", tau_info$max_tau, tau_info$pct_cert)
+
+# Limiares únicos por conjunto (para geom_vline)
+limiares <- unique(tau_df[, c("Conjunto", "limiar")])
+
+p_unc <- ggplot(tau_df, aes(max_tau)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 30, fill = "#2980b9", colour = "white", alpha = 0.70) +
+  geom_density(colour = "#1a5276", linewidth = 0.85) +
+  geom_vline(data = med_tau,
+             aes(xintercept = max_tau),
+             colour = "#c0392b", linetype = "dashed", linewidth = 0.75) +
+  geom_vline(data = limiares,
+             aes(xintercept = limiar),
+             colour = "#e6a817", linetype = "dotted", linewidth = 0.75) +
+  geom_text(data = tau_info,
+            aes(x = 0.02, y = Inf, label = label),
+            hjust = 0, vjust = 1.4, size = 2.8, colour = "grey30") +
+  facet_wrap(~ Conjunto, ncol = 3, scales = "free_y") +
+  scale_x_continuous(labels = percent_format(accuracy = 1),
+                     breaks = c(0, 0.25, 0.5, 0.75, 1)) +
+  labs(
+    x       = "max τ̂_ih  (certeza de pertencimento ao componente mais provável)",
+    y       = "Densidade",
+    title   = "Incerteza de classificação — Mistura NB",
+    subtitle = "Vermelho tracejado = mediana  ·  Amarelo pontilhado = chance aleatória (1/g)",
+    caption  = "Valores próximos de 1 = beneficiário bem separado  ·  Valores próximos de 1/g = sobreposição entre grupos"
+  ) +
+  TEMA
+
+ggsave(file.path(DIR_FIGS, "05_incerteza_classificacao.png"),
+       p_unc, width = 13, height = 7, dpi = 150, bg = "white")
+cat("  05_incerteza_classificacao.png\n")
+
+
+# =============================================================================
+# ── 14. VIS 6 · Evolução das métricas V1 → V5 ────────────────────────────────
+# =============================================================================
+
+tab_evo <- tab
+tab_evo$Conjunto <- factor(tab_evo$Conjunto,
+                            levels = as.character(LABELS_CONJUNTOS))
+
+# Long: ARI, Acurácia, NMI, Pureza
+tab_long <- pivot_longer(
+  tab_evo,
+  cols      = c("ARI", "Acuracia", "NMI", "Pureza"),
+  names_to  = "Metrica",
+  values_to = "Valor"
+)
+tab_long$Metrica <- factor(tab_long$Metrica,
+                            levels = c("ARI", "Acuracia", "NMI", "Pureza"),
+                            labels = c("ARI (concordância de pares)",
+                                       "Acurácia (após pareamento húngaro)",
+                                       "NMI (informação mútua norm.)",
+                                       "Pureza"))
+
+p_evo <- ggplot(tab_long, aes(Conjunto, Valor,
+                               colour = Método, group = Método)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(aes(shape = Método), size = 3.2) +
+  geom_text(
+    data = tab_long[tab_long$Conjunto == levels(tab_long$Conjunto)[nlevels(tab_long$Conjunto)], ],
+    aes(label = sprintf("%.3f", Valor)),
+    hjust = -0.15, size = 2.7, show.legend = FALSE
+  ) +
+  facet_wrap(~ Metrica, ncol = 2, scales = "free_y") +
+  scale_colour_manual(values = c("Mistura NB" = "#4a7c59", "K-means" = "#c0392b"),
+                      name = "") +
+  scale_shape_manual(values  = c("Mistura NB" = 16,        "K-means" = 17),
+                     name = "") +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.12))) +
+  labs(
+    x       = NULL,
+    y       = "Valor",
+    title   = "Evolução das métricas conforme variáveis são adicionadas (V1 → V5)",
+    subtitle = "V1 = baseline 3 variáveis  ·  cada Vi adiciona uma variável ao conjunto anterior",
+    caption  = "* V5 inclui meses_utilizacao (gerada via Beta-Binomial): NB aproxima com ressalva"
+  ) +
+  TEMA +
+  theme(axis.text.x = element_text(angle = 28, hjust = 1))
+
+ggsave(file.path(DIR_FIGS, "06_evolucao_metricas.png"),
+       p_evo, width = 13, height = 7, dpi = 150, bg = "white")
+cat("  06_evolucao_metricas.png\n")
+
+
+# =============================================================================
+# ── 15. VIS 7 · Painel resumo — melhor modelo ────────────────────────────────
+# =============================================================================
+# Combina num único painel de alta síntese: PCA (3 col) + confusão (2 col) +
+# incerteza posterior do melhor conjunto
+
+ct_nb_best <- conf_df(grupo_real_int, fits_nb[[BEST_V]]$classification)
+ct_km_best <- conf_df(grupo_real_int, km_results[[BEST_V]]$cluster)
+
+p_conf_nb_best <- plot_conf(
+  ct_nb_best,
+  titulo    = paste0("Mistura NB (g=", g_best, ")"),
+  subtitulo = sprintf("ARI=%.3f · Acurácia=%.3f", met_nb_best$ari, met_nb_best$acuracia)
+)
+p_conf_km_best <- plot_conf(
+  ct_km_best,
+  titulo    = paste0("K-means (k=", km_results[[BEST_V]]$k, ")"),
+  subtitulo = sprintf("ARI=%.3f · Acurácia=%.3f", met_km_best$ari, met_km_best$acuracia)
+)
+
+tau_best_df <- data.frame(
+  max_tau = apply(fits_nb[[BEST_V]]$tau, 1, max),
+  Grupo   = as.character(fits_nb[[BEST_V]]$classification)
+)
+p_tau_best <- ggplot(tau_best_df, aes(max_tau, fill = Grupo, colour = Grupo)) +
+  geom_density(alpha = 0.35, linewidth = 0.8) +
+  scale_fill_manual(values   = COR, name = "Componente") +
+  scale_colour_manual(values = COR, name = "Componente") +
+  scale_x_continuous(labels = percent_format(accuracy = 1)) +
+  geom_vline(xintercept = 1 / g_best,
+             colour = "#e6a817", linetype = "dotted", linewidth = 0.8) +
+  labs(x = "max τ̂_ih", y = "Densidade",
+       title = "Certeza por componente",
+       subtitle = "Amarelo pontilhado = chance aleatória (1/g)") +
+  TEMA + theme(legend.position = "right")
+
+fig_resumo <- (
+  (make_pca("Verdadeiro", "Verdadeiro") |
+   make_pca("EM",         paste0("EM (g=", g_best, ")")) |
+   make_pca("KMeans",     paste0("K-means (k=", km_results[[BEST_V]]$k, ")"))) /
+  (p_conf_nb_best | p_conf_km_best | p_tau_best)
+) +
+  plot_annotation(
+    title    = paste0("Painel resumo — melhor conjunto: ", BEST_V,
+                      " (", LABELS_CONJUNTOS[BEST_V], ")"),
+    subtitle = paste0("Linha superior: projeção PCA  ·  ",
+                      "Linha inferior: matrizes de confusão e incerteza posterior"),
+    theme    = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "07_painel_resumo.png"),
+       fig_resumo, width = 15, height = 11, dpi = 150, bg = "white")
+cat("  07_painel_resumo.png\n")
+
+
+# ── Resumo final ──────────────────────────────────────────────────────────────
+
+cat(sprintf("\n%s\n", strrep("═", 60)))
+cat(sprintf("Figuras salvas em '%s/':\n", DIR_FIGS))
+cat("  01_matrizes_confusao.png    — grade 5×2 (conjuntos × métodos)\n")
+cat("  02_pca_classificacao.png    — PCA: verdadeiro | EM | K-means\n")
+cat("  03_curvas_selecao.png       — BIC (EM) e Silhouette (K-means)\n")
+cat("  04_perfis_componentes.png   — μ̂ absoluto | μ̂ z-score | θ̂\n")
+cat("  05_incerteza_classificacao.png — distribuição de max(τ̂_ih)\n")
+cat("  06_evolucao_metricas.png    — ARI/Acurácia/NMI/Pureza: V1→V5\n")
+cat("  07_painel_resumo.png        — painel de síntese (melhor conjunto)\n")
+cat(strrep("═", 60), "\n")
+cat("Próximo passo: usar rds/comparacao_variaveis.rds no analises.Rmd\n")

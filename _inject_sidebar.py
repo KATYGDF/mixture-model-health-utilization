@@ -1,0 +1,130 @@
+"""
+Injeta o sidebar de navegação do SimSaúde nas páginas HTML geradas pelo R Markdown.
+Uso: python _inject_sidebar.py
+"""
+
+import re, os
+
+BASE = os.path.dirname(os.path.abspath(__file__))
+
+SIDEBAR_CSS = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+/* === SimSaúde sidebar (overlay para páginas R Markdown) === */
+:root {
+  --ss-w:      250px;
+  --ss-accent: #2a6b6e;
+  --ss-bg:     #f7f7f7;
+  --ss-border: #e4e4e4;
+  --ss-muted:  #666;
+  --ss-ink:    #2c2c2c;
+  --ss-body:   'Source Serif 4', Georgia, serif;
+  --ss-mono:   'IBM Plex Mono', 'Courier New', monospace;
+}
+.ss-sidebar {
+  width: var(--ss-w);
+  background: var(--ss-bg);
+  border-right: 1px solid var(--ss-border);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow-y: auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 1050;
+  font-family: var(--ss-body);
+}
+.ss-sidebar .ss-brand {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ss-ink);
+  text-decoration: none;
+  display: block;
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+.ss-sidebar .ss-sub {
+  font-size: 0.78rem;
+  color: var(--ss-muted);
+  line-height: 1.45;
+  margin-bottom: 2rem;
+}
+.ss-sidebar ul {
+  list-style: none;
+  padding: 0; margin: 0;
+}
+.ss-sidebar ul a {
+  display: block;
+  padding: 0.38rem 0.65rem;
+  color: var(--ss-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  border-radius: 3px;
+  line-height: 1.4;
+}
+.ss-sidebar ul a:hover {
+  color: var(--ss-ink);
+  background: var(--ss-border);
+}
+.ss-sidebar ul a.active {
+  color: var(--ss-accent);
+  background: rgba(42, 107, 110, 0.09);
+}
+.ss-sidebar .ss-footer {
+  margin-top: auto;
+  padding-top: 2rem;
+  font-size: 0.73rem;
+  color: #b0b0b0;
+  line-height: 1.6;
+}
+/* Empurra o conteúdo Bootstrap para a direita */
+.main-container {
+  margin-left: calc(var(--ss-w) + 20px) !important;
+  max-width: none !important;
+}
+</style>
+"""
+
+def sidebar_html(active):
+    links = [
+        ("../index.html",    "Início"),
+        ("estudo.html",      "O Estudo"),
+        ("evolucao.html",    "Evolução"),
+        ("simulacao.html",   "Simulação"),
+        ("eda_simsaude.html","EDA"),
+    ]
+    items = ""
+    for href, label in links:
+        cls = ' class="active"' if href.replace("../", "").replace(".html", "") == active else ""
+        items += f'    <li><a href="{href}"{cls}>{label}</a></li>\n'
+    return f"""
+<nav class="ss-sidebar">
+  <a href="../index.html" class="ss-brand">SimSaúde</a>
+  <p class="ss-sub">Simulação de Utilização<br>em Saúde Suplementar</p>
+  <ul>
+{items}  </ul>
+  <div class="ss-footer">Katy Garcia de Freitas · 2026</div>
+</nav>
+"""
+
+def inject(filepath, active):
+    with open(filepath, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    if "ss-sidebar" in html:
+        print(f"  {filepath}: sidebar já presente, pulando.")
+        return
+
+    html = html.replace("</head>", SIDEBAR_CSS + "</head>", 1)
+    html = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + sidebar_html(active), html, count=1)
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"  {filepath}: sidebar injetado.")
+
+pages = os.path.join(BASE, "docs", "pages")
+inject(os.path.join(pages, "simulacao.html"),    "simulacao")
+inject(os.path.join(pages, "eda_simsaude.html"), "eda_simsaude")
+
+print("Pronto.")

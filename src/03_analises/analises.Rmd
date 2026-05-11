@@ -465,25 +465,21 @@ onde $\phi(\cdot)$ é a densidade gaussiana multivariada.
 
 ## Ajuste e seleção de componentes
 
-```{r m1-ajuste, cache=TRUE, cache.path="analises_cache/"}
-set.seed(SEED)
+```{r m1-ajuste}
+# Lê o modelo ajustado pelo script explorar_modelos.R
+# Para re-ajustar: rode explorar_modelos.R e re-knit este documento
+m1_fit <- readRDS("rds/m1_gaussiana.rds")
 
-# Ajusta BIC para g = 1 até G_MAX componentes, todos os modelos de covariância
-m1_bic <- mclust::mclustBIC(X_std, G = 1:G_MAX, verbose = FALSE)
+M1_G   <- m1_fit$G
+M1_MOD <- m1_fit$modelName
 
-# Modelo ótimo
-m1_fit <- mclust::Mclust(X_std, G = 1:G_MAX, x = m1_bic, verbose = FALSE)
-
-M1_G    <- m1_fit$G          # número de componentes selecionado
-M1_MOD  <- m1_fit$modelName  # modelo de covariância selecionado
-
-cat(sprintf("Modelo 1 selecionado: %s · g = %d componentes\n", M1_MOD, M1_G))
+cat(sprintf("Modelo 1 carregado: %s · g = %d componentes\n", M1_MOD, M1_G))
 ```
 
 ## Curva BIC
 
 ```{r m1-bic-plot}
-plot(m1_bic, legendArgs = list(cex = 0.75))
+plot(m1_fit$BIC, legendArgs = list(cex = 0.75))
 title(main = "Modelo 1 · BIC por número de componentes (mclust)",
       sub  = "Maior BIC = melhor ajuste · Linha vertical = g ótimo")
 ```
@@ -562,122 +558,17 @@ Quando $\theta_{hj} \to \infty$, a NB converge para Poisson.
 
 ## Algoritmo EM
 
-```{r m2-ajuste, cache=TRUE, cache.path="analises_cache/"}
-# ── EM para mistura de Binomial Negativa multivariada ─────────────────────
-# Referência: Ng, Xiang & Yau (2019), cap. 4–5
-#
-# Parâmetros por componente h e variável j: (mu_hj, theta_hj)
-# E-step : tau_ih ∝ pi_h * prod_j NB(y_ij ; mu_hj, theta_hj)
-# M-step : mu_hj    = soma ponderada (forma fechada)
-#          theta_hj = otimização numérica (sem forma fechada)
-#          pi_h     = média de tau_ih
+```{r m2-ajuste}
+# Lê os modelos ajustados pelo script explorar_modelos.R
+# Para re-ajustar: rode explorar_modelos.R e re-knit este documento
+m2_fit_otimo <- readRDS("rds/m2_nb_otimo.rds")
+crit         <- readRDS("rds/m2_criterios.rds")
+m2_bic_vals  <- crit$bic
+m2_aic_vals  <- crit$aic
 
-# Atualiza theta por otimização escalar (log-espaço para garantir theta > 0)
-.update_theta <- function(y_j, tau_h, mu_hj) {
-  neg_ll <- function(lt) {
-    th <- exp(lt)
-    -sum(tau_h * dnbinom(y_j, size = th, mu = mu_hj, log = TRUE))
-  }
-  lt_opt <- tryCatch(
-    optimize(neg_ll, interval = c(-4, 8))$minimum,
-    error = function(e) 0  # fallback: theta = 1
-  )
-  exp(lt_opt)
-}
+M2_G <- m2_fit_otimo$g
 
-nb_mix_em <- function(Y, g, max_iter = 150, tol = 1e-5, n_init = 3, seed = 42) {
-  n <- nrow(Y); p <- ncol(Y)
-  Y <- as.matrix(Y)
-
-  best_loglik <- -Inf
-  best_fit    <- NULL
-
-  for (init in seq_len(n_init)) {
-    set.seed(seed + init)
-
-    # Inicialização: atribuições aleatórias suavizadas
-    tau   <- matrix(runif(n * g) + 0.01, n, g)
-    tau   <- tau / rowSums(tau)
-    theta <- matrix(2, g, p)   # chute inicial: theta = 2
-
-    loglik_old <- -Inf
-
-    for (iter in seq_len(max_iter)) {
-      # ── M-step ────────────────────────────────────────────────────────
-      pi_h  <- colMeans(tau)
-      n_h   <- colSums(tau)
-      mu    <- t(tau) %*% Y / n_h          # g × p  (forma fechada)
-      mu    <- pmax(mu, 1e-6)
-
-      # Atualiza theta_hj por otimização numérica
-      for (h in seq_len(g)) {
-        for (j in seq_len(p)) {
-          theta[h, j] <- .update_theta(Y[, j], tau[, h], mu[h, j])
-        }
-      }
-      theta <- pmax(theta, 0.05)
-
-      # ── E-step (log-sum-exp) ──────────────────────────────────────────
-      log_f <- matrix(0, n, g)
-      for (h in seq_len(g)) {
-        mu_mat    <- matrix(mu[h, ],    n, p, byrow = TRUE)
-        theta_mat <- matrix(theta[h, ], n, p, byrow = TRUE)
-        log_f[, h] <- log(pi_h[h]) +
-          rowSums(dnbinom(Y, size = theta_mat, mu = mu_mat, log = TRUE))
-      }
-      log_max  <- apply(log_f, 1, max)
-      log_norm <- log(rowSums(exp(log_f - log_max))) + log_max
-      loglik   <- sum(log_norm)
-
-      tau_new  <- exp(log_f - log_norm)
-      tau_new  <- tau_new / rowSums(tau_new)
-
-      # ── Convergência ──────────────────────────────────────────────────
-      if (iter > 1 && abs(loglik - loglik_old) < tol) break
-      loglik_old <- loglik
-      tau        <- tau_new
-    }
-
-    if (loglik > best_loglik) {
-      best_loglik <- loglik
-      # Parâmetros livres: g*p mu + g*p theta + (g-1) pi = 2gp + g - 1
-      k_params <- 2L * g * p + (g - 1L)
-      best_fit <- list(
-        g              = g,
-        pi             = pi_h,
-        mu             = mu,        # g × p
-        theta          = theta,     # g × p
-        tau            = tau_new,   # n × g
-        loglik         = loglik,
-        n_iter         = iter,
-        classification = apply(tau_new, 1, which.max),
-        BIC            = -2 * loglik + k_params * log(n),
-        AIC            = -2 * loglik + 2 * k_params
-      )
-    }
-  }
-  best_fit
-}
-
-# ── Executa para g = 1 até G_MAX ─────────────────────────────────────────
-Y_counts <- X_raw   # contagens brutas (NB não usa transformação)
-
-m2_fits     <- vector("list", G_MAX)
-m2_bic_vals <- numeric(G_MAX)
-m2_aic_vals <- numeric(G_MAX)
-
-for (g in seq_len(G_MAX)) {
-  cat(sprintf("  Modelo 2 (NB EM): g = %d ...\r", g))
-  m2_fits[[g]]   <- nb_mix_em(Y_counts, g = g, seed = SEED)
-  m2_bic_vals[g] <- m2_fits[[g]]$BIC
-  m2_aic_vals[g] <- m2_fits[[g]]$AIC
-}
-cat("\n")
-
-M2_G         <- which.min(m2_bic_vals)
-m2_fit_otimo <- m2_fits[[M2_G]]
-
-cat(sprintf("Modelo 2 (NB) selecionado: g = %d · log-lik = %.1f · BIC = %.1f\n",
+cat(sprintf("Modelo 2 (NB) carregado: g = %d · log-lik = %.1f · BIC = %.1f\n",
             M2_G, m2_fit_otimo$loglik, m2_fit_otimo$BIC))
 ```
 
@@ -750,13 +641,11 @@ Aplicamos o K-means sobre as mesmas variáveis transformadas ($\log(1+x)$ + padr
 
 ## Número ótimo de clusters
 
-```{r m3-nbclust, fig.height=4, cache=TRUE, cache.path="analises_cache/"}
-set.seed(SEED)
-
-# Curva do cotovelo (within-cluster sum of squares)
-wcss <- sapply(1:G_MAX, function(k) {
-  kmeans(X_std, centers = k, nstart = 20, iter.max = 200)$tot.withinss
-})
+```{r m3-nbclust, fig.height=4}
+# Lê os vetores de seleção calculados em explorar_modelos.R
+m3_sel   <- readRDS("rds/m3_selecao.rds")
+wcss     <- m3_sel$wcss
+sil_vals <- m3_sel$sil_vals
 
 p_cotovelo <- data.frame(k = 1:G_MAX, wcss = wcss) %>%
   ggplot(aes(x = k, y = wcss)) +
@@ -769,13 +658,6 @@ p_cotovelo <- data.frame(k = 1:G_MAX, wcss = wcss) %>%
     subtitle = "Linha vermelha = número real de grupos (k = 4)",
     x = "k", y = "WCSS"
   )
-
-# Silhouette
-sil_vals <- sapply(2:G_MAX, function(k) {
-  km  <- kmeans(X_std, centers = k, nstart = 20, iter.max = 200)
-  sil <- cluster::silhouette(km$cluster, dist(X_std))
-  mean(sil[, "sil_width"])
-})
 
 p_sil <- data.frame(k = 2:G_MAX, sil = sil_vals) %>%
   ggplot(aes(x = k, y = sil)) +
@@ -794,16 +676,14 @@ p_cotovelo + p_sil
 
 ## Ajuste final
 
-```{r m3-ajuste, cache=TRUE, cache.path="analises_cache/"}
-set.seed(SEED)
-
-# Usa o número real de grupos como k final
-M3_K  <- G_REAL
-m3_km <- kmeans(X_std, centers = M3_K, nstart = 50, iter.max = 300)
-
+```{r m3-ajuste}
+# Lê o K-means ajustado pelo script explorar_modelos.R
+m3_km    <- readRDS("rds/m3_kmeans.rds")
+M3_K     <- m3_km$iter   # número de clusters = length(centers)
+M3_K     <- nrow(m3_km$centers)
 m3_classe <- m3_km$cluster
 
-cat(sprintf("K-means: k = %d · WCSS = %.1f\n", M3_K, m3_km$tot.withinss))
+cat(sprintf("K-means carregado: k = %d · WCSS = %.1f\n", M3_K, m3_km$tot.withinss))
 cat("Distribuição dos clusters:\n")
 print(table(m3_classe))
 ```
@@ -833,6 +713,9 @@ ggplot(pca_df, aes(PC1, PC2, color = m3_cluster)) +
 # ── Algoritmo húngaro para pareamento ótimo de rótulos ───────────────────
 # Os rótulos dos clusters são arbitrários; precisamos encontrar a permutação
 # que maximiza o acordo com os grupos reais.
+#
+# solve_LSAP retorna σ onde σ[i]=j significa "grupo real i → cluster j".
+# Precisamos do INVERSO: "cluster j → grupo real i" = order(σ).
 parear_otimo <- function(real, estimado) {
   g_r <- max(real)
   g_e <- max(estimado)
@@ -845,11 +728,9 @@ parear_otimo <- function(real, estimado) {
       custo[i, j] <- -sum(real == i & estimado == j)
     }
   }
-  sol     <- clue::solve_LSAP(custo + abs(min(custo)))  # LSAP pede custo >= 0
-  mapeamento <- as.integer(sol)         # mapeamento[j] = rótulo real para cluster j
-  # Remapeia estimado para rótulos reais
-  estimado_pareado <- mapeamento[estimado]
-  estimado_pareado
+  sol        <- clue::solve_LSAP(custo + abs(min(custo)))
+  mapeamento <- order(as.integer(sol))   # inverso da permutação: cluster j → grupo i
+  mapeamento[estimado]
 }
 
 # ── Métricas consolidadas ─────────────────────────────────────────────────

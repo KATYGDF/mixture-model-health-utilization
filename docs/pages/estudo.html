@@ -7,6 +7,118 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath:  [['\\(', '\\)']],
+    displayMath: [['$$', '$$']],
+    tags: 'none'
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+<style>
+.eq {
+  margin: 1.5rem 0;
+  padding: 0.8rem 1.2rem;
+  background: var(--surface, #f8f7f4);
+  border-left: 3px solid var(--accent, #4a7c59);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.2rem 0;
+}
+.param-table th {
+  background: var(--surface, #f8f7f4);
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px solid var(--border, #ddd);
+  text-align: left;
+}
+.param-table td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--border, #eee);
+  vertical-align: top;
+}
+.param-table tr:last-child td { border-bottom: none; }
+.param-table .num {
+  font-family: var(--ff-mono, 'IBM Plex Mono', monospace);
+  text-align: right;
+}
+.param-table tr.best td   { background: #f0f7f2; }
+.param-table tr.best .num { font-weight: 600; }
+.param-table tr.sep td    { border-top: 2px solid var(--border, #ccc); }
+.nota {
+  background: #fffbf0;
+  border-left: 3px solid #e6a817;
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: var(--muted, #666);
+  border-radius: 0 4px 4px 0;
+  margin: 1rem 0;
+}
+.toc {
+  background: var(--surface, #f8f7f4);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  padding: 1rem 1.4rem;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+.toc ol { margin: 0.4rem 0 0 1.2rem; padding: 0; }
+.toc li { margin: 0.3rem 0; }
+.toc a  { color: var(--accent, #4a7c59); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.ref-group { margin-bottom: 2rem; }
+.ref-entry {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  border-left: 2px solid var(--border, #ddd);
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.ref-entry cite { font-style: normal; font-weight: 600; color: var(--ink, #1a1a1a); }
+.resultado-destaque {
+  background: #f0f7f2;
+  border: 1px solid #c8e6c9;
+  border-radius: 6px;
+  padding: 1rem 1.4rem;
+  margin: 1.5rem 0;
+  font-size: 0.93rem;
+}
+.resultado-destaque strong { color: #2e7d32; }
+blockquote.cit {
+  margin: 1.2rem 0;
+  padding: 0.75rem 1.2rem;
+  border-left: 3px solid var(--accent, #4a7c59);
+  background: var(--surface, #f8f7f4);
+  font-style: italic;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  color: var(--ink, #1a1a1a);
+}
+blockquote.cit cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+</style>
 </head>
 <body>
 
@@ -16,7 +128,6 @@
   <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="estudo.html" class="active">O Estudo</a></li>
-    <li><a href="evolucao.html">Evolução</a></li>
     <li><a href="simulacao.html">Simulação</a></li>
     <li><a href="eda_simsaude.html">EDA</a></li>
     <li><a href="construcao_progressiva.html">Construção</a></li>
@@ -27,17 +138,406 @@
 </nav>
 
 <main class="main">
-<div class="prose" style="text-align:center;padding-top:4rem;">
+<div class="prose">
 
-  <div style="font-size:5rem;line-height:1;margin-bottom:1.5rem;">🚧</div>
-  <h1 style="margin-bottom:0.5rem;">Em construção</h1>
-  <p class="lead">Esta página está sendo preparada.</p>
-  <p style="color:var(--muted);max-width:36rem;margin:1.5rem auto 0;">
-    Em breve aqui estará a descrição completa do estudo — motivação, objetivos,
-    metodologia e resultados esperados.
-  </p>
+<h1>O Estudo</h1>
+<p class="lead">Modelagem de heterogeneidade latente em dados de utilização de saúde suplementar
+via misturas de Binomial Negativa — estudo preliminar com dados simulados</p>
+
+<div class="toc">
+  <strong>Nesta página</strong>
+  <ol>
+    <li><a href="#problema">O problema: heterogeneidade oculta</a></li>
+    <li><a href="#hipotese">Hipótese central</a></li>
+    <li><a href="#dados">Dados e variáveis</a></li>
+    <li><a href="#metodos">Métodos</a></li>
+    <li><a href="#resultados">Resultados principais</a></li>
+    <li><a href="#limitacoes">Limitações</a></li>
+    <li><a href="#referencias">Referências</a></li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="problema">1 · O problema: heterogeneidade oculta</h2>
+
+<p>
+Planos de saúde atendem populações heterogêneas: beneficiários jovens e
+saudáveis, adultos com doenças crônicas estáveis, pacientes em episódios agudos de
+alto custo e padrões atípicos de utilização. Essa heterogeneidade impacta diretamente
+a precificação atuarial, a gestão de sinistros e a detecção de irregularidades.
+</p>
+
+<p>
+O problema central é que os <strong>grupos de utilização não são diretamente observáveis</strong>:
+dados administrativos contêm apenas contagens de serviços utilizados — consultas,
+pronto-socorro, exames, internações, terapias — sem rótulo de qual subpopulação cada
+beneficiário pertence. A estrutura latente precisa ser recuperada estatisticamente.
+</p>
+
+<p>
+Modelos univariados (Poisson, Binomial Negativa global) não capturam essa estrutura:
+eles produzem um único conjunto de parâmetros que representa uma média ponderada de
+subpopulações distintas, mascarando a heterogeneidade real e comprometendo a inferência.
+</p>
+
+<blockquote class="cit">
+  "Mixture models of negative binomial distributions can be used to handle over-dispersion
+  of count data, which is commonly encountered in medical and healthcare studies."
+  <cite>— Ng, Xiang &amp; Yau (2019, p. 77)</cite>
+</blockquote>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="hipotese">2 · Hipótese central</h2>
+
+<p>
+Modelos de mistura finita com componentes Binomial Negativa são mais capazes de
+recuperar grupos latentes em dados de contagem de saúde suplementar do que métodos
+de clusterização geométrica como o K-means.
+</p>
+
+<p>
+A justificativa é dupla:
+</p>
+
+<ul>
+  <li>
+    <strong>Adequação distributiva:</strong> variáveis de utilização de saúde são
+    contagens discretas com sobredispersão — \(\mathrm{Var}[Y] \gg \mathbb{E}[Y]\).
+    A família NB modela explicitamente esse padrão via parâmetro \(\theta_h > 0\)
+    por componente. K-means opera em distâncias euclidianas em espaço transformado
+    \((\log(1+y))\) e é agnóstico sobre a distribuição dos dados.
+  </li>
+  <li>
+    <strong>Interpretabilidade:</strong> a mistura NB estima, para cada componente \(h\),
+    a média \(\mu_{hj}\) e a dispersão \(\theta_{hj}\) de cada variável clínica —
+    parâmetros diretamente interpretáveis em termos de perfil de utilização.
+    K-means fornece apenas centróides em espaço transformado.
+  </li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="dados">3 · Dados e variáveis</h2>
+
+<h3>Dados simulados</h3>
+
+<p>
+Nenhum dado real de beneficiários foi utilizado. Os dados são inteiramente sintéticos:
+\(n = 5{.}000\) beneficiários gerados por uma mistura finita com \(G = 4\) grupos
+latentes, calibrada para reproduzir indicadores do <strong>Painel de Indicadores da ANS</strong>
+com desvio inferior a 10%.
+</p>
+
+<p>
+A simulação por processo generativo tem duas vantagens metodológicas: (i) o gabarito
+verdadeiro (\(G = 4\) grupos com rótulos conhecidos) permite avaliação objetiva de
+qualidade de recuperação; (ii) os parâmetros são completamente controlados, isolando
+o efeito de cada escolha de modelagem.
+</p>
+
+<h3>Grupos latentes</h3>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Grupo</th><th>Rótulo</th>
+      <th class="num">Peso (π)</th><th class="num">n (realizado)</th>
+      <th>Perfil de utilização</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>\(G_1\)</td><td>Baixo uso</td>
+      <td class="num">0,50</td><td class="num">2.493</td>
+      <td>Utilização mínima em todas as variáveis; majoritariamente jovens saudáveis.</td>
+    </tr>
+    <tr>
+      <td>\(G_2\)</td><td>Ambulatorial coordenado</td>
+      <td class="num">0,25</td><td class="num">1.268</td>
+      <td>Uso regular de consultas e exames preventivos; poucas internações.</td>
+    </tr>
+    <tr>
+      <td>\(G_3\)</td><td>Agudo / hospitalar</td>
+      <td class="num">0,20</td><td class="num">982</td>
+      <td>Alta frequência de pronto-socorro e internações; episódios de alto custo.</td>
+    </tr>
+    <tr>
+      <td>\(G_4\)</td><td>Padrão atípico</td>
+      <td class="num">0,05</td><td class="num">257</td>
+      <td>Volume anormalmente elevado de exames e terapias; padrão atípico de utilização.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Variáveis — conjunto V3 (5 variáveis clínicas)</h3>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Variável</th><th>Descrição</th>
+      <th class="num">Média</th>
+      <th class="num">Var/Média</th>
+      <th class="num">% zeros</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>consultas</code></td>
+      <td>Consultas médicas ambulatoriais</td>
+      <td class="num">4,15</td><td class="num">6,0×</td><td class="num">15,6%</td>
+    </tr>
+    <tr>
+      <td><code>ps</code></td>
+      <td>Atendimentos de pronto-socorro</td>
+      <td class="num">1,31</td><td class="num">6,5×</td><td class="num">63,9%</td>
+    </tr>
+    <tr>
+      <td><code>exames</code></td>
+      <td>Exames diagnósticos</td>
+      <td class="num">22,67</td><td class="num">44,9×</td><td class="num">2,8%</td>
+    </tr>
+    <tr>
+      <td><code>internacoes</code></td>
+      <td>Internações hospitalares</td>
+      <td class="num">0,17</td><td class="num">5,9×</td><td class="num">94,1%</td>
+    </tr>
+    <tr>
+      <td><code>terapias</code></td>
+      <td>Sessões de terapia (fisioterapia, fonoaudiologia, etc.)</td>
+      <td class="num">1,26</td><td class="num">11,9×</td><td class="num">80,1%</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="nota">
+  Todas as variáveis são contagens inteiras com sobredispersão significativa (razão Var/Média
+  entre 5,9× e 44,9× acima da referência Poisson = 1).
+  A variável <code>exames</code> apresenta sobredispersão extrema (44,9×),
+  motivando o uso da família Binomial Negativa.
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="metodos">4 · Métodos</h2>
+
+<h3>Modelo de mistura de Binomial Negativa</h3>
+
+<p>
+O modelo assume que cada beneficiário pertence a um de \(g\) grupos latentes com
+probabilidade \(\pi_h\). Dado o grupo \(h\), as contagens das \(p = 5\) variáveis
+são condicionalmente independentes com distribuição NB₂:
+</p>
+
+<div class="eq">
+$$f(\mathbf{y}_i;\Psi) = \sum_{h=1}^{g} \pi_h \prod_{j=1}^{p}
+\mathrm{NB}\!\left(y_{ij};\,\mu_{hj},\,\theta_{hj}\right)$$
+</div>
+
+<p>
+com \(\mathbb{E}[Y_j \mid Z_i = h] = \mu_{hj}\) e
+\(\mathrm{Var}[Y_j \mid Z_i = h] = \mu_{hj} + \mu_{hj}^2/\theta_{hj}\).
+Para \(g = 4\) e \(p = 5\): \(d(g) = 2gp + (g-1) = 43\) parâmetros livres.
+</p>
+
+<h3>Algoritmo EM customizado</h3>
+
+<ul>
+  <li><strong>Inicialização:</strong> K-means em \(\log(1+\mathbf{Y})\) + \(n_{\mathrm{init}} = 8\) reinícios;</li>
+  <li><strong>E-step:</strong> \(\hat\tau_{ih} \propto \hat\pi_h \prod_j \mathrm{NB}(y_{ij};\hat\mu_{hj},\hat\theta_{hj})\);</li>
+  <li><strong>M-step:</strong> \(\hat\pi_h\), \(\hat\mu_{hj}\) em forma fechada; \(\hat\theta_{hj}\) por otimização numérica em \(\log\theta\);</li>
+  <li><strong>Convergência:</strong> tolerância \(10^{-5}\) na log-verossimilhança;</li>
+  <li><strong>Seleção de \(g\):</strong> BIC com \(g \in \{2,3,4,5,6\}\).</li>
+</ul>
+
+<h3>Baseline: K-means em log1p</h3>
+
+<p>
+K-means aplicado a \(\log(1+\mathbf{Y})\) padronizado, sem suposições distributivas.
+Número de grupos selecionado por silhueta média. Pareamento de rótulos via
+algoritmo húngaro (Kuhn-Munkres, 1955).
+</p>
+
+<h3>Métricas de avaliação</h3>
+
+<table class="param-table">
+  <thead>
+    <tr><th>Métrica</th><th>Interpretação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>ARI</strong> — Rand Ajustado</td>
+        <td>0 = aleatório · 1 = perfeito · métrica primária</td></tr>
+    <tr><td><strong>NMI</strong> — Informação Mútua Normalizada</td>
+        <td>0–1; sensível ao número de grupos</td></tr>
+    <tr><td><strong>Acurácia</strong> (pareamento húngaro)</td>
+        <td>Proporção de classificações corretas após bijeção ótima</td></tr>
+    <tr><td><strong>Pureza</strong></td>
+        <td>Homogeneidade dos clusters (sem penalidade por excesso de grupos)</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="resultados">5 · Resultados principais</h2>
+
+<div class="resultado-destaque">
+  <strong>Melhor resultado:</strong> Mistura NB · V3 (5 variáveis) · \(g^* = 4\) ·
+  ARI = 0,729 · Acurácia = 0,877 · NMI = 0,594 · Pureza = 0,861.
+  O BIC selecionou corretamente o número verdadeiro de grupos (\(g = 4\)).
+</div>
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Conjunto</th><th>Método</th>
+      <th class="num">g*</th>
+      <th class="num">ARI</th><th class="num">NMI</th>
+      <th class="num">Acurácia</th><th class="num">Pureza</th>
+      <th class="num">Tempo (s)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>V1 · 3 vars</td><td>Mistura NB</td>
+      <td class="num">3</td><td class="num">0,583</td><td class="num">0,473</td>
+      <td class="num">0,729</td><td class="num">0,782</td>
+      <td class="num">2.875</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,554</td><td class="num">0,447</td>
+      <td class="num">0,757</td><td class="num">0,786</td>
+      <td class="num">&lt; 1</td>
+    </tr>
+    <tr class="sep">
+      <td>V2 · + internações</td><td>Mistura NB</td>
+      <td class="num">3</td><td class="num">0,599</td><td class="num">0,483</td>
+      <td class="num">0,742</td><td class="num">0,794</td>
+      <td class="num">1.735</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
+      <td class="num">0,777</td><td class="num">0,803</td>
+      <td class="num">&lt; 1</td>
+    </tr>
+    <tr class="sep best">
+      <td>V3 · + terapias ★</td><td>Mistura NB</td>
+      <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
+      <td class="num">0,877</td><td class="num">0,861</td>
+      <td class="num">3.826</td>
+    </tr>
+    <tr>
+      <td></td><td>K-means</td>
+      <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
+      <td class="num">0,815</td><td class="num">0,843</td>
+      <td class="num">2</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+Três observações interpretativas:
+</p>
+
+<ul>
+  <li>
+    <strong>A Mistura NB supera o K-means em todos os conjuntos</strong> (ΔARI = +0,03 a +0,056),
+    confirmando a hipótese central. A superioridade se acentua com a adição de
+    variáveis clinicamente informativas.
+  </li>
+  <li>
+    <strong>A seleção correta de \(g\) é determinante.</strong>
+    Em V1 e V2 o BIC seleciona \(g^* = 3\) (um grupo a menos); em V3 converge para
+    \(g^* = 4\) — o conjunto de informação é suficiente para separar os 4 grupos.
+  </li>
+  <li>
+    <strong><code>terapias</code> é a variável decisiva</strong> (ΔARI = +0,13 de V2 para V3):
+    ela discrimina o grupo atípico (\(G_4\)) dos demais, que apresentam uso de
+    terapias próximo de zero.
+  </li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="limitacoes">6 · Limitações</h2>
+
+<ul>
+  <li>
+    <strong>Dados simulados:</strong> os resultados avaliam a capacidade do método sob
+    condições controladas — não necessariamente a performance em dados reais com
+    dependência estrutural mais complexa entre variáveis.
+  </li>
+  <li>
+    <strong>Hipótese de independência condicional:</strong> o modelo assume que, dado
+    o grupo \(h\), as 5 variáveis são independentes. Em dados reais essa hipótese
+    pode ser violada parcialmente.
+  </li>
+  <li>
+    <strong>Custo computacional:</strong> o EM com 8 reinícios exige ~1–3 h por conjunto.
+    Implementação em C++ ou GPU reduziria esse tempo substancialmente.
+  </li>
+  <li>
+    <strong>Seleção de \(g\) pelo BIC:</strong> pode subselecionar \(g\) quando os grupos
+    têm separação fraca (V1, V2). O ICL é mais conservador e seleciona \(g = 1\) em
+    análises univariadas — reforçando que a informação multivariada é essencial.
+  </li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2 id="referencias">7 · Referências</h2>
+
+<div class="ref-group">
+
+  <div class="ref-entry">
+    <cite>Ahmad, M., Amin, K., Ali, A., Ahmad, R. W., &amp; Khan, R. (2025).</cite>
+    A comparative evaluation of Poisson, negative binomial, and zero-inflated
+    models for count data.
+    <em>Dialogue Social Science Review</em>, <em>3</em>(8), 188–200.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Deb, P., &amp; Trivedi, P. K. (1997).</cite>
+    Demand for medical care by the elderly: A finite mixture approach.
+    <em>Journal of Applied Econometrics</em>, <em>12</em>(3), 313–336.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977).</cite>
+    Maximum likelihood from incomplete data via the EM algorithm.
+    <em>Journal of the Royal Statistical Society — Series B</em>,
+    <em>39</em>(1), 1–38.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Hubert, L., &amp; Arabie, P. (1985).</cite>
+    Comparing partitions.
+    <em>Journal of Classification</em>, <em>2</em>(1), 193–218.
+  </div>
+
+  <div class="ref-entry">
+    <cite>McLachlan, G. J., &amp; Peel, D. (2000).</cite>
+    <em>Finite mixture models.</em> John Wiley &amp; Sons.
+  </div>
+
+  <div class="ref-entry">
+    <cite>Ng, S. K., Xiang, L., &amp; Yau, K. K. W. (2019).</cite>
+    <em>Mixture modelling for medical and health sciences.</em>
+    CRC Press / Taylor &amp; Francis. ISBN 978-1-4822-3675-0.
+  </div>
+
+  <div class="ref-entry">
+    <cite>ANS — Agência Nacional de Saúde Suplementar. (2026).</cite>
+    Painel de Indicadores da Saúde Suplementar.
+    Recuperado de <a href="https://www.ans.gov.br/images/stories/Materiais_para_pesquisa/Perfil_setor/Painel_setor/painel-de-indicadores-da-saude-suplementar-indicadores.pdf"
+    target="_blank" rel="noopener">ans.gov.br</a>.
+  </div>
 
 </div>
+
+</div><!-- .prose -->
 </main>
 
 </body>

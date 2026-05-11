@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -213,7 +213,7 @@ blockquote.cit cite {
   <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="estudo.html">O Estudo</a></li>
-    <li><a href="evolucao.html">Evolução</a></li>
+
     <li><a href="simulacao.html">Simulação</a></li>
     <li><a href="eda_simsaude.html">EDA</a></li>
     <li><a href="construcao_progressiva.html" class="active">Construção</a></li>
@@ -227,7 +227,7 @@ blockquote.cit cite {
 <div class="prose">
 
 <h1>Da Poisson à Mistura NB</h1>
-<p class="lead">Construção progressiva da modelagem de misturas em dados de utilização de saúde suplementar — V3: consultas, PS, exames, internações, terapias</p>
+<p class="lead">Construção progressiva da modelagem de misturas em dados de utilização de saúde suplementar(consultas, PS, exames, internações, terapias)</p>
 
 <div class="toc">
   <strong>Nesta página</strong>
@@ -237,7 +237,7 @@ blockquote.cit cite {
     <li><a href="#heterogeneidade">Parte II — A Binomial Negativa ainda não basta</a></li>
     <li><a href="#mixtools">Parte III — Mistura Gaussiana: <code>mixtools</code></a></li>
     <li><a href="#flexmix">Parte IV — Mixturas de contagem: <code>flexmix</code></a></li>
-    <li><a href="#flexmix-univ">Parte V — <code>flexmix</code> NB univariado: as 5 variáveis de V3</a></li>
+    <li><a href="#flexmix-univ">Parte V — <code>flexmix</code> NB univariado: as 5 variáveis</a></li>
     <li><a href="#bic">Curvas de BIC e seleção de <em>g</em></a></li>
     <li><a href="#posteriores">Probabilidades posteriores</a></li>
     <li><a href="#transicao">Limitações e necessidade do EM customizado</a></li>
@@ -334,7 +334,7 @@ A razão \(\mathrm{Var}[Y] / \mathbb{E}[Y]\), chamada <em>índice de
 sobredispersão</em>, serve como diagnóstico:
 </p>
 
-<pre class="r-code"><span class="com"># Razão variância/média por variável (V3)</span>
+<pre class="r-code"><span class="com"># Razão variância/média por variável </span>
 vars &lt;- c("consultas", "ps", "exames", "internacoes", "terapias")
 
 stats &lt;- data.frame(
@@ -403,9 +403,9 @@ A tabela abaixo sintetiza o padrão esperado nos dados simulados:
 
 <div class="fig-wrapper">
   <img src="../../docs/assets/img/construcao/fig01_sobredispersao.png"
-       alt="Sobredispersão por variável — razão Var/Média (V3)">
+       alt="Sobredispersão por variável — razão Var/Média ">
   <p class="fig-caption">
-    <strong>Fig. 1</strong> — Razão Var/Média por variável (V3).
+    <strong>Fig. 1</strong> — Razão Var/Média por variável .
     Consultas (6,0×), ps (6,5×) e internações (5,9×) apresentam sobredispersão moderada;
     terapias (11,9×) é alta; exames (44,9×) é extrema.
     Linha tracejada = referência Poisson (razão = 1).
@@ -695,22 +695,15 @@ vista distribuicional — e confirma a estrutura de múltiplos grupos.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="flexmix-univ">6 · Parte V — <code>flexmix</code> NB univariado: as 5 variáveis de V3</h2>
+<h2 id="flexmix-univ">6 · Parte V — <code>flexmix</code> NB univariado: as 5 variáveis</h2>
 
 <p>
   Até aqui o <code>flexmix</code> foi aplicado apenas a <code>exames</code>.
-  Esta parte expande a análise para todas as 5 variáveis de V3 e explora
+  Esta parte expande a análise para todas as 5 variáveis e explora
   sistematicamente as principais funções do pacote, que vão muito além do
   simples <code>flexmix() + BIC()</code>.
 </p>
 
-<div class="nota">
-  <strong>Por que analisar cada variável separadamente?</strong>
-  Cada variável pode revelar um número diferente de componentes, uma
-  separabilidade diferente e parâmetros \(\theta\) distintos.
-  Esse diagnóstico univariado orienta a escolha do número de grupos no
-  modelo multivariado posterior.
-</div>
 
 <!-- ─────────────────────────────────────────────── stepFlexmix ── -->
 <h3><code>stepFlexmix()</code> — ajuste sistemático com múltiplos reinícios</h3>
@@ -944,7 +937,7 @@ ref &lt;- flexmix::<span class="fn">refit</span>(best_bic)
 </div>
 
 <!-- ─────────────────────────────────────────────── Tabela resumo ── -->
-<h3>Tabela comparativa: as 5 variáveis de V3</h3>
+<h3>Tabela comparativa: as 5 variáveis</h3>
 
 <p>
   Rodando <code>stepFlexmix</code> para cada variável separadamente,
@@ -961,7 +954,7 @@ ref &lt;- flexmix::<span class="fn">refit</span>(best_bic)
 <span class="com">#  internacoes 2  41823.4   0.388  0.612    0.1     2.1   0.831    61.2%   28.9%</span>
 <span class="com">#  terapias    3  55629.8   0.210  0.472    0.4     8.3   0.887    73.5%   19.6%</span>
 <span class="com">#</span>
-<span class="com"># Resultados reais (n=5000, G=4, V3, seed=42, flexmix NB local):</span>
+<span class="com"># Resultados reais (n=5000, G=4, , seed=42, flexmix NB local):</span>
 <span class="com">#</span>
 <span class="com">#  variavel    g*  BIC*      pi_min pi_max  mu_min  mu_max post_med  %>0.9  ent_rel</span>
 <span class="com">#  consultas    2  25193.4   0.498  0.502    2.46    5.82   0.640    9.1%   86.5%</span>
@@ -971,58 +964,51 @@ ref &lt;- flexmix::<span class="fn">refit</span>(best_bic)
 <span class="com">#  terapias     3  10543.5   0.251  0.420    0.03    4.82   0.521   15.9%   70.7%</span></pre>
 
 <p>
-  Quatro padrões emergem dos resultados reais:
+<p>
+  Por que o modelo univariado não recupera os 4 grupos, mesmo tendo sido gerado como
+  mistura? A tabela acima condensa a resposta — analisemos variável a variável:
 </p>
 
 <ul>
   <li>
-    <strong><code>ps</code> e <code>internacoes</code></strong> — o BIC
-    seleciona \(g^* = 1\): uma única componente NB global. Com 63,9% e 94,1%
-    de zeros respectivamente, a variabilidade é tão concentrada que o critério
-    não justifica multiplicidade. Essas variáveis são <em>individualmente</em>
-    não-discriminantes; sua contribuição emerge apenas em combinação com as demais.
+    <strong><code>ps</code> e <code>internacoes</code> — \(g^* = 1\), modelo trivial.</strong>
+    Para <code>internacoes</code>, 94,1% dos valores são zero; para <code>ps</code>, 63,9%.
+    Na marginal de cada uma dessas variáveis, 3 dos 4 grupos verdadeiros têm distribuição
+    quase idêntica (concentrada em zero). O único grupo que se distingue — <em>agudo</em> em
+    internações, <em>atípico</em> em ps — representa uma fração pequena da amostra, insuficiente
+    para superar a penalidade do BIC com \(n = 5\,000\). O BIC prefere uma única componente NB.
   </li>
   <li>
-    <strong><code>consultas</code> e <code>exames</code></strong> — o BIC
-    seleciona \(g^* = 2\), mas a entropia relativa é alta (86,5% e 70,1%),
-    indicando sobreposição substancial entre os dois componentes.
-    As medianas de certeza (0,640 e 0,778) confirmam: univariadamente, a
-    separação é fraca.
+    <strong><code>consultas</code> e <code>exames</code> — \(g^* = 2\), separação fraca.</strong>
+    Consultas: médias verdadeiras por grupo são 0,79 · 2,35 · 3,54 · 8,83. Em 1D,
+    os três primeiros grupos se fundem num único aglomerado de baixo-médio uso; apenas
+    <em>ambulatorial</em> se destaca à direita. O modelo encontra 2 componentes, mas com
+    entropia relativa de 86,5% — os dois componentes estimados se sobrepõem quase totalmente.
+    Exames é análogo: apesar de médias muito distintas (7,5 · 17,4 · 25,7 · 56,0), a
+    dispersão dentro de cada grupo é tão alta (\(\theta\) pequeno) que as distribuições NB
+    se sobrepõem; o BIC seleciona \(g^* = 2\) com certeza mediana de apenas 0,778.
   </li>
   <li>
-    <strong><code>terapias</code></strong> — \(g^* = 3\) com pesos
-    (0,33; 0,25; 0,42) e médias muito distintas (μ = 0,13; 4,82; 0,03).
-    A variável tem estrutura de mistura mais articulada, mas a entropia
-    relativa de 70,7% mostra sobreposição considerável.
-  </li>
-  <li>
-    <strong>Resultado geral:</strong> nenhuma variável isolada recupera os
-    4 grupos reais. A certeza mediana máxima é 0,778 (exames); o modelo
-    multivariado com EM customizado atinge ARI = 0,729 e acurácia = 0,877.
+    <strong><code>terapias</code> — \(g^* = 3\), melhor resultado univariado.</strong>
+    Esta variável tem a estrutura marginal mais articulada: dois grupos com terapias \(\approx 0\)
+    (<em>agudo</em> e <em>baixo_uso</em>), um com uso moderado (<em>ambulatorial</em>, \(\mu \approx 3,3\))
+    e um com uso alto (<em>atípico</em>, \(\mu \approx 6,6\)). O BIC identifica 3 componentes.
+    Ainda assim, a entropia relativa é 70,7% — dois dos três componentes estimados englobam
+    dois grupos verdadeiros cada um, sem distingui-los.
   </li>
 </ul>
 
-<div class="fig-wrapper">
-  <img src="../../docs/assets/img/construcao/fig06_componentes_nb_v3.png"
-       alt="Componentes NB ajustados por variável — flexmix NB univariado (V3)">
-  <p class="fig-caption">
-    <strong>Fig. 6</strong> — PMF empírica (barras) e componentes NB estimados (linhas coloridas)
-    para cada uma das 5 variáveis de V3. Linha preta = densidade da mistura.
-    <code>ps</code> e <code>internacoes</code> convergem para \(g^* = 1\);
-    <code>consultas</code> e <code>exames</code> para \(g^* = 2\);
-    <code>terapias</code> para \(g^* = 3\).
-    Eixo x truncado no percentil 97.
-  </p>
-</div>
-
-<div class="limitacao">
-  <strong>Limitação central:</strong> mesmo que cada variável produza uma
-  boa separação univariada, isso não garante que os grupos coincidam entre
-  variáveis. Um beneficiário pode ser do "grupo de alta utilização de
-  <code>exames</code>" mas do "grupo de baixa utilização de
-  <code>internacoes</code>". A estrutura de agrupamento real é
-  <em>multivariada</em> — o que motiva diretamente o EM customizado
-  da próxima seção.
+<div class="nota">
+  <strong>O que a análise univariada revela — e por que não recupera os grupos reais</strong>:
+  
+  Cada variável foi gerada <em>independentemente</em> dado o grupo (NB ou ZINB por sorteio
+  separado). A marginal de cada variável é portanto uma mistura de 4 distribuições NB —
+  mas com componentes que se <strong>sobrepõem muito em 1D</strong>: os parâmetros
+  \(\mu_{hj}\) de grupos diferentes são próximos o suficiente para que o BIC prefira
+  \(g^* &lt; 4\) em todas as variáveis. A identidade de grupo está codificada no
+  <em>perfil conjunto</em> das 5 variáveis, não em nenhuma delas isoladamente.
+  O objetivo desta parte é diagnóstico: quantificar a separabilidade marginal de cada
+  variável antes de combiná-las no modelo multivariado.
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -1127,7 +1113,7 @@ Interpretação dos resultados reais:
        alt="Seleção de g por variável — BIC e ICL (flexmix NB univariado)">
   <p class="fig-caption">
     <strong>Fig. 7</strong> — Curvas BIC (esquerda) e ICL (direita) para cada uma das 5 variáveis
-    de V3, ajustadas separadamente com <code>stepFlexmix</code> NB.
+    , ajustadas separadamente com <code>stepFlexmix</code> NB.
     O ICL penaliza a sobreposição de componentes via \(H(\tau)\): note como ele sempre
     seleciona \(g^* = 1\) — indicando que nenhuma variável isolada produz grupos
     claramente separados. O BIC seleciona \(g^* > 1\) apenas para consultas (2),
@@ -1246,7 +1232,7 @@ $$f_h(\mathbf{y};\psi_h) = \prod_{j=1}^{p}
 <p>
 Isso exige estimar \(2gp\) parâmetros de componente (médias e dispersões)
 mais \(g-1\) pesos, totalizando \(d(g) = 2gp + (g-1)\) parâmetros.
-Para \(g = 4\) e \(p = 5\) (V3), isso resulta em \(d(4) = 43\) parâmetros.
+Para \(g = 4\) e \(p = 5\) , isso resulta em \(d(4) = 43\) parâmetros.
 </p>
 
 <h3>Limitações específicas do <code>flexmix</code> para este problema</h3>
@@ -1318,7 +1304,7 @@ Script completo: <code>src/03_analises/construcao_progressiva.R</code>
 <pre class="r-code"><span class="com"># =============================================================================</span>
 <span class="com"># construcao_progressiva.R</span>
 <span class="com"># Evolução metodológica: da Poisson à Mistura NB customizada</span>
-<span class="com"># V3 = consultas + ps + exames + internacoes + terapias</span>
+<span class="com"># consultas + ps + exames + internacoes + terapias</span>
 <span class="com"># =============================================================================</span>
 
 
@@ -1445,7 +1431,7 @@ saveRDS(list(
   bic_pois_fx = bic_pois_fx, bic_nb_fx = bic_nb_fx, post_nb = post_nb
 ), file.path(DIR_RDS, "construcao_progressiva.rds"))
 cat("\nSalvo em 'rds/construcao_progressiva.rds'\n")
-cat("Próximo: analises.html — EM customizado multivariado (V1–V5)\n")</pre>
+cat("Próximo: analises.html — EM customizado multivariado (V1–V3)\n")</pre>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="referencias">11 · Referências</h2>

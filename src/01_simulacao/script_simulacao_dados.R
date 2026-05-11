@@ -85,7 +85,7 @@ alpha_consultas   <- log(c(2.5,  8.0,  4.0,  1.5))  - 0.588
 alpha_ps          <- log(c(0.2,  0.5,  4.0,  7.0))  - 0.321
 alpha_exames      <- log(c(8.0, 50.0, 20.0, 52.0))  - 0.607
 alpha_terapias    <- log(c(0.1,  3.0,  0.7,  6.5))  + 0.282
-alpha_internacoes <- log(c(0.04, 0.06, 0.65, 0.35)) + 0.205
+alpha_internacoes <- log(c(0.04, 0.06, 0.65, 0.35)) + 0.250
 
 
 

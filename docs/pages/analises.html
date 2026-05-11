@@ -203,7 +203,7 @@ blockquote.cit cite {
   <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="estudo.html">O Estudo</a></li>
-    <li><a href="evolucao.html">Evolução</a></li>
+
     <li><a href="simulacao.html">Simulação</a></li>
     <li><a href="eda_simsaude.html">EDA</a></li>
     <li><a href="construcao_progressiva.html">Construção</a></li>
@@ -563,24 +563,13 @@ disponibilidade típica em dados administrativos de planos de saúde:
       <td><strong>V3</strong></td><td>+ terapias</td>
       <td>V2 + <code>terapias</code></td>
     </tr>
-    <tr>
-      <td><strong>V4</strong></td><td>+ prestadores</td>
-      <td>V3 + <code>prestadores_distintos</code></td>
-    </tr>
-    <tr>
-      <td><strong>V5</strong></td><td>+ meses de utilização</td>
-      <td>V4 + <code>meses_utilizacao</code></td>
-    </tr>
   </tbody>
 </table>
 
 <p>
-As variáveis V1–V3 são contagens de eventos clínicos com sobredispersão moderada a
-elevada, naturalmente acomodadas pela NB. <code>prestadores_distintos</code> (V4)
-tem distribuição concentrada em valores baixos e sem excesso de zeros estruturais.
-<code>meses_utilizacao</code> (V5) é discreta com suporte limitado \([1,12]\) e
-distribuição bimodal em U, gerada por Beta-Binomial na simulação — cuja estrutura
-a NB apenas aproxima.
+Os três conjuntos são contagens de eventos clínicos com sobredispersão moderada a
+muito alta — padrão naturalmente acomodado pela família NB. V3 contém as 5 variáveis
+clínicas nucleares do estudo: consultas, pronto-socorro, exames, internações e terapias.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -662,13 +651,13 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V1 · Baseline</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,630</td><td class="num">0,483</td>
       <td class="num">0,820</td><td class="num">0,796</td>
-      <td class="num">2.875,2</td>
+      <td class="num">1.347,7</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">3</td><td class="num">0,570</td><td class="num">0,445</td>
       <td class="num">0,797</td><td class="num">0,768</td>
-      <td class="num">1,9</td>
+      <td class="num">1,4</td>
     </tr>
 
     <!-- V2 -->
@@ -676,13 +665,13 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V2 · + internações</td><td>Mistura NB</td>
       <td class="num">3</td><td class="num">0,658</td><td class="num">0,513</td>
       <td class="num">0,836</td><td class="num">0,814</td>
-      <td class="num">1.735,2</td>
+      <td class="num">1.525,5</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
       <td class="num">0,777</td><td class="num">0,803</td>
-      <td class="num">0,8</td>
+      <td class="num">1,0</td>
     </tr>
 
     <!-- V3 — melhor global -->
@@ -690,41 +679,13 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
       <td>V3 · + terapias</td><td>Mistura NB ★</td>
       <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
       <td class="num">0,877</td><td class="num">0,861</td>
-      <td class="num">3.826,2</td>
+      <td class="num">1.617,0</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
       <td class="num">0,815</td><td class="num">0,843</td>
-      <td class="num">1,5</td>
-    </tr>
-
-    <!-- V4 — desativado -->
-    <tr class="sep desat">
-      <td>V4 · + prestadores <em>(desativado†)</em></td><td>Mistura NB</td>
-      <td class="num">6</td><td class="num">0,442</td><td class="num">0,354</td>
-      <td class="num">0,621</td><td class="num">0,775</td>
-      <td class="num">—</td>
-    </tr>
-    <tr class="desat">
-      <td></td><td>K-means</td>
-      <td class="num">4</td><td class="num">0,662</td><td class="num">0,525</td>
-      <td class="num">0,810</td><td class="num">0,836</td>
-      <td class="num">—</td>
-    </tr>
-
-    <!-- V5 — desativado -->
-    <tr class="sep desat">
-      <td>V5 · + meses util. <em>(desativado†)</em></td><td>Mistura NB</td>
-      <td class="num">6</td><td class="num">0,348</td><td class="num">0,327</td>
-      <td class="num">0,519</td><td class="num">0,794</td>
-      <td class="num">—</td>
-    </tr>
-    <tr class="desat">
-      <td></td><td>K-means</td>
-      <td class="num">3</td><td class="num">0,475</td><td class="num">0,329</td>
-      <td class="num">0,736</td><td class="num">0,773</td>
-      <td class="num">—</td>
+      <td class="num">0,9</td>
     </tr>
 
   </tbody>
@@ -732,9 +693,7 @@ O destaque em verde (★) indica o melhor resultado global por ARI.
 
 <div class="nota">
   ★ melhor resultado global: V3 + Mistura NB (ARI = 0,729 · Acurácia = 0,877).
-  Em V3, o BIC selecionou corretamente \(g = 4\) — o número verdadeiro de grupos.<br>
-  <span style="font-size:0.85em">† V4 e V5 desativados: confirmado empiricamente que não melhoram o modelo.
-  Métricas registradas de execução anterior para referência.</span>
+  Em V3, o BIC selecionou corretamente \(g = 4\) — o número verdadeiro de grupos.
 </div>
 
 
@@ -755,16 +714,18 @@ pares de grupos são mais frequentemente confundidos.
     <strong>Figura 1.</strong> Matrizes de confusão para os três conjuntos ativos (V1–V3), lado a lado para
     Mistura NB (esquerda) e K-means (direita). A diagonal principal corresponde às
     classificações corretas. Rótulos pareados via algoritmo de Kuhn-Munkres.
-    \(n = 5\,000\) · 4 grupos reais.
+    \(n = 5\,000\) · 4 grupos reais.<br>
+    <strong>Legenda:</strong> 1 = baixo_uso · 2 = ambulatorial_coordenado · 3 = agudo_hospitalar · 4 = atipico
   </p>
 </div>
 
 <p>
-O padrão consistente é a excelente recuperação do grupo 4 (baixo uso, diagonal
-inferior-direita) em todos os conjuntos: a Mistura NB o identifica com
-acurácia de 46,1% (V1) a 47,6% (V3) do total, enquanto em V3 o grupo 3 — antes
-praticamente absorvido pelos demais — passa a ser discriminado com 118 acertos
-(2,4% do total, 8 vezes mais que em V1).
+O padrão consistente é a excelente recuperação do grupo 1 (G1 · baixo uso) em todos
+os conjuntos — seu perfil de utilização mínima é bem separado dos demais no espaço
+PCA. Já o grupo 4 (G4 · padrão atípico), minoritário (\(\pi = 0{,}05\)),
+é o que apresenta maior confusão em V1 e V2; com a adição de <code>terapias</code>
+em V3 ele passa a ser discriminado com precisão crescente, permitindo ao BIC
+selecionar corretamente \(g = 4\).
 </p>
 
 
@@ -790,6 +751,31 @@ a projeção 2D colorida pelo grupo verdadeiro, pela Mistura NB e pelo K-means.
 </div>
 
 
+<!-- ── Visualização 2b: PCA por grupo destacado ── -->
+<h3>Qualidade de classificação por grupo</h3>
+<p>
+Para avaliar a recuperação de cada grupo individualmente, o gráfico abaixo replica
+a projeção PCA quatro vezes — uma por grupo. Em cada linha, os pontos do grupo em
+foco são exibidos em cor viva; os demais grupos aparecem em cinza claro.
+A sobreposição espacial entre o painel verdadeiro (esquerda) e os estimados (centro
+e direita) evidencia diretamente a qualidade de recuperação: quanto maior a
+coincidência geométrica, maior a fidelidade da classificação para aquele grupo.
+</p>
+<div class="fig-wrapper">
+  <img src="../../src/03_analises/figs/08_pca_por_grupo.png"
+       alt="PCA com um grupo destacado por linha — verdadeiro, Mistura NB e K-means"
+       loading="lazy">
+  <p class="fig-caption">
+    <strong>Figura 3.</strong> Projeção PCA (V3) com destaque por grupo.
+    Cada linha isola um grupo real: cor viva = grupo em foco · cinza = demais grupos.
+    A comparação entre os painéis <em>verdadeiro</em> e <em>estimado</em> revela quais grupos
+    são bem recuperados (alta sobreposição) e quais apresentam confusão com grupos vizinhos
+    no espaço PCA (baixa sobreposição).<br>
+    <strong>Legenda:</strong> 1 = baixo_uso · 2 = ambulatorial_coordenado · 3 = agudo_hospitalar · 4 = atipico
+  </p>
+</div>
+
+
 <!-- ── Visualização 3: Curvas de seleção ── -->
 <h3>Critérios de seleção do número de grupos</h3>
 <p>
@@ -802,7 +788,7 @@ O círculo destacado em cada curva indica o valor selecionado.
        alt="Curvas BIC (Mistura NB) e Silhouette (K-means) por conjunto de variáveis"
        loading="lazy">
   <p class="fig-caption">
-    <strong>Figura 3.</strong> Esquerda: curvas BIC da Mistura NB para V1 (\(g^* = 3\), BIC = 78.614),
+    <strong>Figura 4.</strong> Esquerda: curvas BIC da Mistura NB para V1 (\(g^* = 3\), BIC = 78.614),
     V2 (\(g^* = 3\), BIC = 81.570) e V3 (\(g^* = 4\), BIC = 91.086).
     A adição de terapias (V3) desloca o mínimo de \(g = 3\) para \(g = 4\) — o número verdadeiro.
     Direita: silhouette médio para K-means; V1 seleciona \(k = 3\), V2 e V3 selecionam \(k = 4\).
@@ -818,7 +804,7 @@ O círculo destacado em cada curva indica o valor selecionado.
        alt="Evolução de ARI, Acurácia, NMI e Pureza de V1 a V3"
        loading="lazy">
   <p class="fig-caption">
-    <strong>Figura 4.</strong> Evolução das quatro métricas ao longo dos três conjuntos ativos.
+    <strong>Figura 5.</strong> Evolução das quatro métricas ao longo dos três conjuntos ativos.
     A Mistura NB (verde) supera o K-means (vermelho) em todos os conjuntos e métricas.
     O maior salto ocorre em V3, especialmente no ARI (+0,071 para NB, +0,093 para K-means)
     e na Acurácia (+0,041 para NB). Valores no extremo direito indicam o valor final em V3.
@@ -856,7 +842,7 @@ estrutura ZINB do componente correspondente.
        alt="Perfis dos componentes estimados — μ̂, z-scores e θ̂ (V3, g=4)"
        loading="lazy">
   <p class="fig-caption">
-    <strong>Figura 5.</strong> Perfis dos 4 componentes estimados para V3 pelo EM customizado.
+    <strong>Figura 6.</strong> Perfis dos 4 componentes estimados para V3 pelo EM customizado.
     <em>Esquerda:</em> médias \(\hat{\mu}_{hj}\) absolutas — G4 domina em exames (56,1 consultas),
     G1 em terapias (10,7). <em>Centro:</em> z-scores por variável — G2 se distingue em internações
     (z = 1,49), G4 em consultas (z = 1,44) e exames (z = 1,40).
@@ -872,7 +858,7 @@ estrutura ZINB do componente correspondente.
        alt="Distribuição de max(τ̂_ih) por conjunto de variáveis"
        loading="lazy">
   <p class="fig-caption">
-    <strong>Figura 6.</strong> Distribuição da certeza de classificação \(\max_h \hat{\tau}_{ih}\)
+    <strong>Figura 7.</strong> Distribuição da certeza de classificação \(\max_h \hat{\tau}_{ih}\)
     por conjunto. Vermelho tracejado = mediana; amarelo pontilhado = chance aleatória \(1/g\).
     A certeza cresce sistematicamente com a adição de variáveis:
     V1 (mediana = 0,92 · 56% com \(\tau > 0{,}9\)) →
@@ -882,37 +868,15 @@ estrutura ZINB do componente correspondente.
   </p>
 </div>
 
-<h3>Inversão em V4 e V5: K-means supera a Mistura NB</h3>
-
-<p>
-O acréscimo de <code>prestadores_distintos</code> em V4 causou queda expressiva
-na Mistura NB (ARI: 0,729 → 0,442) com o BIC selecionando \(g = 6\) — o dobro
-do número verdadeiro. K-means manteve ARI = 0,662 e tornou-se o método de
-melhor desempenho nesse conjunto. O padrão se repete em V5: NB (ARI = 0,348)
-e K-means (ARI = 0,475).
-</p>
-
-<p>
-Essa inversão ilustra precisamente o papel diagnóstico do K-means descrito
-na Seção 2: quando ele supera a Mistura NB, isso sinaliza sobreajuste do BIC.
-<code>prestadores_distintos</code> tem distribuição concentrada em valores
-baixos e sem excesso de zeros estruturais — padrão distinto das demais variáveis
-clínicas. Ao tentar acomodar essa variável com a mesma família NB, o modelo
-fragmenta subgrupos reais em componentes espúrios, inflando \(g\). K-means, por
-operar no espaço \(\log(1+x)\) padronizado, neutraliza parcialmente essa
-distorção por não depender de suposições sobre a forma das distribuições.
-</p>
-
 <h3>Seleção correta de \(g\) como condição de desempenho</h3>
 
 <p>
-O padrão de desempenho ao longo de V1–V5 revela que a seleção correta de
+O padrão de desempenho ao longo de V1–V3 revela que a seleção correta de
 \(g\) é condição necessária (mas não suficiente) para bom desempenho da Mistura NB.
 Em V1 e V2, onde o BIC seleciona \(g = 3\) (abaixo dos 4 grupos verdadeiros),
 a Mistura NB ainda supera o K-means porque as variáveis disponíveis permitem
 fundir apenas um par de grupos reais, mantendo discriminação adequada nos demais.
-Em V4 e V5, a seleção de \(g = 6\) fragmenta desnecessariamente os grupos,
-degradando todas as métricas.
+Em V3, o BIC seleciona corretamente \(g = 4\) — e o desempenho atinge seu pico.
 </p>
 
 <h3>Custo-benefício: quando usar cada método</h3>
@@ -935,12 +899,13 @@ de ARI (~0,06 sobre K-means) e a interpretabilidade dos parâmetros
        alt="Painel resumo — melhor conjunto V3: PCA, matrizes de confusão e certeza posterior"
        loading="lazy">
   <p class="fig-caption">
-    <strong>Figura 7.</strong> Painel de síntese para o melhor conjunto (V3 · + terapias).
+    <strong>Figura 8.</strong> Painel de síntese para o melhor conjunto (V3 · + terapias).
     <em>Linha superior:</em> projeção PCA — grupo verdadeiro, Mistura NB (g = 4) e K-means (k = 4).
     <em>Linha inferior esquerda/centro:</em> matrizes de confusão com pareamento húngaro —
     Mistura NB (ARI = 0,729 · Acurácia = 0,877) vs. K-means (ARI = 0,673 · Acurácia = 0,815).
     <em>Linha inferior direita:</em> densidade de \(\max \hat{\tau}_{ih}\) por componente estimado;
-    todos os 4 componentes concentram-se próximos de 1, indicando separação bem definida.
+    todos os 4 componentes concentram-se próximos de 1, indicando separação bem definida.<br>
+    <strong>Legenda:</strong> 1 = baixo_uso · 2 = ambulatorial_coordenado · 3 = agudo_hospitalar · 4 = atipico
   </p>
 </div>
 
@@ -977,19 +942,13 @@ DIR_RDS     &lt;- "rds"
 CONJUNTOS &lt;- list(
   V1 = c("consultas", "ps", "exames"),
   V2 = c("consultas", "ps", "exames", "internacoes"),
-  V3 = c("consultas", "ps", "exames", "internacoes", "terapias"),
-  V4 = c("consultas", "ps", "exames", "internacoes", "terapias",
-          "prestadores_distintos"),
-  V5 = c("consultas", "ps", "exames", "internacoes", "terapias",
-          "prestadores_distintos", "meses_utilizacao")
+  V3 = c("consultas", "ps", "exames", "internacoes", "terapias")
 )
 
 LABELS_CONJUNTOS &lt;- c(
   V1 = "Baseline (3 vars)",
   V2 = "+ internacoes",
-  V3 = "+ terapias",
-  V4 = "+ prestadores",
-  V5 = "+ meses_utilizacao *"
+  V3 = "+ terapias (5 vars)"
 )
 
 
@@ -1225,7 +1184,6 @@ cat(sprintf("  %s + %s  →  ARI=%.3f · Acurácia=%.3f · g=%d\n\n",
             best_all$Método, best_all$Conjunto,
             best_all$ARI, best_all$Acuracia, best_all$g))
 
-cat("* V5 inclui meses_utilizacao (Beta-Binomial): NB aproxima com ressalva.\n")
 
 
 <span class="com"># ── 7. Salvar RDS ─────────────────────────────────────────────────────────────</span>

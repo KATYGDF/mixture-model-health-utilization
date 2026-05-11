@@ -188,7 +188,7 @@ blockquote.cit cite {
   <ul class="sidebar-nav">
     <li><a href="../index.html">Início</a></li>
     <li><a href="estudo.html">O Estudo</a></li>
-    <li><a href="evolucao.html">Evolução</a></li>
+
     <li><a href="simulacao.html" class="active">Simulação</a></li>
     <li><a href="eda_simsaude.html">EDA</a></li>
     <li><a href="construcao_progressiva.html">Construção</a></li>
@@ -214,7 +214,6 @@ blockquote.cit cite {
     <li><a href="#zinb">ZINB — zeros estruturais</a></li>
     <li><a href="#loglink">Log-link e covariáveis</a></li>
     <li><a href="#coeficientes">Coeficientes grupo-específicos</a></li>
-    <li><a href="#betabin">Beta-Binomial — meses de utilização</a></li>
     <li><a href="#gasto">Gasto total</a></li>
     <li><a href="#calibracao">Calibração aos indicadores ANS</a></li>
     <li><a href="#codigo">Código R completo</a></li>
@@ -398,7 +397,7 @@ $$(\pi_1,\, \pi_2,\, \pi_3,\, \pi_4) = (0{,}50;\; 0{,}25;\; 0{,}20;\; 0{,}05)$$
     <tr>
       <td>\(G_4\)</td><td>Padrão atípico</td>
       <td class="num">0,05</td><td class="num">250</td>
-      <td>Volume anormalmente elevado de exames, terapias e prestadores; potencial sinal de fraude.</td>
+      <td>Volume anormalmente elevado de exames e terapias; padrão atípico de utilização.</td>
     </tr>
   </tbody>
 </table>
@@ -635,63 +634,8 @@ por outros fatores não modelados explicitamente.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="betabin">8 · Beta-Binomial — meses de utilização</h2>
-
-<p>
-A variável \(\mathtt{meses\_utilizacao}\) conta os meses com pelo menos um evento registrado.
-É limitada ao intervalo inteiro \([1, 12]\) e apresenta distribuição bimodal em U —
-padrão em que a maioria dos beneficiários usa o plano ou esporadicamente ou durante quase
-todos os meses. 
-</p>
-
-<p>
-Liu et al. (2013) fornecem evidência empírica para essa estrutura ao analisarem 
-dados de utilização do sistema Veterans Affairs — o sistema federal de saúde dos Estados Unidos 
-voltado a veteranos militares e seus dependentes —, contribuindo para a caracterização de especificações 
-econométricas mais adequadas à modelagem da heterogeneidade observada nesse contexto:
-</p>
-
-<blockquote class="cit">
-  "Beta-binomial regression is a rarely used model in health services research that has the
-  flexibility to fit various distributions, including bimodal and U-shaped distributions. [...]
-  The beta-binomial model [...] is most useful in the case of extreme over-dispersion that
-  cannot be addressed with a negative binomial model, such as U-shaped distributions with
-  finite support bounded between 0 and 1."
-  <cite>Liu et al. (2013, p. 1772)</cite>
-</blockquote>
-
-<p>
-Wagner et al. (2015) confirmam empiricamente a superioridade da Beta-Binomial sobre NB e
-ZINB para variáveis limitadas com distribuição em U: <em>"the beta-binomial better captured the
-counts represented by the observed distribution"</em> (p. 494). O modelo adotado é a
-<strong>distribuição Beta-Binomial</strong> em dois estágios:
-</p>
-
-<div class="eq">
-$$p_i \;\sim\; \mathrm{Beta}(a_i,\, b_i)$$
-$$M_i \mid p_i \;\sim\; \mathrm{Binomial}(12,\, p_i)$$
-</div>
-
-<p>
-Os hiperparâmetros são definidos em função do volume total de eventos do beneficiário:
-</p>
-
-<div class="eq">
-$$
-a_i = \max\left(0.5,\; \frac{\mathrm{total\_eventos}_i}{6}\right)
-\quad
-b_i = \max\left(0.5,\; \frac{36 - \mathrm{total\_eventos}_i}{6}\right)
-$$
-</div>
-
-<p>
-Beneficiários com muitos eventos têm \(a_i \gg b_i\) (uso todo o ano);
-com poucos eventos têm \(b_i \gg a_i\) (uso pontual).
-</p>
-
-
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="gasto">9 · Gasto total</h2>
+<h2 id="gasto">8 · Gasto total</h2>
 
 <p>
 O gasto total é calculado como combinação linear das contagens por tipo de evento, multiplicada
@@ -729,7 +673,7 @@ assimétrica à direita, compatível com dados reais de sinistralidade.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="calibracao">10 · Calibração aos indicadores ANS</h2>
+<h2 id="calibracao">9 · Calibração aos indicadores ANS</h2>
 
 <p>
 Os interceptos \(\alpha_{hj}\) foram calibrados de modo que as médias marginais simuladas permanecessem 
@@ -758,7 +702,7 @@ no setor suplementar:
 </table>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="codigo">11 · Código R completo</h2>
+<h2 id="codigo">10 · Código R completo</h2>
 
 <p>
 O script abaixo reproduz toda a lógica de simulação: definição de parâmetros, geração das
@@ -772,13 +716,11 @@ contagens, variáveis derivadas, validação e exportação do CSV.
 <span class="com"># VERSAO ATUALIZADA:</span>
 <span class="com">#  1. Geracao vetorizada de idades</span>
 <span class="com">#  2. Coeficientes grupo-especificos</span>
-<span class="com">#  3. meses_utilizacao com Beta-Binomial de fato</span>
-<span class="com">#  4. prestadores_distintos com cap inteiro</span>
-<span class="com">#  5. Diagnostico do gasto_total com log-transformacao</span>
-<span class="com">#  6. Validacao com medias simuladas e medias teoricas (mu)</span>
-<span class="com">#  7. Grafico adicional: gasto x eventos por grupo</span>
-<span class="com">#  8. Tabela de prevalencia das flags por grupo</span>
-<span class="com">#  9. Intercepto de exames do grupo atipico suavizado</span>
+<span class="com">#  3. Diagnostico do gasto_total com log-transformacao</span>
+<span class="com">#  4. Validacao com medias simuladas e medias teoricas (mu)</span>
+<span class="com">#  5. Grafico adicional: gasto x eventos por grupo</span>
+<span class="com">#  6. Tabela de prevalencia das flags por grupo</span>
+<span class="com">#  7. Intercepto de exames do grupo atipico suavizado</span>
 <span class="com"># ============================================================</span>
 
 library(dplyr)
@@ -1031,19 +973,6 @@ gasto_base &lt;- consultas   * 120 +
 ruido_gasto &lt;- rlnorm(n, meanlog = 0, sdlog = 0.20)
 gasto_total &lt;- round(gasto_base * ruido_gasto, 2)
 
-<span class="com"># --- meses_utilizacao: Beta-Binomial ------------------------</span>
-shape_a &lt;- pmax(0.5, total_eventos / 6)
-shape_b &lt;- pmax(0.5, (36 - total_eventos) / 6)
-
-p_mes &lt;- rbeta(n, shape1 = shape_a, shape2 = shape_b)
-meses_utilizacao &lt;- rbinom(n, size = 12, prob = p_mes)
-meses_utilizacao &lt;- pmax(1L, meses_utilizacao)
-
-<span class="com"># --- prestadores_distintos com cap inteiro ------------------</span>
-prest_raw &lt;- pmax(1L, rpois(n, lambda = pmax(1, total_eventos / 5)))
-cap_prest &lt;- as.integer(quantile(prest_raw, 0.99))
-prestadores_distintos &lt;- pmin(prest_raw, cap_prest)
-
 <span class="com"># --- Flags --------------------------------------------------</span>
 flag_alta_utilizacao &lt;- ifelse(
   total_eventos &gt;= quantile(total_eventos, 0.95),
@@ -1087,8 +1016,6 @@ dados_sim &lt;- data.frame(
   razao_exames_consultas = razao_exames_consultas,
   razao_ps_consultas     = razao_ps_consultas,
   gasto_total            = gasto_total,
-  meses_utilizacao       = meses_utilizacao,
-  prestadores_distintos  = prestadores_distintos,
   flag_alta_utilizacao   = flag_alta_utilizacao,
   flag_baixa_coerencia   = flag_baixa_coerencia
 )
@@ -1144,7 +1071,6 @@ resumo_grupo &lt;- dados_sim %&gt;%
     internacoes_media      = mean(internacoes),
     total_eventos_medio    = mean(total_eventos),
     gasto_total_medio      = mean(gasto_total),
-    meses_utilizacao_medio = mean(meses_utilizacao),
     .groups = "drop"
   )
 
@@ -1210,14 +1136,7 @@ p4 &lt;- ggplot(
        x = "Total de eventos", y = "Gasto total (R$, escala log)", color = "Grupo") +
   theme_minimal()
 
-p5 &lt;- ggplot(dados_sim, aes(x = meses_utilizacao, fill = grupo_latente)) +
-  geom_histogram(binwidth = 1, color = "white", position = "dodge") +
-  scale_x_continuous(breaks = 1:12) +
-  labs(title = "Distribuicao de meses com utilizacao por grupo",
-       x = "Meses com utilizacao", y = "Frequencia", fill = "Grupo") +
-  theme_minimal()
-
-p6 &lt;- ggplot(
+p5 &lt;- ggplot(
   flags_grupo %&gt;%
     tidyr::pivot_longer(
       cols      = c(prop_alta_utilizacao, prop_baixa_coerencia),
@@ -1260,7 +1179,7 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
 </pre>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="referencias">12 · Referências</h2>
+<h2 id="referencias">11 · Referências</h2>
 
 <div class="ref-group">
 

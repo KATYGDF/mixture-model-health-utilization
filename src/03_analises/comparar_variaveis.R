@@ -82,10 +82,18 @@ if (is.na(col_grupo)) stop("Coluna de grupo não encontrada.")
 
 df <- df_raw
 names(df)[names(df) == col_grupo] <- "grupo_real"
-df$grupo_real   <- factor(df$grupo_real)
+df$grupo_real   <- factor(df$grupo_real,
+                          levels = c("baixo_uso", "ambulatorial_coordenado",
+                                     "agudo_hospitalar", "atipico"))
 G_REAL          <- nlevels(df$grupo_real)
 NIVEIS_REAL     <- levels(df$grupo_real)
 grupo_real_int  <- as.integer(df$grupo_real)
+
+# Legenda numérica: "1 = agudo_hospitalar  ·  2 = ambulatorial_coordenado  ·  ..."
+LEGENDA_GRUPOS <- paste(
+  sprintf("%d = %s", seq_along(NIVEIS_REAL), NIVEIS_REAL),
+  collapse = "  ·  "
+)
 
 cat(sprintf("\nDados: %d obs · %d grupos reais\n", nrow(df), G_REAL))
 cat("Grupos:", paste(NIVEIS_REAL, collapse = " | "), "\n\n")
@@ -337,10 +345,11 @@ cat("  km_results_por_conjunto.rds · bic_curves.rds · sil_curves.rds\n")
 # ── 8. Paleta, tema e helpers de visualização ─────────────────────────────────
 # =============================================================================
 
-# Paleta de até 6 grupos (verde · azul · amarelo · vermelho · roxo · teal)
+# Paleta numérica (1–4) — pastéis consistentes com EDA
+# Ordem da simulação: 1=baixo_uso  2=ambulatorial_coordenado  3=agudo_hospitalar  4=atipico
 COR <- setNames(
-  c("#4a7c59", "#2980b9", "#e6a817", "#c0392b", "#8e44ad", "#16a085"),
-  as.character(1:6)
+  c("#7BAFD4", "#6EBF8B", "#E8B96B", "#D98585"),
+  as.character(1:4)
 )
 
 TEMA <- theme_minimal(base_size = 11) +
@@ -434,7 +443,10 @@ fig_conf <- wrap_plots(plots_conf_list, ncol = 2) +
       "Rótulos pareados via algoritmo húngaro  ·  n = %d beneficiários  ·  %d grupos reais",
       nrow(df), G_REAL
     ),
-    caption  = "Diagonal = classificações corretas  ·  Off-diagonal = trocas de grupo",
+    caption  = paste0(
+      "Diagonal = classificações corretas  ·  Off-diagonal = trocas de grupo\n",
+      LEGENDA_GRUPOS
+    ),
     theme    = TEMA
   )
 
@@ -494,6 +506,73 @@ fig_pca <- (
 ggsave(file.path(DIR_FIGS, "02_pca_classificacao.png"),
        fig_pca, width = 15, height = 5, dpi = 150, bg = "white")
 cat("  02_pca_classificacao.png\n")
+
+
+# =============================================================================
+# ── 10b. VIS 2b · PCA por grupo em destaque (4 linhas × 3 painéis) ────────────
+# =============================================================================
+# Cada linha isola um grupo real: pontos do grupo em foco = cor viva;
+# demais pontos = cinza claro · permite avaliar a recuperação grupo a grupo
+
+# Cores vivas por grupo (mais saturadas que a paleta EDA)
+# Ordem: 1=baixo_uso  2=ambulatorial  3=agudo  4=atipico
+COR_VIVID <- c("1" = "#1552A0", "2" = "#1A7A3E", "3" = "#C07000", "4" = "#B52415")
+
+# Rótulos legíveis para os títulos de linha
+NOME_GRUPO_LABEL <- setNames(
+  c("G1 · baixo uso",
+    "G2 · ambulatorial coordenado",
+    "G3 · agudo / hospitalar",
+    "G4 · padrão atípico"),
+  as.character(1:4)
+)
+
+make_pca_focus <- function(col_grupo, titulo, subtitulo = NULL, fg) {
+  fg_chr  <- as.character(fg)
+  df_back <- pca_df[pca_df[[col_grupo]] != fg_chr, ]
+  df_fore <- pca_df[pca_df[[col_grupo]] == fg_chr, ]
+  ggplot() +
+    geom_point(data = df_back,
+               aes(PC1, PC2),
+               colour = "#C8C8C8", alpha = 0.20, size = 0.9) +
+    geom_point(data = df_fore,
+               aes(PC1, PC2),
+               colour = COR_VIVID[fg_chr], alpha = 0.80, size = 1.5) +
+    labs(x = lab_pc[1], y = lab_pc[2], title = titulo, subtitle = subtitulo) +
+    TEMA + theme(legend.position = "none")
+}
+
+focus_rows <- lapply(seq_len(G_REAL), function(fg) {
+  lbl <- NOME_GRUPO_LABEL[as.character(fg)]
+  (
+    make_pca_focus("Verdadeiro",
+                   paste0(lbl, " — verdadeiro"),
+                   "referência", fg) |
+    make_pca_focus("EM",
+                   paste0(lbl, " — Mistura NB (g=", g_best, ")"),
+                   sprintf("ARI=%.3f  ·  Acurácia=%.3f",
+                           met_nb_best$ari, met_nb_best$acuracia), fg) |
+    make_pca_focus("KMeans",
+                   paste0(lbl, " — K-means (k=", km_results[[BEST_V]]$k, ")"),
+                   sprintf("ARI=%.3f  ·  Acurácia=%.3f",
+                           met_km_best$ari, met_km_best$acuracia), fg)
+  )
+})
+
+fig_focus <- wrap_plots(focus_rows, ncol = 1) +
+  plot_annotation(
+    title    = paste0("Classificação por grupo — projeção PCA · ", BEST_V,
+                      ": ", LABELS_CONJUNTOS[BEST_V]),
+    subtitle = paste0(
+      "Cada linha destaca um grupo: cor viva = grupo em foco  ·  cinza = demais\n",
+      LEGENDA_GRUPOS
+    ),
+    theme    = TEMA
+  )
+
+ggsave(file.path(DIR_FIGS, "08_pca_por_grupo.png"),
+       fig_focus, width = 15, height = 20, dpi = 150, bg = "white")
+cat("  08_pca_por_grupo.png\n")
 
 
 # =============================================================================
@@ -813,6 +892,7 @@ fig_resumo <- (
                       " (", LABELS_CONJUNTOS[BEST_V], ")"),
     subtitle = paste0("Linha superior: projeção PCA  ·  ",
                       "Linha inferior: matrizes de confusão e incerteza posterior"),
+    caption  = LEGENDA_GRUPOS,
     theme    = TEMA
   )
 

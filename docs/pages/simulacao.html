@@ -226,8 +226,9 @@ blockquote.cit cite {
 <p>
 Dados reais de utilização de planos de saúde não estão disponíveis publicamente com a granularidade
 necessária para estudar heterogeneidade latente. A alternativa adotada é a <strong>simulação por
-processo generativo</strong>: especificamos explicitamente o modelo probabilístico que acreditamos
-descrever a realidade e geramos uma amostra a partir dele. Esse procedimento tem duas vantagens
+processo generativo</strong>: especificamos explicitamente um mecanismo probabilístico plausível, 
+inspirado em características conhecidas de dados de utilização em saúde, e geramos uma amostra a 
+partir dele e geramos uma amostra a partir dele. Esse procedimento tem duas vantagens
 metodológicas:
 </p>
 
@@ -260,11 +261,13 @@ metodológicas:
 
 <ol start="2">
   <li>Os parâmetros podem ser calibrados a indicadores públicos do
-      <strong>Painel de Indicadores da ANS</strong>. A calibração foi realizada em médias marginais
-      agregadas: isso torna a escala das variáveis plausível, mas não garante que todas as
-      dependências, caudas e padrões assistenciais reais estejam representados.
-      Avanzi et al. (2021) fundamentam essa abordagem ao argumentar que modelos propostos
-      devem sempre ser testados contra dados sintéticos, pois</li>
+      <strong>Painel de Indicadores da ANS</strong>. A calibração foi realizada em médias marginais 
+      agregadas: isso torna a escala das variáveis plausível, embora não constitua uma validação 
+      completa da estrutura conjunta dos dados. Avanzi et al. (2021) fundamentam essa abordagem 
+      ao argumentar que modelos propostos devem sempre ser testados contra dados sintéticos, pois, 
+      em um ambiente controlado, é possível conhecer o mecanismo gerador dos dados, permitindo observar 
+      os grupos latentes verdadeiros e medir diretamente a capacidade dos métodos em recuperar 
+      a estrutura simulada.</li>
 </ol>
 
 <blockquote class="cit">
@@ -428,8 +431,8 @@ overdispersion. It is deemed to be a better model for an overdispersion variance
 médicos e de saúde: <em>"mixture models of negative binomial distributions can be used to
 handle over-dispersion of count data, which is commonly encountered in medical and healthcare
 studies"</em> (p. 77). Lee et al. (2023) complementam com critérios práticos de seleção de modelo.
-A parametrização <strong>NB₂</strong> (Binomial Negativa de média) adotada tem função de
-massa de probabilidade:
+A parametrização <strong>NB₂</strong> (Binomial Negativa de média) adotada — descrita em
+Cameron &amp; Trivedi (2013, cap. 3) — tem função de massa de probabilidade:
 </p>
 
 <div class="eq">
@@ -469,7 +472,9 @@ Valores pequenos de \(\theta\) indicam alta sobredispersão. Na simulação:
 
 <p>
 Terapias (~80 % de zeros) e internações (~94 % de zeros) apresentam excesso de zeros impossível
-de acomodar pela NB₂ sozinha. Abu Bakar et al. (2022) distinguem dois tipos de zeros em dados
+de acomodar pela NB₂ sozinha. Lambert (1992) introduziu a mistura entre um componente pontual
+em zero e uma distribuição de contagem como solução formal para esse problema.
+Abu Bakar et al. (2022) distinguem dois tipos de zeros em dados
 de utilização: "true zero reflects non-users because they did not get sick during the reference
 period, while frequency zero reflects individuals who fell sick during the reference period but
 did not seek care" (p. 3). Wagner et al. (2015) descrevem o mecanismo gerador no contexto
@@ -1186,6 +1191,12 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
   </div>
 
   <div class="ref-entry">
+    Cameron, A. C., &amp; Trivedi, P. K. (2013).
+    <em>Regression analysis of count data</em> (2ª ed.).
+    Cambridge University Press.
+  </div>
+
+  <div class="ref-entry">
     Deb, P., &amp; Holmes, A. M. (2000).
     Estimates of use and costs of behavioural health care: A comparison of standard and
     finite mixture models.
@@ -1196,6 +1207,12 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
     Deb, P., &amp; Trivedi, P. K. (1997).
     Demand for medical care by the elderly: A finite mixture approach.
     <em>Journal of Applied Econometrics, 12</em>(3), 313–336.
+  </div>
+
+  <div class="ref-entry">
+    Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977).
+    Maximum likelihood from incomplete data via the EM algorithm.
+    <em>Journal of the Royal Statistical Society: Series B (Methodological), 39</em>(1), 1–38.
   </div>
 
   <div class="ref-entry">
@@ -1222,6 +1239,12 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
     Jansen, R. C. (1993).
     Maximum likelihood in a generalized linear finite mixture model by using the EM algorithm.
     <em>Biometrics, 49</em>(1), 227–231.
+  </div>
+
+  <div class="ref-entry">
+    Lambert, D. (1992).
+    Zero-inflated Poisson regression, with an application to defects in manufacturing.
+    <em>Technometrics, 34</em>(1), 1–14.
   </div>
 
   <div class="ref-entry">

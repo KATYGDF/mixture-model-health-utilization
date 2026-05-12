@@ -542,7 +542,7 @@ O custo computacional é de 1–3 segundos por conjunto.
 
 <p>
 Os conjuntos foram construídos incrementalmente em ordem crescente de
-disponibilidade típica em dados administrativos de planos de saúde:
+disponibilidade típica em dados de sinistros de planos de saúde:
 </p>
 
 <table class="param-table">
@@ -586,12 +586,38 @@ simulado — e invariantes à permutação dos rótulos de grupo.
 <p>
 Corrige o Índice de Rand pelo acaso; uma partição aleatória produz
 \(\text{ARI} \approx 0\) e a perfeita produz \(\text{ARI} = 1\)
-(Hubert &amp; Arabie, 1985). É a métrica primária desta análise:
+(Hubert &amp; Arabie, 1985). É a métrica primária desta análise.
+A fórmula opera sobre a <strong>tabela de contingência</strong>
+\(\{n_{ij}\}\) entre a partição estimada e o gabarito verdadeiro:
 </p>
 
 <div class="eq">
-$$\text{ARI} \;=\; \frac{\text{RI} - \mathbb{E}[\text{RI}]}{\max(\text{RI}) - \mathbb{E}[\text{RI}]}$$
+$$\text{ARI} \;=\;
+\frac{
+  \displaystyle\sum_{i,j}\binom{n_{ij}}{2}
+  \;-\;
+  \dfrac{\displaystyle\sum_i\binom{a_i}{2}\;\displaystyle\sum_j\binom{b_j}{2}}{\binom{n}{2}}
+}{
+  \dfrac{1}{2}\!\left[\displaystyle\sum_i\binom{a_i}{2}+\displaystyle\sum_j\binom{b_j}{2}\right]
+  \;-\;
+  \dfrac{\displaystyle\sum_i\binom{a_i}{2}\;\displaystyle\sum_j\binom{b_j}{2}}{\binom{n}{2}}
+}$$
 </div>
+
+<p>Onde:</p>
+<ul>
+  <li>\(n_{ij}\) — número de observações classificadas no cluster estimado \(i\)
+      <em>e</em> no grupo verdadeiro \(j\) (célula da tabela de contingência);</li>
+  <li>\(a_i = \sum_j n_{ij}\) — soma da linha \(i\): tamanho do cluster estimado \(i\);</li>
+  <li>\(b_j = \sum_i n_{ij}\) — soma da coluna \(j\): tamanho do grupo verdadeiro \(j\);</li>
+  <li>\(n\) — número total de observações;</li>
+  <li>\(\binom{m}{2} = \tfrac{m(m-1)}{2}\) — combinações de 2 em \(m\).</li>
+</ul>
+<p>
+O numerador conta os pares de observações que a partição estimada e o gabarito
+<em>concordam</em>, descontando o esperado por acaso. O denominador é a média dos
+máximos possíveis das duas partições, também descontado o acaso.
+</p>
 
 <h3>Informação Mútua Normalizada (NMI)</h3>
 
@@ -608,9 +634,40 @@ clusters obtêm NMI artificialmente elevado (Strehl &amp; Ghosh, 2002).
 <h3>Acurácia (correspondência húngara)</h3>
 
 <p>
-O algoritmo de Kuhn-Munkres encontra a bijeção entre rótulos previstos e
-verdadeiros que maximiza a concordância; acurácia é a proporção de acertos
-após esse pareamento ótimo.
+Como os rótulos de cluster são arbitrários (o algoritmo pode numerar os grupos
+em qualquer ordem), a comparação direta com o gabarito exige um <strong>pareamento
+ótimo de rótulos</strong>. O algoritmo de Kuhn-Munkres (húngaro) encontra a
+permutação \(\pi^*\) que maximiza a concordância em tempo polinomial
+(Munkres, 1957). A acurácia é então definida como:
+</p>
+
+<div class="eq">
+$$\text{Acurácia} \;=\;
+\frac{1}{n}\,
+\max_{\pi \,\in\, \mathcal{S}_G}
+\sum_{g=1}^{G}
+\bigl|\hat{C}_{\pi(g)} \cap T_g\bigr|
+\;=\;
+\frac{1}{n}
+\sum_{g=1}^{G}
+\bigl|\hat{C}_{\pi^*(g)} \cap T_g\bigr|$$
+</div>
+
+<p>Onde:</p>
+<ul>
+  <li>\(G\) — número de grupos (aqui \(G = 4\));</li>
+  <li>\(T_g\) — conjunto das \(n_g\) observações que pertencem ao grupo verdadeiro \(g\);</li>
+  <li>\(\hat{C}_k\) — conjunto das observações atribuídas ao cluster estimado \(k\);</li>
+  <li>\(\mathcal{S}_G\) — conjunto de todas as \(G!\) permutações de \(\{1,\ldots,G\}\);</li>
+  <li>\(\pi^* = \arg\max_{\pi} \sum_g |\hat{C}_{\pi(g)} \cap T_g|\) — permutação ótima
+      obtida pelo algoritmo húngaro;</li>
+  <li>\(n\) — total de observações.</li>
+</ul>
+<p>
+Intuitivamente, \(|\hat{C}_{\pi^*(g)} \cap T_g|\) conta quantas observações
+do grupo verdadeiro \(g\) foram corretamente atribuídas ao cluster que,
+após o pareamento, corresponde a \(g\). A soma sobre todos os grupos dividida
+por \(n\) fornece a proporção global de acertos.
 </p>
 
 <h3>Pureza</h3>

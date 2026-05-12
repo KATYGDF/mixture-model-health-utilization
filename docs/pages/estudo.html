@@ -165,7 +165,7 @@ via misturas de Binomial Negativa — estudo preliminar com dados simulados</p>
 Planos de saúde atendem populações heterogêneas: beneficiários jovens e
 saudáveis, adultos com doenças crônicas estáveis, pacientes em episódios agudos de
 alto custo e padrões atípicos de utilização. Essa heterogeneidade impacta diretamente
-a precificação atuarial, a gestão de sinistros e a detecção de irregularidades.
+a precificação atuarial, a gestão de sinistros e a compreensão dos padrões de utilização.
 </p>
 
 <p>
@@ -192,10 +192,18 @@ subpopulações distintas, mascarando a heterogeneidade real e comprometendo a i
 <h2 id="hipotese">2 · Hipótese central</h2>
 
 <p>
-Modelos de mistura finita com componentes Binomial Negativa são mais capazes de
-recuperar grupos latentes em dados de contagem de saúde suplementar do que métodos
-de clusterização geométrica como o K-means.
+A hipótese central deste estudo é que <strong>modelos probabilísticos — em particular
+a Mistura de Binomial Negativa — são mais capazes de recuperar grupos latentes em
+dados de contagem com sobredispersão do que métodos de clusterização geométrica
+como o K-means</strong>.
 </p>
+
+<div class="nota">
+  <strong>Escopo.</strong> Este estudo avalia recuperação de estrutura latente em ambiente
+  controlado — não tem como objetivo detectar fraude. Embora perfis latentes de utilização
+  possam futuramente apoiar estudos de auditoria ou anomalias, esta etapa modela apenas
+  a capacidade de recuperação de grupos não observados em dados de contagem.
+</div>
 
 <p>
 A justificativa é dupla:
@@ -400,39 +408,39 @@ algoritmo húngaro (Kuhn-Munkres, 1955).
   <tbody>
     <tr>
       <td>V1 · 3 vars</td><td>Mistura NB</td>
-      <td class="num">3</td><td class="num">0,583</td><td class="num">0,473</td>
-      <td class="num">0,729</td><td class="num">0,782</td>
-      <td class="num">2.875</td>
+      <td class="num">3</td><td class="num">0,630</td><td class="num">0,483</td>
+      <td class="num">0,820</td><td class="num">0,796</td>
+      <td class="num">1.347,7</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
-      <td class="num">4</td><td class="num">0,554</td><td class="num">0,447</td>
-      <td class="num">0,757</td><td class="num">0,786</td>
-      <td class="num">&lt; 1</td>
+      <td class="num">3</td><td class="num">0,570</td><td class="num">0,445</td>
+      <td class="num">0,797</td><td class="num">0,768</td>
+      <td class="num">1,4</td>
     </tr>
     <tr class="sep">
       <td>V2 · + internações</td><td>Mistura NB</td>
-      <td class="num">3</td><td class="num">0,599</td><td class="num">0,483</td>
-      <td class="num">0,742</td><td class="num">0,794</td>
-      <td class="num">1.735</td>
+      <td class="num">3</td><td class="num">0,658</td><td class="num">0,513</td>
+      <td class="num">0,836</td><td class="num">0,814</td>
+      <td class="num">1.525,5</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,580</td><td class="num">0,472</td>
       <td class="num">0,777</td><td class="num">0,803</td>
-      <td class="num">&lt; 1</td>
+      <td class="num">1,0</td>
     </tr>
     <tr class="sep best">
       <td>V3 · + terapias ★</td><td>Mistura NB</td>
       <td class="num">4</td><td class="num">0,729</td><td class="num">0,594</td>
       <td class="num">0,877</td><td class="num">0,861</td>
-      <td class="num">3.826</td>
+      <td class="num">1.617,0</td>
     </tr>
     <tr>
       <td></td><td>K-means</td>
       <td class="num">4</td><td class="num">0,673</td><td class="num">0,540</td>
       <td class="num">0,815</td><td class="num">0,843</td>
-      <td class="num">2</td>
+      <td class="num">0,9</td>
     </tr>
   </tbody>
 </table>
@@ -443,19 +451,20 @@ Três observações interpretativas:
 
 <ul>
   <li>
-    <strong>A Mistura NB supera o K-means em todos os conjuntos</strong> (ΔARI = +0,03 a +0,056),
-    confirmando a hipótese central. A superioridade se acentua com a adição de
-    variáveis clinicamente informativas.
+    <strong>Neste cenário sintético de contagens sobredispersas, a Mistura NB recuperou
+    melhor os grupos latentes do que o K-means</strong> (ΔARI = +0,06 a +0,07 em V3),
+    especialmente quando todas as variáveis clínicas foram incluídas. O processo gerador
+    favorece uma estrutura probabilística de contagem, o que beneficia a especificação NB.
   </li>
   <li>
     <strong>A seleção correta de \(g\) é determinante.</strong>
     Em V1 e V2 o BIC seleciona \(g^* = 3\) (um grupo a menos); em V3 converge para
-    \(g^* = 4\) — o conjunto de informação é suficiente para separar os 4 grupos.
+    \(g^* = 4\) — o conjunto de informação é suficiente para separar os 4 grupos latentes.
   </li>
   <li>
-    <strong><code>terapias</code> é a variável decisiva</strong> (ΔARI = +0,13 de V2 para V3):
-    ela discrimina o grupo atípico (\(G_4\)) dos demais, que apresentam uso de
-    terapias próximo de zero.
+    <strong><code>terapias</code> é a variável decisiva</strong> (ΔARI = +0,071 de V2 para V3
+    na Mistura NB): ela discrimina o grupo atípico (\(G_4\)) dos demais, que apresentam
+    uso de terapias próximo de zero.
   </li>
 </ul>
 

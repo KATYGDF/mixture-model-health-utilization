@@ -848,9 +848,7 @@ a projeção 2D colorida pelo grupo verdadeiro, pela Mistura NB e pelo K-means.
   <p class="fig-caption">
     <strong>Figura 2.</strong> Projeção PCA das 5 variáveis de V3 (\(\log(1+x)\) padronizado).
     Painel esquerdo: grupo verdadeiro (referência). Centro: Mistura NB (ARI = 0,729 · Acurácia = 0,877).
-    Direita: K-means (ARI = 0,673 · Acurácia = 0,815).
-    O grupo 4 (vermelho, baixo uso) ocupa a região compacta à esquerda;
-    o grupo 1 (verde, exames intensivos) dispersa-se ao longo do PC1 positivo.
+    Direita: K-means (ARI = 0,673 · Acurácia = 0,815).    
   </p>
 </div>
 
@@ -933,7 +931,7 @@ são informativas.
 </p>
 
 <p>
-A transição V2 → V3, que adiciona <code>internações</code> e <code>terapias</code>,
+A transição V2 → V3, que adiciona  <code>terapias</code> ao conjunto de variáveis,
 produziu o maior ganho isolado: ARI aumentou de 0,658 para 0,729 na Mistura NB
 (+0,071) e de 0,580 para 0,673 no K-means (+0,093).
 A melhora em V3 sugere que variáveis raras como internações e terapias —
@@ -962,18 +960,53 @@ Mistura NB captura diretamente pela estrutura ZINB do componente correspondente.
 </div>
 
 <!-- ── Visualização 6: Incerteza de classificação ── -->
+
+<h3>Certeza de classificação individual</h3>
+
+<p>
+Uma vantagem exclusiva do modelo de mistura sobre o K-means é que o passo E do
+algoritmo EM produz, para cada observação \(i\), um vetor de
+<strong>probabilidades posteriores</strong>
+\(\hat{\tau}_{ih} = P(\text{obs.}\,i \in h \mid \text{dados},\,\hat{\theta})\)
+com \(\sum_h \hat{\tau}_{ih} = 1\).
+A <strong>certeza de classificação</strong> de \(i\) é o maior valor desse vetor:
+</p>
+
+<div class="eq">
+$$\text{certeza}_i \;=\; \max_{h \,\in\, \{1,\ldots,G\}}\hat{\tau}_{ih}$$
+</div>
+
+<p>
+Quando \(\text{certeza}_i \approx 1\), o modelo aloca \(i\) a um único componente
+com alta confiança. Quando \(\text{certeza}_i \approx 1/G\), as probabilidades
+estão distribuídas uniformemente entre os grupos — o modelo equivale a um
+"chute aleatório" para aquela observação. Para \(G = 4\), o piso de acaso é
+\(1/4 = 0{,}25\).
+</p>
+
+<p>
+O gráfico abaixo mostra a distribuição de \(\text{certeza}_i\) sobre os 5.000
+beneficiários em cada conjunto de variáveis. Em dados reais — sem gabarito —
+essa distribuição seria a <strong>principal evidência disponível</strong> sobre a
+qualidade de classificação: uma massa concentrada próxima de 1 indica que o modelo
+encontrou estrutura genuína; uma distribuição espalhada próxima de \(1/G\) sugere
+grupos mal separados ou \(g\) incorretamente especificado.
+</p>
+
 <div class="fig-wrapper">
   <img src="../assets/img/analises/05_incerteza_classificacao.png"
        alt="Distribuição de max(τ̂_ih) por conjunto de variáveis"
        loading="lazy">
   <p class="fig-caption">
     <strong>Figura 7.</strong> Distribuição da certeza de classificação \(\max_h \hat{\tau}_{ih}\)
-    por conjunto. Vermelho tracejado = mediana; amarelo pontilhado = chance aleatória \(1/g\).
+    por conjunto de variáveis. Vermelho tracejado = mediana; amarelo pontilhado = piso de acaso
+    \(1/G = 0{,}25\).
     A certeza cresce sistematicamente com a adição de variáveis:
-    V1 (mediana = 0,92 · 56% com \(\tau > 0{,}9\)) →
+    V1 (mediana = 0,92 · 56% com \(\hat{\tau} > 0{,}9\)) →
     V2 (0,94 · 63%) →
-    V3 (0,96 · 68%). A massa concentrada próxima de 1 confirma que a maioria
-    dos beneficiários está bem alocada no modelo final.
+    V3 (0,96 · 68%). A adição de variáveis discriminativas não só melhora o ARI —
+    também aumenta a confiança individual de classificação, porque os perfis latentes
+    ficam mais distinguíveis no espaço de dados.
   </p>
 </div>
 
@@ -1026,12 +1059,12 @@ parâmetros \((\mu_{hj},\theta_{hj})\) justificam o custo computacional
 
 <p>
 O script abaixo reproduz toda a análise: parâmetros, funções EM e de métricas,
-loop principal sobre V1–V5, tabela comparativa e exportação dos resultados.
+loop principal sobre V1–V3, tabela comparativa e exportação dos resultados.
 </p>
 
 <pre class="r-code"><span class="com"># =============================================================================</span>
 <span class="com"># comparar_variaveis.R</span>
-<span class="com"># Comparação sistemática: 5 conjuntos de variáveis × 2 métodos</span>
+<span class="com"># Comparação sistemática: 3 conjuntos de variáveis × 2 métodos</span>
 <span class="com">#</span>
 <span class="com"># Métodos (dados de contagem → escolha motivada pela natureza discreta):</span>
 <span class="com">#   M1  Mistura NB  — EM do zero, distribuição NB por componente e variável</span>

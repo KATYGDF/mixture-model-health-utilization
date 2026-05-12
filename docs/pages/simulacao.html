@@ -202,7 +202,7 @@ blockquote.cit cite {
 <div class="prose">
 
 <h1>Simulação dos Dados</h1>
-<p class="lead">Geração de uma amostra sintética de 5.000 beneficiários por mistura finita calibrada ao Painel ANS</p>
+<p class="lead">Construção de um ambiente controlado para testar a recuperação de grupos latentes — amostra sintética de 5.000 beneficiários por mistura finita, com escala calibrada ao Painel ANS</p>
 
 <div class="toc">
   <strong>Nesta página</strong>
@@ -214,7 +214,6 @@ blockquote.cit cite {
     <li><a href="#zinb">ZINB — zeros estruturais</a></li>
     <li><a href="#loglink">Log-link e covariáveis</a></li>
     <li><a href="#coeficientes">Coeficientes grupo-específicos</a></li>
-    <li><a href="#gasto">Gasto total</a></li>
     <li><a href="#calibracao">Calibração aos indicadores ANS</a></li>
     <li><a href="#codigo">Código R completo</a></li>
     <li><a href="#referencias">Referências</a></li>
@@ -261,7 +260,9 @@ metodológicas:
 
 <ol start="2">
   <li>Os parâmetros podem ser calibrados a indicadores públicos do
-      <strong>Painel de Indicadores da ANS</strong>, tornando a simulação realista.
+      <strong>Painel de Indicadores da ANS</strong>. A calibração foi realizada em médias marginais
+      agregadas: isso torna a escala das variáveis plausível, mas não garante que todas as
+      dependências, caudas e padrões assistenciais reais estejam representados.
       Avanzi et al. (2021) fundamentam essa abordagem ao argumentar que modelos propostos
       devem sempre ser testados contra dados sintéticos, pois</li>
 </ol>
@@ -598,8 +599,8 @@ foram calibrados para capturar:
   <li>redução do uso em função da coparticipação financeira (coeficiente negativo de
       \(\texttt{copart}\) em todos os grupos);</li>
   <li>diferenças comportamentais entre grupos latentes, incluindo perfis de baixa utilização
-      (\(G_1\)), alta necessidade clínica (\(G_2\), \(G_3\)) e padrões atípicos potencialmente
-      associados a fraude (\(G_4\)).</li>
+      (\(G_1\)), alta necessidade clínica (\(G_2\), \(G_3\)) e padrão atípico de uso elevado e
+      disperso (\(G_4\)).</li>
 </ul>
 <p>
 A tabela abaixo apresenta os coeficientes para o desfecho <strong>consultas</strong>:
@@ -634,46 +635,7 @@ por outros fatores não modelados explicitamente.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="gasto">8 · Gasto total</h2>
-
-<p>
-O gasto total é calculado como combinação linear das contagens por tipo de evento, multiplicada
-por um ruído log-normal que representa a variação de preços entre prestadores e regiões.
-Os custos médios unitários foram calibrados com referência em Andrade et al. (2013),
-que analisam indicadores de gastos desagregados por tipo de serviço no setor suplementar
-brasileiro, e em Avanzi et al. (2021), que adotam estrutura análoga em simuladores de
-sinistros individuais:
-</p>
-
-<div class="eq">
-$$\text{gasto}_i \;=\;
-\bigl(120\,\text{cons}_i + 250\,\text{ps}_i + 80\,\text{ex}_i
-     + 150\,\text{ter}_i + 3500\,\text{int}_i\bigr)\cdot \varepsilon_i,
-\qquad \varepsilon_i \sim \mathrm{LogNormal}(0,\,0{,}20)$$
-</div>
-
-<table class="param-table">
-  <thead>
-    <tr><th>Tipo de evento</th><th class="num">Custo médio (R$)</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>Consulta</td>      <td class="num">120</td></tr>
-    <tr><td>Pronto-socorro</td><td class="num">250</td></tr>
-    <tr><td>Exame</td>         <td class="num">80</td></tr>
-    <tr><td>Terapia</td>       <td class="num">150</td></tr>
-    <tr><td>Internação</td>    <td class="num">3.500</td></tr>
-  </tbody>
-</table>
-
-<p>
-O ruído \(\varepsilon_i \sim \mathrm{LogNormal}(0, 0{,}20)\) introduz coeficiente de variação
-de ~20 %, garantindo \(\varepsilon_i > 0\) e produzindo distribuição marginal do gasto
-assimétrica à direita, compatível com dados reais de sinistralidade.
-</p>
-
-<!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="calibracao">9 · Calibração aos indicadores ANS</h2>
+<h2 id="calibracao">8 · Calibração aos indicadores ANS</h2>
 
 <p>
 Os interceptos \(\alpha_{hj}\) foram calibrados de modo que as médias marginais simuladas permanecessem 
@@ -701,8 +663,17 @@ no setor suplementar:
   </tbody>
 </table>
 
+<div class="callout callout-warn">
+  <strong>Nota sobre o alcance da calibração.</strong>
+  A calibração foi realizada em médias marginais agregadas, com base em indicadores públicos do
+  Painel ANS. Isso torna a escala das variáveis plausível em relação ao setor, mas não garante que
+  todas as dependências, caudas e padrões assistenciais reais estejam representados nos dados sintéticos.
+  O ambiente controlado é adequado para o objetivo deste estudo — testar a recuperação de estrutura
+  latente — e não deve ser interpretado como réplica fiel da população de beneficiários.
+</div>
+
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="codigo">10 · Código R completo</h2>
+<h2 id="codigo">9 · Código R completo</h2>
 
 <p>
 O script abaixo reproduz toda a lógica de simulação: definição de parâmetros, geração das
@@ -1179,7 +1150,7 @@ cat("\nArquivo salvo: dados_simulados_saude_suplementar.csv\n")
 </pre>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2 id="referencias">11 · Referências</h2>
+<h2 id="referencias">10 · Referências</h2>
 
 <div class="ref-group">
 

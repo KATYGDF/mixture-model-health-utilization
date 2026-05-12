@@ -89,7 +89,7 @@
 <div class="prose">
 
 <h1>Análise Exploratória dos Dados</h1>
-<p class="lead">Verificação empírica das propriedades estatísticas da base sintética — sobredispersão, excesso de zeros e separabilidade dos grupos latentes</p>
+<p class="lead">EDA da base SimSaúde — cinco variáveis clínicas de utilização em saúde suplementar, 5 000 beneficiários, 4 grupos latentes</p>
 
 <div class="toc">
   <strong>Nesta página</strong>
@@ -115,32 +115,23 @@
 <h2 id="objetivo">1 · Objetivo</h2>
 
 <p>
-  Esta página funciona como uma <strong>verificação empírica</strong> das propriedades estatísticas
-  da base sintética antes da modelagem. As quatro perguntas que ela responde são:
+  Esta análise exploratória caracteriza a distribuição conjunta das cinco variáveis clínicas nos dados simulados calibrados ao Painel ANS.
+  Os objetivos específicos são:
 </p>
-<ol>
-  <li><strong>Há sobredispersão?</strong> — se sim, a Poisson é inadequada e a Binomial Negativa se justifica;</li>
-  <li><strong>Há excesso de zeros?</strong> — se sim, um modelo que trate zeros estruturalmente é necessário;</li>
-  <li><strong>Os grupos simulados são distinguíveis?</strong> — se os perfis se sobrepõem demais, a recuperação
-      de estrutura latente seria irrealisticamente fácil ou impossível;</li>
-  <li><strong>Há indícios de que Poisson e K-means podem ser inadequados?</strong> — a sobredispersão e a
-      assimetria das distribuições limitam a aplicação de métodos que pressupõem equidispersão ou
-      geometria euclidiana.</li>
-</ol>
+<ul>
+  <li><strong>Documentar a sobredispersão</strong> — justificativa para abandonar a Poisson;</li>
+  <li><strong>Identificar zeros estruturais</strong> em internações e terapias;</li>
+  <li><strong>Verificar a separabilidade dos grupos latentes</strong> nas distribuições
+      marginais e conjuntas;</li>
+  <li><strong>Avaliar a correlação entre variáveis</strong> — determinante para a estrutura
+      do modelo de mistura multivariado.</li>
+</ul>
 <p>
   Os dados provêm de
   <code>dados/dados_simulados.csv</code>
   (<em>n</em> = 5 000 beneficiários, 4 grupos latentes, seed = 42).
   O script de EDA está em <code>src/02_eda/eda_v3.R</code>.
 </p>
-
-<div class="callout callout-warn">
-  <strong>Uso do grupo verdadeiro.</strong>
-  Várias figuras desta página segmentam os dados pelo grupo latente verdadeiro.
-  Isso só é possível porque a base é sintética e o gabarito é conhecido por construção.
-  Em dados reais, esses grupos seriam não observados e estimados pelas probabilidades
-  posteriores do modelo de mistura.
-</div>
 
 <!-- ════════════════════════════════════════════════════════════════════════
      § 2 · Tabela descritiva
@@ -501,7 +492,7 @@
     descartando a Poisson como modelo de contagem adequado.
   </li>
   <li>
-    <strong>Zeros estruturais</strong> em internações (94,1%) e terapias (80,1%),
+    <strong>Zeros estruturais</strong> em internações (≈ 85%) e terapias (≈ 55%),
     compatíveis com mistura de subpopulações com consumo nulo.
   </li>
   <li>
@@ -513,22 +504,16 @@
     internações e terapias apresentando perfis mais independentes.
   </li>
   <li>
-    <strong>Calda longa</strong> especialmente em exames (Var/Média = 44,9×), refletindo
-    a mistura de subpopulações com utilização muito distinta.
+    <strong>Calda longa</strong> especialmente em exames, refletindo casos de alto custo
+    que elevam a variância drasticamente.
   </li>
 </ol>
 
 <p>
-  A EDA confirma que os dados possuem características típicas de utilização em saúde:
-  contagens assimétricas, sobredispersão e excesso de zeros. Essas propriedades justificam
-  o uso de modelos probabilísticos de contagem e tornam limitada a aplicação direta de
-  métodos geométricos como o K-means.
-</p>
-
-<p>
-  Esses achados motivam diretamente a adoção de um
+  Estes achados motivam diretamente a adoção de um
   <strong>modelo de mistura finita de Binomiais Negativas</strong>
-  (via algoritmo EM), desenvolvido nas páginas
+  (via algoritmo EM) como ferramenta de tipificação de beneficiários,
+  desenvolvido nas páginas
   <a href="construcao_progressiva.html">Construção</a> e
   <a href="analises.html">Análises</a>.
 </p>

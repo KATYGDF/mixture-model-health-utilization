@@ -978,10 +978,12 @@ $$\text{certeza}_i \;=\; \max_{h \,\in\, \{1,\ldots,G\}}\hat{\tau}_{ih}$$
 
 <p>
 Quando \(\text{certeza}_i \approx 1\), o modelo aloca \(i\) a um único componente
-com alta confiança. Quando \(\text{certeza}_i \approx 1/G\), as probabilidades
-estão distribuídas uniformemente entre os grupos — o modelo equivale a um
-"chute aleatório" para aquela observação. Para \(G = 4\), o piso de acaso é
-\(1/4 = 0{,}25\).
+com alta confiança. Quando \(\text{certeza}_i \approx 1/g\), as probabilidades
+estão distribuídas uniformemente entre os \(g\) componentes — o modelo equivale a
+um "chute aleatório" para aquela observação. O piso de acaso depende do \(g\)
+selecionado pelo BIC em cada conjunto: \(1/3 \approx 0{,}33\) em V1 e V2
+(onde BIC escolheu \(g = 3\)) e \(1/4 = 0{,}25\) em V3 (onde BIC escolheu
+\(g = 4\) — o número verdadeiro de grupos).
 </p>
 
 <p>
@@ -1000,7 +1002,7 @@ grupos mal separados ou \(g\) incorretamente especificado.
   <p class="fig-caption">
     <strong>Figura 7.</strong> Distribuição da certeza de classificação \(\max_h \hat{\tau}_{ih}\)
     por conjunto de variáveis. Vermelho tracejado = mediana; amarelo pontilhado = piso de acaso
-    \(1/G = 0{,}25\).
+    \(1/g\) — varia por painel: \(\approx 0{,}33\) em V1 e V2 (\(g = 3\)) e \(0{,}25\) em V3 (\(g = 4\)).
     A certeza cresce sistematicamente com a adição de variáveis:
     V1 (mediana = 0,92 · 56% com \(\hat{\tau} > 0{,}9\)) →
     V2 (0,94 · 63%) →

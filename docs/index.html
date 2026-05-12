@@ -32,17 +32,28 @@
 <p class="lead">Estudo preliminar · Pôster científico · Doutorado</p>
 
 <p>
-Este projeto investiga a estrutura latente de utilização de serviços de saúde por beneficiários de
-planos privados, utilizando <strong>modelos de mistura finita</strong> para identificar perfis heterogêneos
-de uso. Os dados são inteiramente sintéticos, gerados com parâmetros calibrados a indicadores
-oficiais do <strong>Painel de Indicadores da ANS</strong>.
+Este projeto investiga se <strong>modelos probabilísticos de mistura</strong> — em especial a
+Mistura de Binomiais Negativas — são mais adequados do que métodos geométricos, como o K-means,
+para recuperar grupos latentes em <strong>dados de contagem sobredispersos</strong> de utilização
+em saúde suplementar. Os dados são inteiramente sintéticos, gerados com parâmetros calibrados a
+indicadores oficiais do <strong>Painel de Indicadores da ANS</strong>; os grupos verdadeiros são
+conhecidos apenas porque a base foi simulada.
 </p>
 
 <p>
-A hipótese central é que modelos probabilísticos — em particular a mistura de Binomial Negativa —
-são mais capazes de recuperar grupos latentes em dados de contagem com sobredispersão do que
-métodos de clusterização geométrica como o K-means.
+O objetivo é avaliar, em ambiente controlado, a capacidade de recuperação de estrutura latente
+de heterogeneidade em perfis de utilização — comparando a abordagem probabilística baseada em
+mistura NB com o baseline geométrico K-means. A saúde suplementar é o contexto substantivo;
+a aplicação operacional não é o escopo deste estudo.
 </p>
+
+<div style="background:#f0f7f2; border-left:3px solid #4a7c59; border-radius:0 4px 4px 0;
+            padding:0.75rem 1.1rem; margin:1.5rem 0; font-size:0.9rem; color:#333;">
+  <strong>Escopo do estudo.</strong> Este trabalho não tem como objetivo detectar fraude.
+  Seu foco é avaliar, em ambiente controlado, se uma abordagem probabilística baseada em
+  mistura NB recupera melhor a estrutura latente de <em>perfis de utilização</em> do que o K-means.
+  Não há dados reais de beneficiários — todos os dados são inteiramente simulados.
+</div>
 
 <hr style="margin: 2.5rem 0; border: none; border-top: 1px solid var(--border);">
 
@@ -82,9 +93,9 @@ métodos de clusterização geométrica como o K-means.
     </div>
     <p style="margin:0; color:var(--text);">
       Caracterização descritiva dos dados simulados: distribuição dos desfechos de contagem por
-      grupo latente, proporção de zeros, sobredispersão, correlações e indicadores de alerta.
+      grupo latente, proporção de zeros, sobredispersão e correlações entre variáveis.
       Verificação da qualidade da simulação e identificação das variáveis com maior poder
-      discriminativo entre os grupos.
+      discriminativo entre os <strong>grupos não observados</strong>.
     </p>
   </div>
 

@@ -239,27 +239,28 @@ blockquote.cit cite {
 <h2 id="objetivo">1 · Objetivo</h2>
 
 <p>
-Uma das vantagens centrais do processo generativo descrito na página de
-<a href="simulacao.html">Simulação</a> é que o grupo latente verdadeiro de cada
-beneficiário é conhecido por construção. Isso permite a avaliação quantitativa de
-métodos de agrupamento não supervisionado: algoritmos aplicados aos dados
-observados — sem acesso ao rótulo de grupo — podem ter sua capacidade de recuperação
-medida contra o gabarito simulado por métricas externas como ARI e acurácia.
+Esta página compara a <strong>Mistura de Binomiais Negativas</strong> e o <strong>K-means</strong>
+na tarefa de recuperar os grupos latentes definidos no processo de simulação.
+A comparação é feita em três conjuntos progressivos de variáveis e avaliada por
+ARI, NMI, acurácia e pureza.
 </p>
 
 <p>
-O objetivo desta análise é comparar dois métodos não supervisionados quanto à
-capacidade de recuperar a estrutura latente de \(G = 4\) grupos em dados sintéticos
-de utilização de planos de saúde, variando sistematicamente o conjunto de variáveis
-disponíveis (V1 a V5). A comparação examina:
+Como o grupo latente verdadeiro de cada beneficiário é conhecido por construção,
+os algoritmos são aplicados aos dados observados — sem acesso ao rótulo de grupo —
+e sua capacidade de recuperação é medida contra o gabarito por métricas externas.
+A análise responde diretamente à hipótese do projeto: a Mistura NB recupera melhor
+os grupos latentes do que o K-means em dados de contagem sobredispersos?
 </p>
+
+<p>A comparação examina:</p>
 
 <ul>
   <li>como o desempenho evolui à medida que variáveis são adicionadas
       progressivamente;</li>
   <li>se o BIC seleciona o número correto de componentes \(g = 4\); e</li>
-  <li>em quais conjuntos o método paramétrico (Mistura NB) supera o baseline
-      geométrico (K-means) — e quando a relação se inverte.</li>
+  <li>em quais conjuntos o método paramétrico (Mistura NB) apresenta melhor
+      recuperação do que o baseline geométrico (K-means).</li>
 </ul>
 
 <!-- ══════════════════════════════════════════════════════════ -->
@@ -627,7 +628,7 @@ não como critério primário de comparação.
 <h2 id="resultados">7 · Resultados</h2>
 
 <p>
-A tabela consolida as 10 combinações método × conjunto de variáveis.
+A tabela consolida as 6 combinações método × conjunto de variáveis.
 O destaque em verde (★) indica o melhor resultado global por ARI.
 </p>
 
@@ -805,7 +806,9 @@ O círculo destacado em cada curva indica o valor selecionado.
        loading="lazy">
   <p class="fig-caption">
     <strong>Figura 5.</strong> Evolução das quatro métricas ao longo dos três conjuntos ativos.
-    A Mistura NB (verde) supera o K-means (vermelho) em todos os conjuntos e métricas.
+    Nos dados simulados, caracterizados por sobredispersão e estrutura latente probabilística,
+    a Mistura NB (verde) recuperou os grupos com maior aderência ao gabarito verdadeiro do que
+    o K-means (vermelho) em todos os conjuntos e métricas.
     O maior salto ocorre em V3, especialmente no ARI (+0,071 para NB, +0,093 para K-means)
     e na Acurácia (+0,041 para NB). Valores no extremo direito indicam o valor final em V3.
   </p>
@@ -819,21 +822,24 @@ O círculo destacado em cada curva indica o valor selecionado.
 
 <p>
 O melhor resultado global (ARI = 0,729; acurácia = 0,877) foi obtido pela
-Mistura NB no conjunto V3. Em V3, o BIC selecionou exatamente \(g = 4\) —
+Mistura NB no conjunto V3 (consultas, PS, exames, internações e terapias).
+Em V3, o BIC selecionou exatamente \(g = 4\) —
 o número verdadeiro de grupos — evidência de que a penalidade do BIC identifica
 corretamente a estrutura quando a família distributiva é adequada e as variáveis
 são informativas.
 </p>
 
 <p>
-A transição V2 → V3, que adiciona <code>terapias</code>, produziu o maior ganho
-isolado: ARI aumentou de 0,658 para 0,729 na Mistura NB (+0,071) e de 0,580
-para 0,673 no K-means (+0,093). Isso reflete o poder discriminativo de
-<code>terapias</code>: na simulação, o grupo \(G_4\) (padrão atípico) tem
-probabilidade de zero estrutural \(\omega = 0{,}35\) — o menor valor entre
-todos os grupos —, enquanto \(G_1\) tem \(\omega = 0{,}85\). Essa assimetria
-cria um sinal de separação que a Mistura NB captura diretamente por meio da
-estrutura ZINB do componente correspondente.
+A transição V2 → V3, que adiciona <code>internações</code> e <code>terapias</code>,
+produziu o maior ganho isolado: ARI aumentou de 0,658 para 0,729 na Mistura NB
+(+0,071) e de 0,580 para 0,673 no K-means (+0,093).
+A melhora em V3 sugere que variáveis raras como internações e terapias —
+embora tenham muitos zeros (94,1% e 80,1%, respectivamente) — carregam
+informação discriminativa sobre certos perfis latentes.
+Em particular, <code>terapias</code> separa o grupo \(G_4\) (padrão atípico,
+\(\omega = 0{,}35\)) do grupo \(G_1\) (baixo uso, \(\omega = 0{,}85\)):
+essa assimetria nos zeros estruturais cria um sinal de separação que a
+Mistura NB captura diretamente pela estrutura ZINB do componente correspondente.
 </p>
 
 <!-- ── Visualização 5: Perfis dos componentes ── -->
@@ -874,8 +880,9 @@ estrutura ZINB do componente correspondente.
 O padrão de desempenho ao longo de V1–V3 revela que a seleção correta de
 \(g\) é condição necessária (mas não suficiente) para bom desempenho da Mistura NB.
 Em V1 e V2, onde o BIC seleciona \(g = 3\) (abaixo dos 4 grupos verdadeiros),
-a Mistura NB ainda supera o K-means porque as variáveis disponíveis permitem
-fundir apenas um par de grupos reais, mantendo discriminação adequada nos demais.
+a Mistura NB ainda apresenta recuperação superior à do K-means: as variáveis
+disponíveis permitem fundir apenas um par de grupos reais, mantendo discriminação
+adequada nos demais.
 Em V3, o BIC seleciona corretamente \(g = 4\) — e o desempenho atinge seu pico.
 </p>
 
@@ -886,11 +893,13 @@ K-means mostrou desempenho competitivo em todos os conjuntos ativos (ARI entre 0
 e 0,67) a custo computacional negligenciável (≤ 2 s). Para aplicações em que
 velocidade é prioritária, como análises exploratórias em painéis com muitas
 variáveis candidatas, K-means em espaço \(\log(1+x)\) padronizado é a
-escolha operacional imediata. A Mistura NB, por sua vez, é superior quando
-o conjunto de variáveis é clinicamente motivado (V3) e sua especificação
-distributiva alinha-se com a natureza dos dados — situação em que o ganho
-de ARI (~0,06 sobre K-means) e a interpretabilidade dos parâmetros
-\((\mu_{hj},\theta_{hj})\) justificam o custo computacional (~1–2 h por conjunto).
+escolha operacional imediata. Nos dados simulados, onde a estrutura latente é probabilística e as variáveis
+são sobredispersas, a Mistura NB recuperou os grupos com maior aderência ao
+gabarito verdadeiro — especialmente quando o conjunto de variáveis é clinicamente
+motivado (V3) e a especificação distributiva alinha-se com a natureza dos dados.
+Nessa situação, o ganho de ARI (~0,06 sobre K-means) e a interpretabilidade dos
+parâmetros \((\mu_{hj},\theta_{hj})\) justificam o custo computacional
+(~1–2 h por conjunto).
 </p>
 
 <!-- ── Visualização 7: Painel resumo ── -->

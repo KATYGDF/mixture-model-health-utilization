@@ -621,14 +621,43 @@ máximos possíveis das duas partições, também descontado o acaso.
 
 <h3>Informação Mútua Normalizada (NMI)</h3>
 
+<p>
+Mede quanto a partição estimada reduz a incerteza sobre o gabarito verdadeiro,
+normalizada para o intervalo \([0,1]\). A forma aritmética (Strehl &amp; Ghosh, 2002)
+usa a média das entropias como denominador:
+</p>
+
 <div class="eq">
-$$\text{NMI}(U,V) \;=\; \frac{2\,I(U;V)}{H(U)+H(V)}$$
+$$\text{NMI}(U,V) \;=\; \frac{2\,I(U;\,V)}{H(U)+H(V)}$$
 </div>
 
 <p>
-\(I(U;V)\) é a informação mútua e \(H(\cdot)\) a entropia de Shannon.
-Varia em \([0,1]\), mas é sensível à superescolha de \(g\): modelos com muitos
-clusters obtêm NMI artificialmente elevado (Strehl &amp; Ghosh, 2002).
+com os termos expandidos explicitamente:
+</p>
+
+<div class="eq">
+$$I(U;\,V) \;=\; \sum_{i=1}^{G}\sum_{j=1}^{G}
+  \frac{n_{ij}}{n}\,\log\!\frac{n\,n_{ij}}{a_i\,b_j}$$
+</div>
+
+<div class="eq">
+$$H(U) = -\sum_{i=1}^{G}\frac{a_i}{n}\log\frac{a_i}{n}, \qquad
+  H(V) = -\sum_{j=1}^{G}\frac{b_j}{n}\log\frac{b_j}{n}$$
+</div>
+
+<p>Onde:</p>
+<ul>
+  <li>\(U\) — partição estimada; \(V\) — gabarito verdadeiro;</li>
+  <li>\(n_{ij}\), \(a_i\), \(b_j\), \(n\) — mesmas quantidades da tabela de contingência
+      definidas no ARI acima;</li>
+  <li>\(I(U;V)\) — informação mútua: redução de incerteza sobre \(V\) ao conhecer \(U\);</li>
+  <li>\(H(U)\), \(H(V)\) — entropias de Shannon das duas partições.</li>
+</ul>
+<p>
+NMI = 1 indica recuperação perfeita; NMI = 0 indica independência entre as partições.
+A métrica é sensível à superescolha de \(g\): modelos com muitos clusters obtêm
+NMI artificialmente elevado, mesmo sem correspondência real com o gabarito.
+Por isso é usada como complemento ao ARI, não como critério primário.
 </p>
 
 <h3>Acurácia (correspondência húngara)</h3>
@@ -672,13 +701,30 @@ por \(n\) fornece a proporção global de acertos.
 
 <h3>Pureza</h3>
 
+<p>
+Para cada cluster estimado \(k\), identifica o grupo verdadeiro mais frequente
+entre seus membros e conta essas observações "corretas". A pureza é a proporção
+dessas observações no total:
+</p>
+
 <div class="eq">
-$$\text{pureza} \;=\; \frac{1}{n}\sum_{k}\max_j\,|C_k \cap T_j|$$
+$$\text{Pureza} \;=\; \frac{1}{n}\sum_{k=1}^{G}\max_{j}\,|\hat{C}_k \cap T_j|$$
 </div>
 
+<p>Onde:</p>
+<ul>
+  <li>\(\hat{C}_k\) — conjunto de observações atribuídas ao cluster estimado \(k\);</li>
+  <li>\(T_j\) — conjunto de observações do grupo verdadeiro \(j\);</li>
+  <li>\(\max_j\,|\hat{C}_k \cap T_j|\) — número de membros do cluster \(k\) que
+      pertencem ao grupo verdadeiro predominante em \(k\);</li>
+  <li>\(n\) — total de observações.</li>
+</ul>
 <p>
-Cresce monotonicamente com \(g\); usada como métrica complementar,
-não como critério primário de comparação.
+Pureza = 1 indica que cada cluster contém apenas observações de um único grupo
+verdadeiro. A métrica <strong>não penaliza a divisão excessiva de grupos</strong>
+(fragmentar um grupo verdadeiro em vários clusters aumenta a pureza artificialmente),
+o que explica por que cresce monotonicamente com \(G\) e não é adequada como
+critério primário de comparação.
 </p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
